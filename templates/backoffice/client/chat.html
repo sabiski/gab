@@ -1,0 +1,11 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Discussion{% endblock %}
+{% block portal_heading %}{{ pharmacy.name }}{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">
+  {% if emergency_alert %}Urgence {{ emergency_alert.code }} · {{ emergency_alert.get_category_display }}{% else %}Messagerie sécurisée avec votre pharmacie{% endif %}
+</p>
+{% endblock %}
+{% block portal_body %}
+{% include "backoffice/client/partials/chat_body.html" %}
+{% endblock %}

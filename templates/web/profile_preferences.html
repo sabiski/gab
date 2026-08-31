@@ -1,0 +1,37 @@
+{% extends "web/profile_subpage.html" %}
+{% block profile_form %}
+<form method="post" class="profile-card p-5 space-y-5 text-sm">
+  {% csrf_token %}
+  <div>
+    <label class="text-xs font-bold text-[#6B7280] uppercase tracking-wide">Langue</label>
+    <div class="mt-2 space-y-2">
+      <label class="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer {% if language == 'fr' %}border-[#6C3AED] bg-[#F5F3FF]{% else %}border-[#E5E7EB]{% endif %}">
+        <input type="radio" name="language" value="fr" {% if language == 'fr' %}checked{% endif %}>
+        <span>🇫🇷</span>
+        <span class="font-semibold text-[#374151]">Français</span>
+      </label>
+      <label class="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer {% if language == 'en' %}border-[#6C3AED] bg-[#F5F3FF]{% else %}border-[#E5E7EB]{% endif %} opacity-60">
+        <input type="radio" name="language" value="en" {% if language == 'en' %}checked{% endif %} disabled>
+        <span>🇬🇧</span>
+        <span class="font-semibold text-[#374151]">English <span class="text-xs font-normal">(bientôt)</span></span>
+      </label>
+    </div>
+  </div>
+  <div>
+    <label class="text-xs font-bold text-[#6B7280] uppercase tracking-wide">Thème</label>
+    <div class="mt-2 space-y-2">
+      <label class="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer {% if theme == 'light' %}border-[#6C3AED] bg-[#F5F3FF]{% else %}border-[#E5E7EB]{% endif %}">
+        <input type="radio" name="theme" value="light" {% if theme == 'light' %}checked{% endif %}>
+        <span class="material-symbols-rounded text-[#F59E0B]">light_mode</span>
+        <span class="font-semibold text-[#374151]">Clair</span>
+      </label>
+      <label class="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer {% if theme == 'dark' %}border-[#6C3AED] bg-[#F5F3FF]{% else %}border-[#E5E7EB]{% endif %} opacity-60">
+        <input type="radio" name="theme" value="dark" {% if theme == 'dark' %}checked{% endif %} disabled>
+        <span class="material-symbols-rounded text-[#6B7280]">dark_mode</span>
+        <span class="font-semibold text-[#374151]">Sombre <span class="text-xs font-normal">(bientôt)</span></span>
+      </label>
+    </div>
+  </div>
+  <button class="w-full bg-[#6C3AED] hover:bg-[#5B21B6] text-white font-bold py-3 rounded-xl transition">Enregistrer</button>
+</form>
+{% endblock %}

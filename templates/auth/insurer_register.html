@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Créer un compte compagnie d'assurance{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/insurer-register.css?v=1">
+{% endblock %}
+{% block content %}
+<div class="ins-reg">
+  <header class="ins-reg__top">
+    <div class="ins-reg__brand">
+      <img src="/static/images/logo-gabpharma.png" alt="Gab'Pharma" class="h-10">
+      <div>
+        <p class="font-extrabold text-[#5B47FB]">Gab'Pharma</p>
+        <p class="text-xs text-ink-muted">Compagnie d'assurance</p>
+      </div>
+    </div>
+    <a href="{% url 'login' %}" class="ins-reg__help"><span class="material-symbols-rounded sm">help</span> Besoin d'aide ?</a>
+  </header>
+
+  <div class="ins-reg__layout">
+    <aside class="ins-reg__aside">
+      <div class="ins-reg__hero-card">
+        <div class="ins-reg__illus" aria-hidden="true">🛡️</div>
+        <h1>Créez le compte de votre compagnie d'assurance</h1>
+        <p>Rejoignez Gab'Pharma pour simplifier la gestion des prises en charge, contrats et remboursements — CNAMGS, NSIA, mutuelle ou toute autre compagnie agréée.</p>
+        <ul class="ins-reg__features">
+          <li><span class="material-symbols-rounded">shield</span><div><strong>Sécurisé</strong><span>Chiffrement avancé des données</span></div></li>
+          <li><span class="material-symbols-rounded">monitoring</span><div><strong>Efficace</strong><span>Suivi en temps réel</span></div></li>
+          <li><span class="material-symbols-rounded">handshake</span><div><strong>Collaboratif</strong><span>Pharmacies, patients, autorités</span></div></li>
+          <li><span class="material-symbols-rounded">tune</span><div><strong>Personnalisé</strong><span>Adapté à vos politiques internes</span></div></li>
+        </ul>
+        <div class="ins-reg__support">
+          <span class="material-symbols-rounded">headset_mic</span>
+          <div><strong>Besoin d'assistance ?</strong><p>Notre équipe support vous accompagne.</p></div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="ins-reg__form-wrap">
+      {% if error %}<div class="ins-reg__error">{{ error }}</div>{% endif %}
+      <form method="post" class="ins-reg__form">
+        {% csrf_token %}
+        <h2>Informations sur la compagnie</h2>
+        <div class="ins-reg__grid">
+          <label class="ins-reg__field"><span>Nom de la compagnie *</span><input name="company_name" required placeholder="Ex. CNAMGS"></label>
+          <label class="ins-reg__field"><span>Sigle</span><input name="acronym" placeholder="Ex. CNAMGS"></label>
+          <label class="ins-reg__field"><span>N° RCCM</span><input name="registration_number"></label>
+          <label class="ins-reg__field"><span>NIF</span><input name="tax_id"></label>
+          <label class="ins-reg__field"><span>Pays</span>
+            <select name="country"><option value="Gabon">Gabon</option></select>
+          </label>
+          <label class="ins-reg__field ins-reg__field--full"><span>Adresse du siège</span><input name="headquarters_address"></label>
+          <label class="ins-reg__field"><span>E-mail professionnel *</span><input type="email" name="company_email" required></label>
+          <label class="ins-reg__field"><span>Téléphone professionnel</span><input name="company_phone" placeholder="+241…"></label>
+        </div>
+
+        <h2>Informations du responsable</h2>
+        <div class="ins-reg__grid">
+          <label class="ins-reg__field"><span>Prénom</span><input name="rep_first_name"></label>
+          <label class="ins-reg__field"><span>Nom</span><input name="rep_last_name"></label>
+          <label class="ins-reg__field ins-reg__field--full"><span>Nom et prénom (affichage)</span><input name="rep_full_name" placeholder="Optionnel si prénom/nom renseignés"></label>
+          <label class="ins-reg__field"><span>Fonction</span><input name="rep_job_title" placeholder="Directeur général…"></label>
+          <label class="ins-reg__field"><span>Téléphone</span><input name="rep_phone"></label>
+        </div>
+
+        <h2>Sécurité du compte</h2>
+        <div class="ins-reg__grid">
+          <label class="ins-reg__field"><span>Mot de passe *</span><input type="password" name="password" required autocomplete="new-password"></label>
+          <label class="ins-reg__field"><span>Confirmer le mot de passe *</span><input type="password" name="password2" required autocomplete="new-password"></label>
+        </div>
+        <p class="ins-reg__pwd-hint">Le mot de passe doit contenir au minimum 8 caractères avec une majuscule, un chiffre et un caractère spécial.</p>
+
+        <label class="ins-reg__terms">
+          <input type="checkbox" name="accept_terms" value="1" required>
+          J'accepte les Conditions d'utilisation et la Politique de confidentialité
+        </label>
+        <button type="submit" class="ins-reg__submit"><span class="material-symbols-rounded">person_add</span> Créer mon compte</button>
+        <p class="ins-reg__login">Vous avez déjà un compte ? <a href="{% url 'login' %}">Se connecter</a></p>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}

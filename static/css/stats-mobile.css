@@ -1,0 +1,370 @@
+/* Statistiques & rapports — layout mobile (design system Gab'Pharma) */
+.stats-portal {
+  --stats-accent: #6c2aed;
+  --stats-accent-soft: #f5f3ff;
+  --stats-success: #16a34a;
+  --stats-warn: #f59e0b;
+  --stats-danger: #ef4444;
+  --stats-info: #2563eb;
+  font-family: "Poppins", "Plus Jakarta Sans", sans-serif;
+}
+
+.stats-portal--admin {
+  --stats-accent: #228545;
+  --stats-accent-soft: #f0f9f3;
+}
+
+.stats-portal--authority {
+  --stats-accent: #0ea5e9;
+  --stats-accent-soft: #f0f9ff;
+}
+
+.stats-portal--partner {
+  --stats-accent: #8b5cf6;
+  --stats-accent-soft: #f5f3ff;
+}
+
+.stats-portal__pharmacy {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  margin: -0.25rem 0 1rem;
+}
+
+.stats-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.stats-toolbar select,
+.stats-toolbar .stats-export-btn {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: #fff;
+}
+
+.stats-toolbar select:focus {
+  outline: 2px solid var(--stats-accent);
+  border-color: var(--stats-accent);
+}
+
+.stats-export-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.stats-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-decoration: none;
+  color: #374151;
+}
+
+.stats-export-btn--primary {
+  background: var(--stats-accent) !important;
+  color: #fff !important;
+  border-color: var(--stats-accent) !important;
+}
+
+.stats-kpi-scroll {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+  margin: 0 -0.25rem 1.25rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.stats-kpi-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.stats-kpi-card {
+  flex: 0 0 auto;
+  min-width: 9.5rem;
+  max-width: 11rem;
+  scroll-snap-align: start;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+}
+
+.stats-kpi-card__label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+  line-height: 1.3;
+}
+
+.stats-kpi-card__value {
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--stats-accent);
+  margin-top: 0.35rem;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.stats-kpi-card__value--neutral {
+  color: #111827;
+}
+
+.stats-kpi-card__sub {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+}
+
+.stats-kpi-card__trend {
+  display: inline-block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  margin-top: 0.35rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+}
+
+.stats-kpi-card__trend--up {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.stats-chart-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.stats-chart-card h2 {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+
+.stats-chart-card .chart-box {
+  height: 13rem;
+  min-width: 0;
+}
+
+.stats-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 640px) {
+  .stats-status-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.stats-status-pill {
+  border-radius: 0.85rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid transparent;
+}
+
+.stats-status-pill__count {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.stats-status-pill__label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-top: 0.2rem;
+}
+
+.stats-status-pill__pct {
+  font-size: 0.6rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.stats-status-pill--green {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.stats-status-pill--blue {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.stats-status-pill--amber {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.stats-status-pill--rose {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.stats-status-pill--slate {
+  background: #f8fafc;
+  color: #475569;
+}
+
+.stats-top-list {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+}
+
+.stats-top-list h2 {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+
+.stats-top-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.8125rem;
+}
+
+.stats-top-row:last-child {
+  border-bottom: 0;
+}
+
+.stats-top-rank {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: var(--stats-accent-soft);
+  color: var(--stats-accent);
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.35rem;
+  flex-shrink: 0;
+}
+
+.stats-grid-2 {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .stats-kpi-scroll {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: visible;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .stats-kpi-card {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .stats-kpi-scroll--dense {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  @media (min-width: 1280px) {
+    .stats-kpi-scroll--dense {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
+  .stats-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats-chart-card .chart-box {
+    height: 14rem;
+  }
+}
+
+.stats-kpi-more {
+  margin-bottom: 1rem;
+}
+
+.stats-kpi-more summary {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--stats-accent);
+  cursor: pointer;
+  list-style: none;
+}
+
+.stats-kpi-more summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Barre de navigation mobile pharmacie */
+.pharmacy-mobile-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: space-around;
+  align-items: stretch;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  padding: 0.35rem 0 calc(0.35rem + env(safe-area-inset-bottom, 0));
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+}
+
+@media (min-width: 1024px) {
+  .pharmacy-mobile-nav {
+    display: none;
+  }
+}
+
+body.pharmacy-stats-mobile {
+  padding-bottom: 4.25rem;
+}
+
+.pharmacy-mobile-nav a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  padding: 0.35rem 0.15rem;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.pharmacy-mobile-nav a.is-active {
+  color: #6c2aed;
+}
+
+.pharmacy-mobile-nav a .material-symbols-rounded {
+  font-size: 1.35rem;
+}

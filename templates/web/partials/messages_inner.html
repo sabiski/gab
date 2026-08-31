@@ -1,0 +1,32 @@
+{% load portal_urls %}
+{% if client_portal %}<div class="space-y-5">{% else %}<div class="max-w-site mx-auto px-4 py-8">{% endif %}
+  <h1 class="portal-hide-in-espace text-2xl font-extrabold mb-2">Messagerie</h1>
+  <p class="{% if client_portal %}text-sm text-[#6B7280] font-medium mb-4{% else %}text-sm text-ink-muted mb-6{% endif %}">Échangez directement avec une pharmacie partenaire.</p>
+
+  <div class="grid lg:grid-cols-2 gap-6">
+    <section class="bg-white border border-[#E5E7EB] rounded-2xl p-5">
+      <h2 class="font-extrabold mb-4">Conversations</h2>
+      {% for c in conversations %}
+      <a href="{% portal_url 'pharmacy_chat' c.pharmacy.slug %}" class="flex justify-between py-3 border-b border-slate-50 hover:bg-canvas/50 -mx-2 px-2 rounded">
+        <span class="font-bold">{{ c.pharmacy.name }}</span>
+        <span class="text-xs text-ink-muted">{{ c.updated_at|date:"d/m H:i" }}</span>
+      </a>
+      {% empty %}
+      <p class="text-sm text-ink-muted">Aucune conversation pour le moment.</p>
+      {% endfor %}
+    </section>
+    <section class="bg-white border border-[#E5E7EB] rounded-2xl p-5">
+      <h2 class="font-extrabold mb-4">Contacter une pharmacie</h2>
+      <ul class="space-y-2 text-sm max-h-80 overflow-y-auto">
+        {% for ph in pharmacies %}
+        <li>
+          <a href="{% portal_url 'pharmacy_chat' ph.slug %}" class="flex justify-between py-2 px-3 rounded-xl border hover:border-primary hover:bg-primary-50 font-semibold">
+            {{ ph.name }}
+            <span class="material-symbols-rounded sm text-primary">chat</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+</div>

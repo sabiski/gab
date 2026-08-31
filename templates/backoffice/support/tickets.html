@@ -1,0 +1,48 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Réclamations{% endblock %}
+{% block bo_label %}{% if bo_role == "admin" %}Administration{% else %}Centre de support{% endif %}{% endblock %}
+{% block bo_title %}Réclamations clients{% endblock %}
+{% block bo_content %}
+<form method="get" class="bg-white rounded-2xl border p-3 mb-4 flex flex-wrap gap-2 items-center">
+  <select name="status" class="border rounded-xl px-3 py-2 text-sm">
+    <option value="">Tous les statuts</option>
+    {% for val, label in statuses %}<option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl">Filtrer</button>
+</form>
+<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} ticket{{ total_count|pluralize }}</p>
+
+<div class="space-y-3">
+  {% for t in page_obj %}
+  <article class="bg-white rounded-2xl border p-4">
+    <div class="flex flex-wrap justify-between gap-2 mb-2">
+      <div>
+        <p class="font-extrabold">{{ t.code }} — {{ t.subject }}</p>
+        <p class="text-xs text-ink-muted">{{ t.client }} · {{ t.get_category_display }} · {{ t.created_at|date:"d/m/Y H:i" }}{% if t.order %} · {{ t.order.code }}{% endif %}</p>
+      </div>
+      <span class="text-xs font-bold px-2 py-1 rounded-full bg-primary-50 text-primary h-fit">{{ t.get_status_display }}</span>
+    </div>
+    <p class="text-sm mb-3">{{ t.description }}</p>
+    {% if t.attachment %}<p class="text-xs mb-3"><a href="{{ t.attachment.url }}" class="text-primary font-bold" target="_blank" rel="noopener">Pièce jointe</a></p>{% endif %}
+    <form method="post" class="flex flex-wrap gap-2 items-end border-t pt-3">
+      {% csrf_token %}
+      <input type="hidden" name="ticket_id" value="{{ t.id }}">
+      <div>
+        <label class="text-[10px] font-bold text-ink-muted uppercase">Statut</label>
+        <select name="status" class="block border rounded-xl px-2 py-1.5 text-sm">
+          {% for val, label in statuses %}<option value="{{ val }}" {% if t.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="flex-1 min-w-[180px]">
+        <label class="text-[10px] font-bold text-ink-muted uppercase">Notes internes</label>
+        <input name="staff_notes" value="{{ t.staff_notes }}" class="w-full border rounded-xl px-3 py-1.5 text-sm" placeholder="Suivi…">
+      </div>
+      <button class="bg-primary text-white text-xs font-bold px-4 py-2 rounded-full">Enregistrer</button>
+    </form>
+  </article>
+  {% empty %}
+  <p class="bg-white rounded-2xl border p-8 text-center text-ink-muted">Aucune réclamation.</p>
+  {% endfor %}
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endblock %}

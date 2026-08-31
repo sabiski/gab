@@ -1,0 +1,209 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Abonnements{% endblock %}
+{% block bo_label %}Administration{% endblock %}
+{% block bo_title %}Abonnements plateforme{% endblock %}
+{% block bo_content %}
+
+<div class="flex flex-wrap gap-2 mb-6">
+  <a href="?tab=pharmacies" class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold {% if tab == 'pharmacies' %}bg-primary text-white{% else %}bg-white border text-ink-muted hover:border-primary{% endif %}">
+    <span class="material-symbols-rounded sm">local_pharmacy</span> Pharmacies
+  </a>
+  <a href="?tab=insurers" class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold {% if tab == 'insurers' %}bg-[#5B47FB] text-white{% else %}bg-white border text-ink-muted hover:border-[#5B47FB]{% endif %}">
+    <span class="material-symbols-rounded sm">health_and_safety</span> Assurances
+    {% if insurer_pending %}<span class="bg-amber-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-full">{{ insurer_pending }}</span>{% endif %}
+  </a>
+</div>
+
+{% if tab == 'pharmacies' %}
+<div class="grid sm:grid-cols-2 gap-4 mb-6">
+  <div class="bg-primary-50 border border-primary/20 rounded-2xl p-4">
+    <p class="text-xs font-bold text-ink-muted uppercase">MRR pharmacies (actifs)</p>
+    <p class="text-2xl font-extrabold text-primary">{{ pharmacy_mrr|floatformat:0 }} FCFA</p>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <section class="bg-white rounded-2xl border p-5 h-fit">
+    <h2 class="font-extrabold mb-3">Créer un abonnement pharmacie</h2>
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      <input type="hidden" name="tab" value="pharmacies">
+      <input type="hidden" name="action" value="create_pharmacy">
+      <select name="pharmacy_id" required class="w-full border rounded-xl px-3 py-2 text-sm">
+        <option value="">Pharmacie…</option>
+        {% for p in pharmacies %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+      </select>
+      <select name="plan" class="w-full border rounded-xl px-3 py-2 text-sm">
+        {% for val, label in plans %}
+          {% if val != "none" %}<option value="{{ val }}">{{ label }}</option>{% endif %}
+        {% endfor %}
+      </select>
+      <label class="flex items-center gap-2 text-sm font-semibold">
+        <input type="checkbox" name="annual" class="rounded"> Facturation annuelle (−20 %)
+      </label>
+      <button class="bg-primary text-white font-bold text-sm px-4 py-2 rounded-full">Activer</button>
+    </form>
+  </section>
+
+  <section class="lg:col-span-2 bg-white rounded-2xl border overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+        <tr><th class="px-4 py-3">Pharmacie</th><th class="px-4 py-3">Plan</th><th class="px-4 py-3">Montant</th><th class="px-4 py-3">Période</th><th class="px-4 py-3">Statut</th></tr>
+      </thead>
+      <tbody>
+        {% for s in subscriptions %}
+        <tr class="border-t align-top">
+          <td class="px-4 py-3 font-bold">{{ s.pharmacy.name }}</td>
+          <td class="px-4 py-3">{{ s.get_plan_display }}</td>
+          <td class="px-4 py-3 text-primary font-bold">{{ s.amount }} F</td>
+          <td class="px-4 py-3 text-ink-muted whitespace-nowrap">{{ s.starts_at|date:"d/m/Y" }} → {{ s.ends_at|date:"d/m/Y" }}</td>
+          <td class="px-4 py-3">
+            <form method="post" class="flex flex-wrap gap-1 items-center">
+              {% csrf_token %}
+              <input type="hidden" name="tab" value="pharmacies">
+              <input type="hidden" name="action" value="status_pharmacy">
+              <input type="hidden" name="sub_id" value="{{ s.id }}">
+              <select name="status" class="border rounded text-xs px-1 py-1">
+                {% for val, label in statuses %}<option value="{{ val }}" {% if s.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+              <button class="text-xs font-bold text-primary px-2">OK</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="5" class="px-4 py-10 text-center text-ink-muted">Aucun abonnement</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+
+{% else %}
+
+<div class="mb-4 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm">
+  <p class="font-extrabold text-violet-900">Revenus plateforme — compagnies d'assurance</p>
+  <p class="text-xs text-ink-muted mt-0.5">Facturez les assureurs qui s'inscrivent sur Gab'Pharma. L'accès au portail est bloqué tant que l'abonnement n'est pas payé et activé.</p>
+</div>
+
+<div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <div class="bg-[#5B47FB]/10 border border-[#5B47FB]/20 rounded-2xl p-4">
+    <p class="text-xs font-bold text-ink-muted uppercase">MRR assurances (actifs)</p>
+    <p class="text-2xl font-extrabold text-[#5B47FB]">{{ insurer_mrr|floatformat:0 }} FCFA</p>
+  </div>
+  <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+    <p class="text-xs font-bold text-ink-muted uppercase">Encaissé (total)</p>
+    <p class="text-2xl font-extrabold text-emerald-700">{{ insurer_collected|floatformat:0 }} FCFA</p>
+  </div>
+  <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+    <p class="text-xs font-bold text-ink-muted uppercase">En attente de paiement</p>
+    <p class="text-2xl font-extrabold text-amber-700">{{ insurer_pending }}</p>
+  </div>
+  <div class="bg-white border rounded-2xl p-4 text-xs text-ink-muted">
+    <p class="font-bold text-ink mb-1">Tarifs mensuels</p>
+    <p>Standard : {{ insurer_plan_amounts.standard|floatformat:0 }} F</p>
+    <p>Professionnel : {{ insurer_plan_amounts.professional|floatformat:0 }} F</p>
+    <p>Entreprise : {{ insurer_plan_amounts.enterprise|floatformat:0 }} F</p>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <section class="bg-white rounded-2xl border p-5 h-fit space-y-4">
+    <div>
+      <h2 class="font-extrabold mb-1">Nouvel abonnement assureur</h2>
+      <p class="text-xs text-ink-muted mb-3">Après validation d'une inscription (<a href="{% url 'bo_admin_insurance' %}" class="text-primary font-bold underline">Assurances — pilotage</a>).</p>
+      <form method="post" class="space-y-3">
+        {% csrf_token %}
+        <input type="hidden" name="tab" value="insurers">
+        <input type="hidden" name="action" value="create_insurer">
+        <select name="partner_id" required class="w-full border rounded-xl px-3 py-2 text-sm">
+          <option value="">Compagnie d'assurance…</option>
+          {% for p in insurer_partners %}
+          <option value="{{ p.id }}">{{ p.organization_name }}{% if p.acronym %} ({{ p.acronym }}){% endif %}</option>
+          {% endfor %}
+        </select>
+        <select name="plan" class="w-full border rounded-xl px-3 py-2 text-sm">
+          <option value="standard">Standard — {{ insurer_plan_amounts.standard|floatformat:0 }} F/mois</option>
+          <option value="professional">Professionnel — {{ insurer_plan_amounts.professional|floatformat:0 }} F/mois</option>
+          <option value="enterprise">Entreprise — {{ insurer_plan_amounts.enterprise|floatformat:0 }} F/mois</option>
+        </select>
+        <label class="flex items-center gap-2 text-sm font-semibold">
+          <input type="checkbox" name="annual" class="rounded"> Facturation annuelle (−15 %)
+        </label>
+        <select name="payment_method" class="w-full border rounded-xl px-3 py-2 text-sm">
+          <option value="">Mode de paiement (optionnel)</option>
+          {% for val, label in payment_methods %}
+          <option value="{{ val }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="payment_reference" placeholder="Référence virement / Mobile Money" class="w-full border rounded-xl px-3 py-2 text-sm">
+        <label class="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+          <input type="checkbox" name="activate_now" class="rounded"> Paiement reçu — activer immédiatement
+        </label>
+        <button class="w-full bg-[#5B47FB] text-white font-bold text-sm px-4 py-2.5 rounded-full">Créer l'abonnement</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="lg:col-span-2 bg-white rounded-2xl border overflow-x-auto">
+    <h2 class="font-extrabold px-4 pt-4 pb-2">Abonnements assureurs</h2>
+    <table class="w-full text-sm">
+      <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+        <tr>
+          <th class="px-4 py-3">Assureur</th>
+          <th class="px-4 py-3">Plan</th>
+          <th class="px-4 py-3">Montant</th>
+          <th class="px-4 py-3">Période</th>
+          <th class="px-4 py-3">Paiement</th>
+          <th class="px-4 py-3">Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in insurer_subscriptions %}
+        <tr class="border-t align-top">
+          <td class="px-4 py-3">
+            <p class="font-bold">{{ s.partner.organization_name }}</p>
+            <p class="text-xs text-ink-muted">{{ s.partner.user.email }}</p>
+          </td>
+          <td class="px-4 py-3">{{ s.get_plan_display }}</td>
+          <td class="px-4 py-3 text-[#5B47FB] font-bold">{{ s.amount|floatformat:0 }} F</td>
+          <td class="px-4 py-3 text-ink-muted whitespace-nowrap text-xs">{{ s.starts_at|date:"d/m/Y" }} → {{ s.ends_at|date:"d/m/Y" }}</td>
+          <td class="px-4 py-3 text-xs">
+            {% if s.paid_at %}
+            <span class="text-emerald-700 font-bold">Payé</span>
+            <p class="text-ink-muted">{{ s.paid_at|date:"d/m/Y H:i" }}</p>
+            {% if s.payment_reference %}<p class="text-ink-muted">{{ s.payment_reference }}</p>{% endif %}
+            {% else %}
+            <form method="post" class="space-y-1 max-w-[200px]">
+              {% csrf_token %}
+              <input type="hidden" name="tab" value="insurers">
+              <input type="hidden" name="action" value="record_payment">
+              <input type="hidden" name="sub_id" value="{{ s.id }}">
+              <select name="payment_method" class="w-full border rounded text-xs px-1 py-1">
+                <option value="">Mode…</option>
+                {% for val, label in payment_methods %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+              </select>
+              <input type="text" name="payment_reference" placeholder="Référence" class="w-full border rounded text-xs px-2 py-1">
+              <button class="w-full bg-emerald-600 text-white font-bold text-xs px-2 py-1.5 rounded-lg">Encaisser & activer</button>
+            </form>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <form method="post" class="flex flex-wrap gap-1 items-center">
+              {% csrf_token %}
+              <input type="hidden" name="tab" value="insurers">
+              <input type="hidden" name="action" value="status_insurer">
+              <input type="hidden" name="sub_id" value="{{ s.id }}">
+              <select name="status" class="border rounded text-xs px-1 py-1">
+                {% for val, label in insurer_statuses %}<option value="{{ val }}" {% if s.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select>
+              <button class="text-xs font-bold text-[#5B47FB] px-2">OK</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="px-4 py-10 text-center text-ink-muted">Aucun abonnement assureur. Validez une inscription puis créez un forfait ici.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

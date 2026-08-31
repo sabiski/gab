@@ -1,0 +1,27 @@
+<div class="cp-file-upload" data-cp-file-upload>
+  <input type="file" name="{{ field_name }}" id="file-{{ field_name }}" accept=".pdf,.jpg,.jpeg,.png" class="cp-file-upload__input" hidden>
+  <label for="file-{{ field_name }}" class="cp-file-upload__zone {% if has_file %}is-uploaded{% endif %}">
+    <span class="cp-file-upload__icon"><span class="material-symbols-rounded">{{ icon }}</span></span>
+    <span class="cp-file-upload__body">
+      <span class="cp-file-upload__title">{{ label }}</span>
+      <span class="cp-file-upload__hint" data-file-hint>
+        {% if has_file %}Glissez un fichier ou cliquez pour remplacer{% else %}Glissez un fichier ou cliquez pour ajouter{% endif %}
+      </span>
+      <span class="cp-file-upload__meta">PDF, JPG ou PNG</span>
+      <span class="cp-file-upload__name hidden" data-file-name></span>
+    </span>
+    <span class="cp-file-upload__btn">
+      <span class="material-symbols-rounded">upload_file</span>
+      Parcourir
+    </span>
+  </label>
+  {% if has_file and file_url %}
+  <a href="{{ file_url }}" target="_blank" rel="noopener" class="cp-file-upload__current">
+    <span class="material-symbols-rounded">check_circle</span>
+    Document enregistré — voir
+  </a>
+  {% endif %}
+  <button type="button" class="cp-file-upload__clear hidden" data-file-clear aria-label="Retirer le fichier sélectionné">
+    <span class="material-symbols-rounded">close</span>
+  </button>
+</div>

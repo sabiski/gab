@@ -1,0 +1,9 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Panier{% endblock %}
+{% block portal_heading %}Votre panier{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Vérifiez vos articles avant de passer commande.</p>
+{% endblock %}
+{% block portal_body %}
+{% include "backoffice/client/partials/cart_body.html" %}
+{% endblock %}

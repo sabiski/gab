@@ -1,0 +1,64 @@
+<header class="bg-white border-b border-slate-100/80 sticky top-0 z-40 shadow-[0_1px_0_rgba(1,85,51,0.04)]">
+  <div class="max-w-site mx-auto px-3 sm:px-4 py-2.5 lg:py-3">
+    <div class="flex flex-wrap items-center gap-2 sm:gap-3 lg:gap-6">
+      <a href="{% url 'home' %}" class="flex items-center gap-2 shrink-0 group min-w-0">
+        <img src="/static/images/logo-gabpharma.png" alt="Gab'Pharma" class="logo-mark drop-shadow-sm group-hover:scale-[1.02] transition">
+        <span class="hidden sm:block leading-tight min-w-0">
+          <span class="block text-primary-700 font-extrabold text-base lg:text-[1.35rem] tracking-tight truncate">Gab'Pharma</span>
+          <span class="block text-[10px] lg:text-[11px] text-ink-muted font-medium truncate">La santé à portée de main</span>
+        </span>
+      </a>
+
+      <div class="flex items-center gap-0.5 ml-auto sm:ml-0 lg:order-last shrink-0">
+        {% if user.is_authenticated %}
+        <a href="{% url 'subscription_plans' %}" class="flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-1.5 rounded-xl hover:bg-[#F5F3FF] text-ink-muted hover:text-[#6C3AED] transition" title="Forfaits recherche">
+          <span class="material-symbols-rounded {% if access_status %}filled text-[#6C3AED]{% endif %}">card_membership</span>
+          <span class="text-[10px] font-semibold hidden lg:block">Forfaits</span>
+        </a>
+        <a href="{% url 'emergency' %}" class="flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-1.5 rounded-xl hover:bg-rose-50 text-ink-muted {% if has_premium %}hover:text-rose-600{% else %}opacity-60{% endif %} transition" title="{% if has_premium %}Urgence SOS{% else %}Premium requis{% endif %}">
+          <span class="material-symbols-rounded {% if has_premium %}text-rose-600 filled{% endif %}">e911_emergency</span>
+          <span class="text-[10px] font-semibold hidden lg:block">Urgence</span>
+        </a>
+        <a href="{% url user.backoffice_home %}" class="flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-1.5 rounded-xl hover:bg-primary-50 text-ink-muted hover:text-primary-700 transition" title="Mon espace">
+          <span class="material-symbols-rounded">dashboard</span>
+          <span class="text-[10px] font-semibold hidden lg:block">Espace</span>
+        </a>
+        <a href="{% url 'bo_client_settings' %}" class="flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-1.5 rounded-xl hover:bg-[#F5F3FF] text-ink-muted hover:text-[#6C3AED] transition" title="Mon profil">
+          <span class="material-symbols-rounded filled text-[#6C3AED]">person</span>
+          <span class="text-[10px] font-semibold hidden lg:block">Profil</span>
+        </a>
+        {% else %}
+        <a href="{% url 'login' %}" class="flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-1.5 rounded-xl hover:bg-primary-50 text-ink-muted hover:text-primary-700 transition" title="Connexion">
+          <span class="material-symbols-rounded">person</span>
+          <span class="text-[10px] font-semibold hidden lg:block">Connexion</span>
+        </a>
+        {% endif %}
+        <a href="{% if user.is_authenticated %}{% url 'favorites' %}{% else %}{% url 'login' %}?next={% url 'favorites' %}{% endif %}" class="relative flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-1.5 rounded-xl hover:bg-primary-50 text-ink-muted hover:text-primary-700 transition" title="Favoris">
+          <span class="material-symbols-rounded">favorite</span>
+          {% if favorites_count %}<span class="absolute top-0 right-0.5 h-4 min-w-[1rem] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{{ favorites_count }}</span>{% endif %}
+          <span class="text-[10px] font-semibold hidden lg:block">Favoris</span>
+        </a>
+        <a href="{% if user.is_authenticated %}{% url 'cart' %}{% else %}{% url 'login' %}?next={% url 'cart' %}{% endif %}" class="relative flex flex-col items-center gap-0.5 px-1.5 sm:px-2.5 py-1.5 rounded-xl hover:bg-primary-50 text-ink-muted hover:text-primary-700 transition" title="Panier">
+          <span class="material-symbols-rounded">shopping_bag</span>
+          {% if cart_count %}<span class="absolute top-0 right-0.5 h-4 min-w-[1rem] px-1 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">{{ cart_count }}</span>{% endif %}
+          <span class="text-[10px] font-semibold hidden lg:block">Panier</span>
+        </a>
+      </div>
+
+      <form action="{% url 'search' %}" method="get" class="w-full sm:flex-1 sm:min-w-0 order-last sm:order-none">
+        <div class="flex items-stretch rounded-full border-[1.5px] border-primary/20 overflow-hidden focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 bg-canvas transition">
+          <span class="pl-3 flex items-center text-primary/70 shrink-0">
+            <span class="material-symbols-rounded">search</span>
+          </span>
+          <input type="search" name="q" value="{{ q|default:'' }}"
+            placeholder="Médicament, pharmacie…"
+            class="flex-1 min-w-0 bg-transparent px-2 py-2 sm:py-2.5 text-sm outline-none placeholder:text-ink-muted/80 font-medium">
+          <button type="submit" class="bg-primary hover:bg-primary-600 text-white px-3 sm:px-5 flex items-center gap-1.5 text-sm font-semibold transition shrink-0">
+            <span class="hidden sm:inline">Rechercher</span>
+            <span class="material-symbols-rounded sm sm:hidden">search</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</header>

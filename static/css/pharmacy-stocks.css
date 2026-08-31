@@ -1,0 +1,354 @@
+/* Page stocks pharmacie — complète pharmacy-orders.css */
+.pharmacy-stocks {
+  padding-bottom: 5.5rem;
+}
+
+@media (min-width: 1024px) {
+  .pharmacy-stocks {
+    padding-bottom: 2rem;
+  }
+}
+
+.pharmacy-stocks .po-hero {
+  background: linear-gradient(135deg, #1e4d8c 0%, #2563eb 45%, #3b82f6 100%);
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.22);
+}
+
+.pharmacy-stocks .po-hero__role--preparer {
+  background: rgba(224, 231, 255, 0.28);
+  border-color: rgba(199, 210, 254, 0.45);
+}
+
+.stk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+
+.stk-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid #e5ebe7;
+  background: #fff;
+  color: #14291c;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(20, 41, 28, 0.05);
+}
+
+.stk-action-btn--primary {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #fff;
+  border-color: transparent;
+}
+
+.stk-action-btn--outline {
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.stk-import {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e5ebe7;
+  background: #fff;
+  font-size: 0.6875rem;
+}
+
+.stk-import input[type="file"] {
+  max-width: 7rem;
+  font-size: 0.625rem;
+}
+
+.stk-help {
+  background: #fff;
+  border: 1px solid #e8eeea;
+  border-radius: 1rem;
+  margin-bottom: 0.85rem;
+  overflow: hidden;
+}
+
+.stk-help summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.stk-help summary::-webkit-details-marker {
+  display: none;
+}
+
+.stk-help__body {
+  padding: 0 0.9rem 0.85rem;
+  font-size: 0.75rem;
+  color: #5b6b63;
+  line-height: 1.5;
+}
+
+.stk-help__body ol {
+  list-style: decimal;
+  padding-left: 1.15rem;
+  margin: 0;
+}
+
+.stk-help__body li + li {
+  margin-top: 0.35rem;
+}
+
+.stk-results {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #5b6b63;
+  margin: 0 0 0.65rem 0.15rem;
+}
+
+/* Cartes stock */
+.stk-stock-card {
+  background: #fff;
+  border: 1px solid #e8eeea;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(20, 41, 28, 0.05);
+  margin-bottom: 0.35rem;
+}
+
+.stk-stock-card--low {
+  border-color: #fcd34d;
+  box-shadow: 0 2px 12px rgba(245, 158, 11, 0.1);
+}
+
+.stk-stock-card--out {
+  border-color: #fecaca;
+  box-shadow: 0 2px 12px rgba(239, 68, 68, 0.1);
+}
+
+.stk-stock-card--expiring {
+  border-color: #fdba74;
+}
+
+.stk-stock-card__main {
+  padding: 0.85rem 0.9rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+@media (min-width: 768px) {
+  .stk-stock-card__main {
+    grid-template-columns: 1.4fr repeat(4, 1fr);
+    align-items: end;
+  }
+
+  .stk-stock-card__main--wide {
+    grid-template-columns: 1.2fr repeat(6, 1fr);
+  }
+}
+
+.stk-stock-card__head {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+}
+
+@media (min-width: 768px) {
+  .stk-stock-card__head {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+}
+
+.stk-stock-card__dot {
+  width: 0.35rem;
+  border-radius: 9999px;
+  align-self: stretch;
+  min-height: 2.5rem;
+  background: #22c55e;
+  flex-shrink: 0;
+}
+
+.stk-stock-card--low .stk-stock-card__dot {
+  background: #f59e0b;
+}
+
+.stk-stock-card--out .stk-stock-card__dot {
+  background: #ef4444;
+}
+
+.stk-stock-card--expiring .stk-stock-card__dot {
+  background: #f97316;
+}
+
+.stk-stock-card__name {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.stk-stock-card__meta {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #5b6b63;
+  margin-top: 0.15rem;
+}
+
+.stk-stock-card__edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-top: 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.stk-field label {
+  display: block;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: #5b6b63;
+  margin-bottom: 0.2rem;
+}
+
+.stk-field input {
+  width: 100%;
+  border: 1px solid #e5ebe7;
+  border-radius: 0.55rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8125rem;
+  background: #f9fbfa;
+}
+
+.stk-field input:focus {
+  outline: 2px solid #2563eb;
+  border-color: #2563eb;
+  background: #fff;
+}
+
+.stk-stock-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0 0.9rem 0.85rem;
+}
+
+.stk-save-btn {
+  background: linear-gradient(135deg, #228545, #015533);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.45rem 0.85rem;
+  border: none;
+  border-radius: 0.65rem;
+  cursor: pointer;
+}
+
+.stk-movement {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.55rem 0.9rem;
+  margin: 0 0.5rem 0.5rem;
+  background: #f5f8f6;
+  border: 1px dashed #d1ddd6;
+  border-radius: 0.75rem;
+  font-size: 0.6875rem;
+}
+
+.stk-movement select,
+.stk-movement input {
+  border: 1px solid #e5ebe7;
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.6875rem;
+}
+
+.stk-delete {
+  padding: 0 0.9rem 0.65rem;
+}
+
+.stk-delete button {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #e11d48;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.stk-panel {
+  background: #fff;
+  border: 1px solid #e8eeea;
+  border-radius: 1.15rem;
+  padding: 1rem;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 2px 10px rgba(20, 41, 28, 0.04);
+}
+
+.stk-panel__title {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 0.35rem;
+}
+
+.stk-panel table {
+  width: 100%;
+  font-size: 0.8125rem;
+}
+
+.stk-panel thead {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #5b6b63;
+  background: #f5f8f6;
+}
+
+.stk-panel th,
+.stk-panel td {
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+}
+
+.stk-panel tbody tr {
+  border-top: 1px solid #eef2ef;
+}
+
+.stk-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: #fff;
+  border-radius: 1rem;
+  border: 1px dashed #d1ddd6;
+}
+
+@media (max-width: 1023px) {
+  .bo-shell__main:has(#pharmacy-stocks-root) .bo-pharmacy-header .bo-pharmacy-header__icon,
+  .bo-shell__main:has(#pharmacy-stocks-root) .bo-pharmacy-header .min-w-0.flex-1 {
+    display: none;
+  }
+
+  .bo-shell__main:has(#pharmacy-stocks-root) .bo-pharmacy-header {
+    background: transparent;
+    border-bottom: none;
+    box-shadow: none;
+    padding-bottom: 0;
+  }
+}

@@ -1,0 +1,253 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Utilisateurs{% endblock %}
+{% block bo_label %}Administration{% endblock %}
+{% block bo_title %}Gestion des utilisateurs{% endblock %}
+{% block bo_content %}
+
+<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-5">
+  {% for r in role_distribution %}
+  <div class="bg-white border rounded-xl px-3 py-2 text-center">
+    <p class="text-[10px] font-bold text-ink-muted uppercase truncate">{{ r.label }}</p>
+    <p class="text-lg font-extrabold text-primary">{{ r.count }}</p>
+  </div>
+  {% endfor %}
+</div>
+
+{% if pending_authorities %}
+<section class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5">
+  <h2 class="font-extrabold text-amber-900 mb-2 flex items-center gap-2">
+    <span class="material-symbols-rounded sm">gavel</span> Comptes autorités en attente de validation
+  </h2>
+  <div class="space-y-2">
+    {% for u in pending_authorities %}
+    <div class="flex flex-wrap justify-between gap-2 items-center bg-white rounded-xl px-3 py-2 text-sm">
+      <div>
+        <p class="font-bold">{{ u.get_full_name|default:u.username }} · {{ u.email }}</p>
+        <p class="text-xs text-ink-muted">
+          {% if u.authority_profile %}{{ u.authority_profile.institution }} — {{ u.authority_profile.job_title }}{% else %}Institution non renseignée{% endif %}
+        </p>
+      </div>
+      <form method="post" class="shrink-0">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="validate_authority">
+        <input type="hidden" name="user_id" value="{{ u.id }}">
+        <button class="text-xs font-bold bg-primary text-white px-3 py-1.5 rounded-lg">Valider le compte</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<form method="get" class="bg-white rounded-2xl border p-3 mb-4 flex flex-wrap gap-2 items-center">
+  <div class="relative flex-1 min-w-[200px]">
+    <span class="material-symbols-rounded sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
+    <input name="q" value="{{ q }}" placeholder="Rechercher nom, email, téléphone…"
+      class="w-full border rounded-xl pl-9 pr-3 py-2 text-sm outline-none focus:border-primary">
+  </div>
+  <select name="role" class="border rounded-xl px-3 py-2 text-sm">
+    <option value="">Tous les rôles</option>
+    {% for val, label in roles %}<option value="{{ val }}" {% if filter_role == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="status" class="border rounded-xl px-3 py-2 text-sm">
+    <option value="">Tous les statuts</option>
+    {% for val, label in statuses %}<option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="verification" class="border rounded-xl px-3 py-2 text-sm">
+    <option value="">Vérification</option>
+    <option value="verified" {% if filter_verification == "verified" %}selected{% endif %}>Vérifié</option>
+    <option value="partial" {% if filter_verification == "partial" %}selected{% endif %}>Partiel</option>
+    <option value="unverified" {% if filter_verification == "unverified" %}selected{% endif %}>Non vérifié</option>
+  </select>
+  <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl">Filtrer</button>
+  <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if filter_role %}role={{ filter_role }}&{% endif %}{% if filter_status %}status={{ filter_status }}&{% endif %}{% if filter_verification %}verification={{ filter_verification }}&{% endif %}export=csv"
+     class="inline-flex items-center gap-1 border font-bold text-sm px-3 py-2 rounded-xl">
+    <span class="material-symbols-rounded sm">download</span> Export
+  </a>
+  <a href="?new=1" class="inline-flex items-center gap-1 bg-primary text-white font-bold text-sm px-3 py-2 rounded-xl">
+    <span class="material-symbols-rounded sm">person_add</span> Ajouter
+  </a>
+  <a href="?invite=1" class="inline-flex items-center gap-1 border font-bold text-sm px-3 py-2 rounded-xl">
+    <span class="material-symbols-rounded sm">mail</span> Inviter
+  </a>
+  <a href="?import=1" class="inline-flex items-center gap-1 border font-bold text-sm px-3 py-2 rounded-xl">
+    <span class="material-symbols-rounded sm">upload</span> Importer
+  </a>
+</form>
+
+<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} résultat{{ total_count|pluralize }} · Les comptes non vérifiés ont des fonctionnalités restreintes (pas de commande sans vérification e-mail/téléphone).</p>
+
+{% if show_import %}
+<section class="bg-white rounded-2xl border p-5 mb-4">
+  <div class="flex justify-between mb-3">
+    <h2 class="font-extrabold">Import CSV / Excel</h2>
+    <a href="{% url 'bo_admin_users' %}" class="text-xs font-bold text-ink-muted">Fermer</a>
+  </div>
+  <p class="text-xs text-ink-muted mb-3">Colonnes : username, email, role, first_name, last_name, phone, city (séparateur ; ou ,). Un e-mail d'invitation est envoyé à chaque compte.</p>
+  <form method="post" enctype="multipart/form-data" class="flex flex-wrap gap-3 items-end">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="import_csv">
+    <input type="file" name="csv_file" accept=".csv,.xlsx,.xls" required class="text-sm">
+    <button class="bg-primary text-white font-bold rounded-xl px-4 py-2 text-sm">Importer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if show_invite %}
+<section class="bg-white rounded-2xl border p-5 mb-4">
+  <div class="flex justify-between mb-3">
+    <h2 class="font-extrabold">Inviter par e-mail</h2>
+    <a href="{% url 'bo_admin_users' %}" class="text-xs font-bold text-ink-muted">Fermer</a>
+  </div>
+  <form method="post" class="grid sm:grid-cols-3 gap-2 text-sm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="invite">
+    <input name="email" type="email" required placeholder="E-mail *" class="border rounded-xl px-3 py-2">
+    <input name="username" placeholder="Identifiant (optionnel)" class="border rounded-xl px-3 py-2">
+    <select name="role" class="border rounded-xl px-3 py-2">
+      {% for val, label in create_roles %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+      <option value="client">Client / Patient</option>
+    </select>
+    <input name="first_name" placeholder="Prénom" class="border rounded-xl px-3 py-2">
+    <input name="last_name" placeholder="Nom" class="border rounded-xl px-3 py-2">
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Envoyer l'invitation</button>
+  </form>
+</section>
+{% endif %}
+
+{% if view_obj %}
+<section class="bg-white rounded-2xl border p-5 mb-4">
+  <div class="flex justify-between mb-4">
+    <h2 class="font-extrabold">Fiche — {{ view_obj.get_full_name|default:view_obj.username }}</h2>
+    <a href="{% url 'bo_admin_users' %}" class="text-xs font-bold text-ink-muted">Fermer</a>
+  </div>
+  <dl class="grid sm:grid-cols-2 gap-3 text-sm mb-4">
+    <div><dt class="text-xs font-bold text-ink-muted">Identifiant</dt><dd class="font-bold">@{{ view_obj.username }}</dd></div>
+    <div><dt class="text-xs font-bold text-ink-muted">Contact</dt><dd>{{ view_obj.email }} · {{ view_obj.phone|default:"—" }}</dd></div>
+    <div><dt class="text-xs font-bold text-ink-muted">Rôle / statut</dt><dd>{{ view_obj.get_role_display }} · {{ view_obj.get_status_display }}</dd></div>
+    <div><dt class="text-xs font-bold text-ink-muted">Vérification</dt><dd>
+      E-mail {% if view_obj.is_email_verified %}<span class="text-primary font-bold">OK</span>{% else %}<span class="text-rose-600">non</span>{% endif %}
+      · Tél. {% if view_obj.is_phone_verified %}<span class="text-primary font-bold">OK</span>{% else %}<span class="text-rose-600">non</span>{% endif %}
+    </dd></div>
+    <div><dt class="text-xs font-bold text-ink-muted">Inscription</dt><dd>{{ view_obj.date_joined|date:"d/m/Y H:i" }}</dd></div>
+  </dl>
+  {% if client_orders %}
+  <h3 class="font-extrabold text-sm mb-2">Historique commandes (client)</h3>
+  <div class="space-y-1 text-sm max-h-48 overflow-y-auto">
+    {% for o in client_orders %}
+    <div class="flex justify-between py-1.5 border-b border-slate-50">
+      <span class="font-bold">{{ o.code }}</span>
+      <span class="text-ink-muted">{{ o.get_status_display }} · {{ o.total }} F</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="flex flex-wrap gap-2 mt-4">
+    <a href="?edit={{ view_obj.id }}" class="text-xs font-bold border px-3 py-1.5 rounded-lg">Modifier</a>
+    {% if view_obj.status != "suspended" and view_obj.id != user.id %}
+    <form method="post" onsubmit="return confirm('Suspendre ce compte ?')">
+      {% csrf_token %}<input type="hidden" name="action" value="suspend"><input type="hidden" name="user_id" value="{{ view_obj.id }}">
+      <button class="text-xs font-bold border border-rose-200 text-rose-700 px-3 py-1.5 rounded-lg">Suspendre</button>
+    </form>
+    {% elif view_obj.status == "suspended" %}
+    <form method="post">
+      {% csrf_token %}<input type="hidden" name="action" value="reactivate"><input type="hidden" name="user_id" value="{{ view_obj.id }}">
+      <button class="text-xs font-bold border border-primary text-primary px-3 py-1.5 rounded-lg">Réactiver</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+{% if show_create %}{% include "backoffice/admin/users_create_panel.html" %}{% endif %}
+{% if edit_obj %}
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-5 mb-4">
+  <div class="flex justify-between mb-3">
+    <h2 class="font-extrabold">Modifier — {{ edit_obj.username }}</h2>
+    <a href="{% url 'bo_admin_users' %}" class="text-xs font-bold text-ink-muted">Fermer</a>
+  </div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-3 gap-2 text-sm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update">
+    <input type="hidden" name="user_id" value="{{ edit_obj.id }}">
+    <input name="first_name" value="{{ edit_obj.first_name }}" placeholder="Prénom" class="border rounded-xl px-3 py-2">
+    <input name="last_name" value="{{ edit_obj.last_name }}" placeholder="Nom" class="border rounded-xl px-3 py-2">
+    <input name="email" value="{{ edit_obj.email }}" class="border rounded-xl px-3 py-2">
+    <input name="phone" value="{{ edit_obj.phone }}" class="border rounded-xl px-3 py-2">
+    <input name="city" value="{{ edit_obj.city }}" class="border rounded-xl px-3 py-2">
+    <select name="role" class="border rounded-xl px-3 py-2">{% for val, label in roles %}<option value="{{ val }}" {% if edit_obj.role == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <select name="status" class="border rounded-xl px-3 py-2">{% for val, label in statuses %}<option value="{{ val }}" {% if edit_obj.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <label class="flex items-center gap-2 text-xs font-semibold border rounded-xl px-3 py-2"><input type="checkbox" name="is_email_verified" {% if edit_obj.is_email_verified %}checked{% endif %}> E-mail vérifié</label>
+    <label class="flex items-center gap-2 text-xs font-semibold border rounded-xl px-3 py-2"><input type="checkbox" name="is_phone_verified" {% if edit_obj.is_phone_verified %}checked{% endif %}> Téléphone vérifié</label>
+    {% include "backoffice/partials/image_field.html" with name="avatar" label="Photo de profil" current=edit_obj.avatar %}
+    <button class="bg-primary text-white font-bold rounded-xl py-2 sm:col-span-2">Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="bg-white rounded-2xl border overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-canvas text-left text-[11px] font-bold text-ink-muted uppercase">
+        <tr>
+          <th class="px-4 py-3">Utilisateur</th>
+          <th class="px-4 py-3">Rôle</th>
+          <th class="px-4 py-3">Statut</th>
+          <th class="px-4 py-3">Vérification</th>
+          <th class="px-4 py-3">Contact</th>
+          <th class="px-4 py-3">Inscription</th>
+          <th class="px-4 py-3 text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in page_obj %}
+        <tr class="border-t border-slate-50 hover:bg-canvas/50">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2.5">
+              <div class="h-9 w-9 rounded-full bg-primary-50 overflow-hidden flex items-center justify-center shrink-0">
+                {% if u.avatar %}<img src="{{ u.avatar.url }}" alt="" class="h-full w-full object-cover">{% else %}<span class="text-xs font-bold text-primary">{{ u.first_name|default:u.username|slice:":1"|upper }}</span>{% endif %}
+              </div>
+              <div>
+                <p class="font-bold">{{ u.get_full_name|default:u.username }}</p>
+                <p class="text-xs text-ink-muted">@{{ u.username }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3"><span class="text-xs font-bold bg-canvas px-2 py-1 rounded-full">{{ u.get_role_display }}</span></td>
+          <td class="px-4 py-3">
+            <span class="text-xs font-bold {% if u.status == 'suspended' %}text-rose-600{% elif u.status == 'pending' %}text-amber-600{% else %}text-primary{% endif %}">{{ u.get_status_display }}</span>
+          </td>
+          <td class="px-4 py-3">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full
+              {% if u.verification_state == 'verified' %}bg-emerald-100 text-emerald-800
+              {% elif u.verification_state == 'partial' %}bg-amber-100 text-amber-900
+              {% else %}bg-slate-100 text-ink-muted{% endif %}">{{ u.verification_label }}</span>
+          </td>
+          <td class="px-4 py-3 text-xs text-ink-muted">{{ u.email|default:"—" }}<br>{{ u.phone|default:"" }}</td>
+          <td class="px-4 py-3 text-ink-muted whitespace-nowrap">{{ u.date_joined|date:"d/m/Y" }}</td>
+          <td class="px-4 py-3 text-right whitespace-nowrap">
+            <a href="?view={{ u.id }}" class="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-canvas text-ink-muted" title="Consulter"><span class="material-symbols-rounded sm">visibility</span></a>
+            <a href="?edit={{ u.id }}" class="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-primary-50 text-primary" title="Modifier"><span class="material-symbols-rounded sm">edit</span></a>
+            {% if u.status != "suspended" and u.id != user.id and u.role != "superadmin" %}
+            <form method="post" class="inline" onsubmit="return confirm('Suspendre {{ u.username }} ?')">
+              {% csrf_token %}<input type="hidden" name="action" value="suspend"><input type="hidden" name="user_id" value="{{ u.id }}">
+              <button class="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-rose-50 text-rose-600" title="Suspendre"><span class="material-symbols-rounded sm">block</span></button>
+            </form>
+            {% endif %}
+            {% if u.email %}
+            <form method="post" class="inline" onsubmit="return confirm('Renvoyer les identifiants ?')">
+              {% csrf_token %}<input type="hidden" name="action" value="resend_credentials"><input type="hidden" name="user_id" value="{{ u.id }}">
+              <button class="inline-flex items-center justify-center h-8 w-8 rounded-lg hover:bg-amber-50 text-amber-700" title="Renvoyer identifiants"><span class="material-symbols-rounded sm">mail</span></button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="px-4 py-10 text-center text-ink-muted">Aucun utilisateur trouvé</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endblock %}

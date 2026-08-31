@@ -1,0 +1,34 @@
+<div class="sm:col-span-full border border-dashed border-slate-200 rounded-xl p-3 bg-white/60" data-image-field>
+  <p class="text-xs font-bold text-ink-muted mb-2">{{ label|default:"Image" }}</p>
+  <div class="flex flex-wrap items-center gap-4">
+    <div class="h-20 w-20 rounded-xl bg-canvas border overflow-hidden flex items-center justify-center shrink-0">
+      <img
+        data-preview-for="{{ name }}"
+        src="{% if current %}{{ current.url }}{% endif %}"
+        alt=""
+        class="h-full w-full object-contain {% if not current %}hidden{% endif %}"
+      >
+      <span data-preview-placeholder="{{ name }}" class="material-symbols-rounded text-ink-muted {% if current %}hidden{% endif %}">image</span>
+    </div>
+    <div class="min-w-0 flex-1">
+      <input
+        type="file"
+        name="{{ name }}"
+        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+        {% if required %}required{% endif %}
+        data-image-preview="{{ name }}"
+        {% if rule %}data-image-rule="{{ rule }}"{% endif %}
+        {% if min_w %}data-min-w="{{ min_w }}"{% endif %}
+        {% if max_w %}data-max-w="{{ max_w }}"{% endif %}
+        {% if min_h %}data-min-h="{{ min_h }}"{% endif %}
+        {% if max_h %}data-max-h="{{ max_h }}"{% endif %}
+        {% if max_bytes %}data-max-bytes="{{ max_bytes }}"{% endif %}
+        class="block w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-primary file:text-white file:font-bold file:text-xs"
+      >
+      <p class="text-[11px] text-ink-muted mt-1.5 font-medium" data-image-hint>
+        {% if hint %}{{ hint }}{% else %}Aperçu avant enregistrement — JPG, PNG ou WebP{% endif %}
+      </p>
+      <p class="text-[11px] text-rose-600 font-semibold mt-1 hidden" data-image-error="{{ name }}"></p>
+    </div>
+  </div>
+</div>

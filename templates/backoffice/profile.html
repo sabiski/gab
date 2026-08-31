@@ -1,0 +1,126 @@
+{% extends "backoffice/base_bo.html" %}
+{% load bo_extras %}
+{% block title %}Mon profil{% endblock %}
+{% block bo_title %}Mon profil{% endblock %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/bo-profile.css?v=2">
+{% if bo_role == "pharmacy" %}
+<link rel="stylesheet" href="/static/css/stats-mobile.css?v=1">
+{% endif %}
+{% endblock %}
+{% block bo_content %}
+<div class="bo-prof" id="bo-prof-account">
+
+  <section class="bo-prof-hero">
+    <div class="bo-prof-hero__row">
+      <div class="bo-prof-hero__media bo-prof-hero__media--round">
+        {% if user.avatar %}
+        <img src="{{ user.avatar.url }}" alt="">
+        {% else %}
+        <span class="bo-prof-hero__initial">{{ user.first_name|default:user.username|slice:":1"|upper }}</span>
+        {% endif %}
+      </div>
+      <div class="bo-prof-hero__body">
+        <p class="bo-prof-hero__eyebrow">Mon compte</p>
+        <h2 class="bo-prof-hero__title">{{ user.get_full_name|default:user.username }}</h2>
+        <div class="bo-prof-hero__meta">
+          <span class="bo-prof-hero__pill">
+            {% if bo_role == "pharmacy" and pharmacy_job_label %}
+            <span class="material-symbols-rounded sm">{{ pharmacy_job_role|pharmacy_job_icon }}</span>
+            {{ pharmacy_job_label }}
+            {% else %}
+            <span class="material-symbols-rounded sm">badge</span>
+            {{ user.get_role_display }}
+            {% endif %}
+          </span>
+          {% if user.email %}<span class="bo-prof-hero__pill">{{ user.email }}</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <section class="bo-prof-card">
+      <div class="bo-prof-card__head">
+        <span class="bo-prof-card__icon"><span class="material-symbols-rounded sm">person</span></span>
+        <div>
+          <h3 class="bo-prof-card__title">Informations personnelles</h3>
+          <p class="bo-prof-card__sub">Photo, nom et coordonnées</p>
+        </div>
+      </div>
+      <div class="bo-prof-card__body bo-prof-card__body--grid">
+        {% include "backoffice/partials/image_field_bo.html" with name="avatar" label="Photo de profil" current=user.avatar round=1 %}
+        <div class="bo-prof-field">
+          <label for="u-first">Prénom</label>
+          <input id="u-first" name="first_name" value="{{ user.first_name }}">
+        </div>
+        <div class="bo-prof-field">
+          <label for="u-last">Nom</label>
+          <input id="u-last" name="last_name" value="{{ user.last_name }}">
+        </div>
+        <div class="bo-prof-field">
+          <label for="u-email">E-mail</label>
+          <input id="u-email" name="email" type="email" value="{{ user.email }}">
+        </div>
+        <div class="bo-prof-field">
+          <label for="u-phone">Téléphone</label>
+          <input id="u-phone" name="phone" value="{{ user.phone }}" placeholder="+241…">
+        </div>
+        <div class="bo-prof-field">
+          <label for="u-city">Ville</label>
+          <input id="u-city" name="city" value="{{ user.city }}">
+        </div>
+        <div class="bo-prof-field">
+          <label for="u-district">Quartier</label>
+          <input id="u-district" name="district" value="{{ user.district }}">
+        </div>
+        <div class="bo-prof-span-2">
+          <p class="bo-prof-role-note">Rôle plateforme : <strong>{{ user.get_role_display }}</strong> — non modifiable depuis cette page.</p>
+        </div>
+        <div class="bo-prof-span-2 pt-1">
+          <button type="submit" class="bo-prof-submit bo-prof-submit--primary">
+            <span class="material-symbols-rounded sm">save</span> Enregistrer
+          </button>
+        </div>
+      </div>
+    </section>
+  </form>
+
+  <section class="bo-prof-card">
+    <div class="bo-prof-card__head">
+      <span class="bo-prof-card__icon"><span class="material-symbols-rounded sm">lock</span></span>
+      <div>
+        <h3 class="bo-prof-card__title">Sécurité</h3>
+        <p class="bo-prof-card__sub">Changez votre mot de passe temporaire ou personnel</p>
+      </div>
+    </div>
+    <form method="post" class="bo-prof-card__body bo-prof-card__body--grid">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="change_password">
+      <div class="bo-prof-field bo-prof-span-2">
+        <label for="pw-current">Mot de passe actuel</label>
+        <input id="pw-current" type="password" name="current_password" required autocomplete="current-password">
+      </div>
+      <div class="bo-prof-field">
+        <label for="pw-new">Nouveau mot de passe</label>
+        <input id="pw-new" type="password" name="new_password" required minlength="8" autocomplete="new-password" placeholder="8 caractères minimum">
+      </div>
+      <div class="bo-prof-field">
+        <label for="pw-confirm">Confirmer</label>
+        <input id="pw-confirm" type="password" name="new_password2" required minlength="8" autocomplete="new-password">
+      </div>
+      <div class="bo-prof-span-2 pt-1">
+        <button type="submit" class="bo-prof-submit bo-prof-submit--secondary">
+          <span class="material-symbols-rounded sm">key</span> Mettre à jour le mot de passe
+        </button>
+      </div>
+    </form>
+  </section>
+</div>
+
+{% if bo_role == "pharmacy" %}
+{% include "backoffice/partials/pharmacy_bottom_nav.html" %}
+{% endif %}
+{% endblock %}

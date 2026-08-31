@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Inscription patient{% endblock %}
+{% block content %}
+<div class="max-w-site mx-auto px-4 py-12">
+  <div class="max-w-md mx-auto bg-white border border-slate-100 rounded-3xl p-8 shadow-card">
+    <div class="text-center mb-6">
+      <img src="/static/images/logo-gabpharma.png" alt="Gab'Pharma" class="h-14 mx-auto mb-3">
+      <h1 class="text-2xl font-extrabold text-ink tracking-tight">Créer un compte patient</h1>
+      <p class="text-sm text-ink-muted font-medium mt-1">Inscription libre — patients / clients uniquement</p>
+    </div>
+    <div class="mb-4 text-xs text-ink-muted bg-canvas rounded-xl px-3 py-2.5 font-medium leading-relaxed">
+      Pharmaciens, livreurs, admin et autorités : votre compte est créé par l’administrateur Gab'Pharma.
+      Vous recevrez vos identifiants par e-mail.
+    </div>
+    {% if error %}
+    <div class="mb-4 text-sm bg-rose-50 text-rose-700 border border-rose-100 rounded-xl px-3 py-2.5 font-medium">{{ error }}</div>
+    {% endif %}
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-ink-muted mb-1">Prénom</label>
+          <input name="first_name" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary font-medium">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-ink-muted mb-1">Nom</label>
+          <input name="last_name" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary font-medium">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1">E-mail *</label>
+        <input type="email" name="email" required autocomplete="email" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary font-medium">
+        <p class="text-[11px] text-ink-muted mt-1">Servira aussi d’identifiant de connexion.</p>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1">Téléphone</label>
+        <input name="phone" placeholder="+241..." class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary font-medium">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1">Mot de passe *</label>
+        <input type="password" name="password" required minlength="8" autocomplete="new-password" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary font-medium">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1">Confirmer *</label>
+        <input type="password" name="password2" required minlength="8" autocomplete="new-password" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary font-medium">
+      </div>
+      <button type="submit" class="w-full bg-primary hover:bg-primary-600 text-white font-bold text-sm py-3 rounded-full transition mt-2">Créer mon compte patient</button>
+    </form>
+    <p class="text-center text-sm text-ink-muted mt-5 font-medium">
+      Déjà inscrit ? <a href="{% url 'login' %}" class="text-primary font-bold hover:underline">Se connecter</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

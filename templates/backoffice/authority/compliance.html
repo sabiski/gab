@@ -1,0 +1,53 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Conformité{% endblock %}
+{% block bo_label %}Santé publique{% endblock %}
+{% block bo_title %}Suivi pharmacies & conformité{% endblock %}
+{% block bo_content %}
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Score moyen</p><p class="text-2xl font-extrabold text-primary">{{ avg|floatformat:1 }}%</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Sous seuil (&lt;50 %)</p><p class="text-2xl font-extrabold text-rose-600">{{ critical }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Pharmacies suivies</p><p class="text-2xl font-extrabold">{{ compliance_rows|length }}</p></div>
+</div>
+
+{% if nonconformities %}
+<section class="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-6">
+  <h2 class="font-extrabold mb-2">Non-conformités les plus fréquentes</h2>
+  <ul class="text-sm space-y-1">
+    {% for label, count in nonconformities %}
+    <li class="font-bold">{{ label }} — <span class="text-rose-600">{{ count }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<div class="bg-white rounded-2xl border overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-canvas text-xs font-bold text-ink-muted uppercase text-left">
+      <tr>
+        <th class="px-4 py-3">Pharmacie</th>
+        <th class="px-4 py-3">Zone</th>
+        <th class="px-4 py-3">Score docs</th>
+        <th class="px-4 py-3">Score enregistré</th>
+        <th class="px-4 py-3">Statut</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in compliance_rows %}
+      <tr class="border-t {% if row.effective_score < 50 %}bg-rose-50/40{% endif %}">
+        <td class="px-4 py-3 font-bold">{{ row.pharmacy.name }}</td>
+        <td class="px-4 py-3 text-ink-muted">{{ row.pharmacy.city }} · {{ row.pharmacy.region }}</td>
+        <td class="px-4 py-3 font-extrabold">{{ row.doc_score }}%</td>
+        <td class="px-4 py-3">{{ row.stored_score }}%</td>
+        <td class="px-4 py-3 text-xs font-bold">
+          {% if row.status_label == "non_conforme" %}<span class="text-rose-600">Non conforme — inspection prioritaire</span>
+          {% elif row.status_label == "inspection" %}<span class="text-amber-700">En inspection</span>
+          {% else %}<span class="text-primary">Conforme</span>{% endif %}
+          {% if row.doc_missing %}<span class="block text-ink-muted">{{ row.doc_missing }} doc. manquant(s)</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="text-xs text-ink-muted mt-4">Score &lt; 50 % : alerte automatique — suspension possible sur décision de l'autorité.</p>
+{% endblock %}

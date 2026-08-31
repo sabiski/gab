@@ -1,0 +1,162 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Fiche produit{% endblock %}
+{% block bo_label %}Portail Pharmacie{% endblock %}
+{% block bo_title %}Fiche produit — {{ medicine.name }}{% endblock %}
+{% block bo_content %}
+
+<div class="flex flex-wrap gap-2 mb-4 text-sm">
+  <a href="{% url 'bo_pharmacy_stocks' %}" class="font-bold text-ink-muted hover:text-primary">← Retour stocks</a>
+  <a href="{{ preview_url }}" target="_blank" class="font-bold text-primary inline-flex items-center gap-1">
+    <span class="material-symbols-rounded sm">open_in_new</span> Aperçu client
+  </a>
+</div>
+
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-4 mb-5 text-sm max-w-4xl">
+  <p class="font-extrabold text-ink mb-1">Fiche type parapharmacie (Pharma GDD)</p>
+  <p class="text-ink-muted font-medium">Renseignez référence, contenance, accroche, présentation, composition, conseils, avis pharmacien signé, Q&R et variantes ml. Le contenu est partagé entre toutes les contenances du même produit.</p>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="bg-white border rounded-2xl p-5 mb-6 max-w-4xl space-y-4 text-sm">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="save_medicine">
+
+  <div class="grid sm:grid-cols-2 gap-3">
+    <div class="sm:col-span-2 border-b pb-3 mb-1">
+      <p class="font-extrabold text-base">{{ medicine.name }}</p>
+      <p class="text-xs text-ink-muted">{{ stock.price }} FCFA · stock {{ stock.quantity }} · contenance actuelle : <strong>{{ medicine.format_label|default:"—" }}</strong></p>
+    </div>
+
+    <label class="sm:col-span-2 block">
+      <span class="text-xs font-bold text-ink-muted">Accroche (sous le titre)</span>
+      <input name="tagline" value="{{ medicine.tagline }}" class="mt-1 w-full border rounded-xl px-3 py-2" placeholder="Ex. Apaise, ré-équilibre et réduit les irritations — Peaux sensibles">
+    </label>
+
+    <label class="block">
+      <span class="text-xs font-bold text-ink-muted">Référence / code-barres</span>
+      <input name="barcode" value="{{ medicine.barcode }}" class="mt-1 w-full border rounded-xl px-3 py-2" placeholder="3282779003131">
+    </label>
+
+    <label class="block">
+      <span class="text-xs font-bold text-ink-muted">Forme galénique</span>
+      <select name="form" class="mt-1 w-full border rounded-xl px-3 py-2">
+        {% for val, label in forms %}
+        <option value="{{ val }}" {% if medicine.form == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label class="block">
+      <span class="text-xs font-bold text-ink-muted">Contenance (format actuel)</span>
+      <select name="contenance_preset" class="mt-1 w-full border rounded-xl px-3 py-2">
+        <option value="">— Choisir —</option>
+        {% for c in contenance_presets %}
+        <option value="{{ c }}" {% if medicine.contenance == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+        <option value="custom" {% if medicine.contenance and medicine.contenance not in contenance_presets %}selected{% endif %}>Autre…</option>
+      </select>
+    </label>
+    <label class="block">
+      <span class="text-xs font-bold text-ink-muted">Ou contenance personnalisée</span>
+      <input name="contenance_custom" value="{% if medicine.contenance and medicine.contenance not in contenance_presets %}{{ medicine.contenance }}{% endif %}" class="mt-1 w-full border rounded-xl px-3 py-2" placeholder="Ex. 2 x 400 ml">
+    </label>
+
+    <input name="recommended_by" value="{{ medicine.recommended_by }}" placeholder="Recommandé par (ex. Dermatologues)" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    {% include "backoffice/partials/image_field.html" with name="image" label="Photo produit" current=medicine.image %}
+  </div>
+
+  <label class="block">
+    <span class="text-xs font-bold text-ink-muted uppercase">Présentation</span>
+    <textarea name="presentation" rows="8" class="mt-1 w-full border rounded-xl px-3 py-2 font-mono text-xs" placeholder="Texte long type fiche conseil…">{{ medicine.presentation }}</textarea>
+  </label>
+  <label class="block">
+    <span class="text-xs font-bold text-ink-muted uppercase">Conseils d'utilisation</span>
+    <textarea name="usage_advice" rows="5" class="mt-1 w-full border rounded-xl px-3 py-2">{{ medicine.usage_advice }}</textarea>
+  </label>
+  <label class="block">
+    <span class="text-xs font-bold text-ink-muted uppercase">Composition</span>
+    <textarea name="composition" rows="5" class="mt-1 w-full border rounded-xl px-3 py-2" placeholder="Ingrédients, tableau minéral…">{{ medicine.composition }}</textarea>
+  </label>
+
+  <div class="border-t pt-4 grid sm:grid-cols-2 gap-3">
+    <p class="sm:col-span-2 font-extrabold text-ink">Avis pharmacien (affiché sur la fiche)</p>
+    <input name="pharmacist_name" value="{{ stock.pharmacist_name }}" placeholder="Nom du pharmacien (ex. Samuel Rault)" class="border rounded-xl px-3 py-2">
+    <input name="pharmacist_title" value="{{ stock.pharmacist_title|default:'Docteur en pharmacie' }}" placeholder="Titre" class="border rounded-xl px-3 py-2">
+    <input name="pharmacist_rpps" value="{{ stock.pharmacist_rpps }}" placeholder="N° RPPS / ordre" class="border rounded-xl px-3 py-2">
+    <input name="delivery_promise" value="{{ stock.delivery_promise }}" placeholder="Livraison (ex. Livré demain avant 18h)" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <textarea name="stock_pharmacist_advice" rows="4" class="border rounded-xl px-3 py-2 sm:col-span-2" placeholder="Conseil du pharmacien affiché au client…">{{ stock.pharmacist_advice }}</textarea>
+    <textarea name="pharmacist_advice" rows="2" class="border rounded-xl px-3 py-2 sm:col-span-2 text-xs text-ink-muted" placeholder="Conseil catalogue (optionnel, secours)">{{ medicine.pharmacist_advice }}</textarea>
+  </div>
+
+  <button class="bg-primary text-white font-bold rounded-xl px-5 py-2.5">Enregistrer la fiche</button>
+</form>
+
+<section class="bg-white border rounded-2xl p-5 mb-6 max-w-4xl">
+  <h2 class="font-extrabold mb-1">Contenances / variantes</h2>
+  <p class="text-xs text-ink-muted mb-4">Ajoutez d'autres formats (50 ml, 150 ml, 300 ml…) pour le même produit.</p>
+
+  {% if variant_stocks|length > 1 %}
+  <ul class="text-sm space-y-1 mb-4">
+    {% for v in variant_stocks %}
+    <li class="flex justify-between gap-2">
+      <a href="{% url 'bo_pharmacy_medicine_edit' v.id %}" class="font-bold {% if v.id == stock.id %}text-primary{% else %}text-ink hover:text-primary{% endif %}">
+        {{ v.medicine.format_label }} — {{ v.price }} FCFA (stock {{ v.quantity }})
+      </a>
+      <a href="{% url 'product_detail' v.id %}" target="_blank" class="text-xs text-primary font-bold">Voir</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  <form method="post" class="grid sm:grid-cols-3 gap-3 text-sm border-t pt-4">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_variant">
+    <label class="block">
+      <span class="text-xs font-bold text-ink-muted">Contenance *</span>
+      <select name="contenance_preset" required class="mt-1 w-full border rounded-xl px-3 py-2">
+        <option value="">— Choisir —</option>
+        {% for c in contenance_presets %}
+        <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
+        <option value="custom">Autre…</option>
+      </select>
+    </label>
+    <input name="contenance_custom" placeholder="Contenance perso." class="border rounded-xl px-3 py-2">
+    <input type="number" name="variant_price" min="1" required placeholder="Prix FCFA *" class="border rounded-xl px-3 py-2">
+    <input type="number" name="variant_quantity" value="10" min="0" placeholder="Stock initial" class="border rounded-xl px-3 py-2">
+    <button class="bg-canvas border font-bold rounded-xl py-2 sm:col-span-2">Ajouter cette contenance</button>
+  </form>
+</section>
+
+<section class="bg-white border rounded-2xl p-5 max-w-4xl">
+  <h2 class="font-extrabold mb-4">Questions / Réponses</h2>
+  {% if questions %}
+  <div class="space-y-3 mb-6">
+    {% for q in questions %}
+    <div class="border rounded-xl p-3 flex justify-between gap-3">
+      <div class="text-sm">
+        <p class="font-bold">{{ q.question }}</p>
+        <p class="text-ink-muted mt-1">{{ q.answer }}</p>
+      </div>
+      <form method="post" onsubmit="return confirm('Supprimer cette question ?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete_question">
+        <input type="hidden" name="question_id" value="{{ q.id }}">
+        <button class="text-rose-600 shrink-0"><span class="material-symbols-rounded sm">delete</span></button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-sm text-ink-muted mb-4">Aucune question — ajoutez des Q&R visibles sur la fiche client.</p>
+  {% endif %}
+
+  <form method="post" class="grid gap-3 text-sm border-t pt-4">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_question">
+    <input name="question" required placeholder="Question *" class="border rounded-xl px-3 py-2">
+    <textarea name="answer" required rows="3" placeholder="Réponse *" class="border rounded-xl px-3 py-2"></textarea>
+    <input type="number" name="order" value="0" min="0" class="border rounded-xl px-3 py-2 w-32" placeholder="Ordre">
+    <button class="bg-canvas border font-bold rounded-xl py-2 w-fit px-4">Ajouter une Q&R</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}{% block ins_page_title %}Espace Assurance{% endblock %}{% endblock %}
+{% block bo_label %}Compagnie d'assurance{% endblock %}
+{% block bo_title %}{% endblock %}
+{% block bo_subtitle %}{% endblock %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/insurer-portal.css?v=14">
+{% block ins_extra_head %}{% endblock %}
+{% endblock %}
+{% block bo_content %}
+<div class="ins-portal">
+  {% if bo_role == "admin" %}
+  {% include "backoffice/insurer/partials/admin_pilot_bar.html" %}
+  {% endif %}
+  {% block ins_content %}{% endblock %}
+</div>
+{% endblock %}

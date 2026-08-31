@@ -1,0 +1,93 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Pharmacies{% endblock %}
+{% block bo_label %}Administration{% endblock %}
+{% block bo_title %}Pharmacies{% endblock %}
+{% block bo_content %}
+<form method="get" class="bg-white rounded-2xl border p-3 mb-4 flex flex-wrap gap-2 items-center">
+  <div class="relative flex-1 min-w-[200px]">
+    <span class="material-symbols-rounded sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
+    <input name="q" value="{{ q }}" placeholder="Nom, code, ville…" class="w-full border rounded-xl pl-9 pr-3 py-2 text-sm">
+  </div>
+  <select name="status" class="border rounded-xl px-3 py-2 text-sm">
+    <option value="">Tous les statuts</option>
+    {% for val, label in statuses %}<option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl">Filtrer</button>
+  <a href="?new=1" class="bg-primary text-white font-bold text-sm px-4 py-2 rounded-xl inline-flex items-center gap-1"><span class="material-symbols-rounded sm">add</span> Ajouter</a>
+</form>
+<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} résultat{{ total_count|pluralize }}</p>
+
+{% if show_create %}
+<section class="bg-white rounded-2xl border p-5 mb-4">
+  <div class="flex justify-between mb-3"><h2 class="font-extrabold">Nouvelle pharmacie</h2><a href="{% url 'bo_admin_pharmacies' %}" class="text-xs font-bold text-ink-muted">Fermer</a></div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-3 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="create">
+    <input name="name" required placeholder="Nom *" class="border rounded-xl px-3 py-2">
+    <input name="code" placeholder="Code" class="border rounded-xl px-3 py-2">
+    <input name="phone" placeholder="Téléphone" class="border rounded-xl px-3 py-2">
+    <input name="address" placeholder="Adresse" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <input name="city" value="Libreville" class="border rounded-xl px-3 py-2">
+    <input name="district" placeholder="Quartier" class="border rounded-xl px-3 py-2">
+    <input name="region" value="Estuaire" class="border rounded-xl px-3 py-2">
+    <select name="status" class="border rounded-xl px-3 py-2">{% for val, label in statuses %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select>
+    {% include "backoffice/partials/image_field.html" with name="logo" label="Logo pharmacie" %}
+    <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="is_24h"> 24h</label>
+    <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="is_on_duty"> Garde</label>
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Créer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if edit_obj %}
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-5 mb-4">
+  <div class="flex justify-between mb-3"><h2 class="font-extrabold">Modifier — {{ edit_obj.code }}</h2><a href="{% url 'bo_admin_pharmacies' %}" class="text-xs font-bold text-ink-muted">Fermer</a></div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-3 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="update"><input type="hidden" name="pharmacy_id" value="{{ edit_obj.id }}">
+    <input name="name" value="{{ edit_obj.name }}" class="border rounded-xl px-3 py-2">
+    <input name="phone" value="{{ edit_obj.phone }}" class="border rounded-xl px-3 py-2">
+    <input name="compliance_score" type="number" min="0" max="100" value="{{ edit_obj.compliance_score }}" class="border rounded-xl px-3 py-2" placeholder="Conformité">
+    <input name="address" value="{{ edit_obj.address }}" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <input name="city" value="{{ edit_obj.city }}" class="border rounded-xl px-3 py-2">
+    <input name="district" value="{{ edit_obj.district }}" class="border rounded-xl px-3 py-2">
+    <input name="region" value="{{ edit_obj.region }}" class="border rounded-xl px-3 py-2">
+    <select name="status" class="border rounded-xl px-3 py-2">{% for val, label in statuses %}<option value="{{ val }}" {% if edit_obj.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    {% include "backoffice/partials/image_field.html" with name="logo" label="Logo pharmacie" current=edit_obj.logo %}
+    <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="is_24h" {% if edit_obj.is_24h %}checked{% endif %}> 24h</label>
+    <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="is_on_duty" {% if edit_obj.is_on_duty %}checked{% endif %}> Garde</label>
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="bg-white rounded-2xl border overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+      <tr><th class="px-4 py-3">Code</th><th class="px-4 py-3">Pharmacie</th><th class="px-4 py-3">Ville</th><th class="px-4 py-3">Statut</th><th class="px-4 py-3">Note</th><th class="px-4 py-3">Conf.</th><th class="px-4 py-3 text-right">Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for p in page_obj %}
+      <tr class="border-t hover:bg-canvas/50">
+        <td class="px-4 py-3 font-bold">{{ p.code }}</td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2">
+            <div class="h-9 w-9 rounded-lg bg-primary-50 overflow-hidden flex items-center justify-center shrink-0">
+              {% if p.logo %}<img src="{{ p.logo.url }}" alt="" class="h-full w-full object-cover">{% else %}<span class="material-symbols-rounded sm text-primary">local_pharmacy</span>{% endif %}
+            </div>
+            <div><p class="font-bold">{{ p.name }}</p><p class="text-xs text-ink-muted">{{ p.district }}</p></div>
+          </div>
+        </td>
+        <td class="px-4 py-3 text-ink-muted">{{ p.city }}</td>
+        <td class="px-4 py-3"><span class="text-xs font-bold bg-primary-50 text-primary px-2 py-1 rounded-full">{{ p.get_status_display }}</span></td>
+        <td class="px-4 py-3">{{ p.rating }}</td>
+        <td class="px-4 py-3">{{ p.compliance_score }}%</td>
+        <td class="px-4 py-3 text-right whitespace-nowrap">
+          <a href="?edit={{ p.id }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-50 text-primary"><span class="material-symbols-rounded sm">edit</span></a>
+          <form method="post" class="inline" onsubmit="return confirm('Supprimer ?')">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="pharmacy_id" value="{{ p.id }}"><button class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-rose-50 text-rose-600"><span class="material-symbols-rounded sm">delete</span></button></form>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="7" class="px-4 py-10 text-center text-ink-muted">Aucune pharmacie</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endblock %}

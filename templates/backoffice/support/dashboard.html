@@ -1,0 +1,50 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Support{% endblock %}
+{% block bo_label %}Centre de support{% endblock %}
+{% block bo_title %}Incidents & réclamations{% endblock %}
+{% block bo_content %}
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-8">
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Incidents ouverts</p><p class="text-2xl font-extrabold text-rose-600 mt-1">{{ stats.incidents }}</p></div>
+  <a href="{% url 'bo_support_tickets' %}" class="bg-white rounded-2xl border p-4 hover:border-primary transition block">
+    <p class="text-xs font-bold text-ink-muted uppercase">Réclamations ouvertes</p>
+    <p class="text-2xl font-extrabold text-amber-600 mt-1">{{ stats.tickets }}</p>
+  </a>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Commandes en attente</p><p class="text-2xl font-extrabold mt-1">{{ stats.orders_pending }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Notifs non lues</p><p class="text-2xl font-extrabold mt-1">{{ stats.notif_unread }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Pharmacies à valider</p><p class="text-2xl font-extrabold text-amber-600 mt-1">{{ stats.pharmacies_pending }}</p></div>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-6">
+  <section class="bg-white rounded-2xl border p-5">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="font-extrabold">Incidents récents</h2>
+      <a href="{% url 'bo_admin_incidents' %}" class="text-xs font-bold text-primary">Gérer</a>
+    </div>
+    {% for i in incidents %}
+    <div class="flex justify-between text-sm py-3 border-b border-slate-50">
+      <div>
+        <p class="font-bold">{{ i.get_incident_type_display }}</p>
+        <p class="text-xs text-ink-muted">{{ i.delivery }} · {{ i.reported_by }}</p>
+      </div>
+      <span class="text-xs font-bold px-2 py-1 rounded-full bg-amber-50 text-amber-700">{{ i.get_priority_display }}</span>
+    </div>
+    {% empty %}<p class="text-sm text-ink-muted">Aucun incident ouvert.</p>{% endfor %}
+  </section>
+
+  <section class="bg-white rounded-2xl border p-5">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="font-extrabold">Réclamations récentes</h2>
+      <a href="{% url 'bo_support_tickets' %}" class="text-xs font-bold text-primary">Tout voir</a>
+    </div>
+    {% for t in tickets %}
+    <div class="flex justify-between gap-2 text-sm py-3 border-b border-slate-50">
+      <div class="min-w-0">
+        <p class="font-bold truncate">{{ t.code }} · {{ t.subject }}</p>
+        <p class="text-xs text-ink-muted truncate">{{ t.client }} · {{ t.get_category_display }}</p>
+      </div>
+      <span class="text-[11px] font-bold shrink-0">{{ t.get_status_display }}</span>
+    </div>
+    {% empty %}<p class="text-sm text-ink-muted">Aucune réclamation.</p>{% endfor %}
+  </section>
+</div>
+{% endblock %}

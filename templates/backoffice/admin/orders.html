@@ -1,0 +1,47 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Commandes{% endblock %}
+{% block bo_label %}Administration{% endblock %}
+{% block bo_title %}Commandes{% endblock %}
+{% block bo_content %}
+<form method="get" class="bg-white rounded-2xl border p-3 mb-4 flex flex-wrap gap-2 items-center">
+  <div class="relative flex-1 min-w-[200px]">
+    <span class="material-symbols-rounded sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
+    <input name="q" value="{{ q }}" placeholder="Code, client, pharmacie…" class="w-full border rounded-xl pl-9 pr-3 py-2 text-sm">
+  </div>
+  <select name="status" class="border rounded-xl px-3 py-2 text-sm">
+    <option value="">Tous les statuts</option>
+    {% for val, label in statuses %}<option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl">Filtrer</button>
+</form>
+<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} résultat{{ total_count|pluralize }}</p>
+
+<div class="bg-white rounded-2xl border overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+      <tr><th class="px-4 py-3">Code</th><th class="px-4 py-3">Client</th><th class="px-4 py-3">Pharmacie</th><th class="px-4 py-3">Total</th><th class="px-4 py-3">Date</th><th class="px-4 py-3">Statut</th></tr>
+    </thead>
+    <tbody>
+      {% for o in page_obj %}
+      <tr class="border-t hover:bg-canvas/50">
+        <td class="px-4 py-3 font-bold">{{ o.code }}{% if o.is_urgent %} <span class="text-rose-600 text-[10px]">URGENT</span>{% endif %}</td>
+        <td class="px-4 py-3">{{ o.client }}</td>
+        <td class="px-4 py-3 text-ink-muted">{{ o.pharmacy.name|default:"—" }}</td>
+        <td class="px-4 py-3 font-bold text-primary">{{ o.total }} F</td>
+        <td class="px-4 py-3 text-ink-muted whitespace-nowrap">{{ o.created_at|date:"d/m/Y H:i" }}</td>
+        <td class="px-4 py-3">
+          <form method="post" class="flex gap-1 items-center">
+            {% csrf_token %}<input type="hidden" name="order_id" value="{{ o.id }}">
+            <select name="status" class="border rounded-lg text-xs px-2 py-1 max-w-[140px]">
+              {% for val, label in statuses %}<option value="{{ val }}" {% if o.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+            <button class="text-xs font-bold text-primary px-2" title="Mettre à jour">OK</button>
+          </form>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="6" class="px-4 py-10 text-center text-ink-muted">Aucune commande</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endblock %}

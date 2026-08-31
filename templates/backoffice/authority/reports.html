@@ -1,0 +1,176 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Rapports &amp; indicateurs{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Rapports &amp; indicateurs <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Indicateurs alignés OMS, ODD 3 et DHIS2 — données mesurées sur le réseau Gab'Pharma.</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <a href="?period={{ report.period_days }}&region={{ filter_region }}&export=csv" class="auth-filter-btn">
+      <span class="material-symbols-rounded text-sm">download</span> Exporter CSV
+    </a>
+  </div>
+</header>
+
+<p class="auth-reports-note">{{ report.standards_note }}</p>
+
+<form method="get" class="auth-stocks-filters auth-pharma-filters mb-3">
+  <div>
+    <label>Période</label>
+    <select name="period" class="auth-stocks-filters__input">
+      <option value="7" {% if report.period_days == 7 %}selected{% endif %}>7 jours</option>
+      <option value="30" {% if report.period_days == 30 %}selected{% endif %}>30 jours</option>
+      <option value="90" {% if report.period_days == 90 %}selected{% endif %}>90 jours</option>
+      <option value="365" {% if report.period_days == 365 %}selected{% endif %}>12 mois</option>
+    </select>
+  </div>
+  <div>
+    <label>Province</label>
+    <select name="region" class="auth-stocks-filters__input">
+      <option value="">National</option>
+      {% for r in regions %}
+      <option value="{{ r.slug }}" {% if filter_region == r.slug %}selected{% endif %}>{{ r.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="auth-filter-btn">Actualiser</button>
+</form>
+
+<section class="auth-kpi-grid auth-kpi-grid--5 auth-kpi-grid--national auth-delivery-kpis">
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-green">
+    <span class="auth-kpi__icon material-symbols-rounded">inventory_2</span>
+    <p class="auth-kpi__label">Disponibilité stocks</p>
+    <p class="auth-kpi__value">{{ report.kpis.availability }}%</p>
+    <p class="auth-kpi__hint">Cible OMS ≥ 80 %</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-sky">
+    <span class="auth-kpi__icon material-symbols-rounded">verified</span>
+    <p class="auth-kpi__label">Conformité réseau</p>
+    <p class="auth-kpi__value">{{ report.kpis.compliance_rate }}%</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-violet">
+    <span class="auth-kpi__icon material-symbols-rounded">local_shipping</span>
+    <p class="auth-kpi__label">Taux de livraison</p>
+    <p class="auth-kpi__value">{{ report.kpis.delivery_rate }}%</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-amber">
+    <span class="auth-kpi__icon material-symbols-rounded">shopping_cart</span>
+    <p class="auth-kpi__label">Commandes ({{ report.period_days }} j)</p>
+    <p class="auth-kpi__value">{{ report.kpis.orders|intcomma }}</p>
+    <p class="auth-kpi__trend {% if report.kpis.orders_trend >= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      {% if report.kpis.orders_trend >= 0 %}+{% endif %}{{ report.kpis.orders_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-rose">
+    <span class="auth-kpi__icon material-symbols-rounded">warning</span>
+    <p class="auth-kpi__label">Ruptures</p>
+    <p class="auth-kpi__value text-rose-700">{{ report.kpis.ruptures|intcomma }}</p>
+    <p class="auth-kpi__hint">{{ report.kpis.low_stock }} stock(s) faible(s)</p>
+  </article>
+</section>
+
+<section class="auth-reports-mid">
+  <article class="auth-panel auth-reports-framework-panel">
+    <h3>Indicateurs internationaux (OMS / ODD 3 / DHIS2)</h3>
+    <div class="auth-pharma-table-wrap">
+      <table class="auth-pharma-table auth-reports-framework-table">
+        <thead>
+          <tr>
+            <th>Réf.</th>
+            <th>Code</th>
+            <th>Indicateur</th>
+            <th>Valeur</th>
+            <th>Cible</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in report.frameworks %}
+          <tr>
+            <td><span class="auth-reports-ref {% if row.framework == 'OMS' %}auth-reports-ref--oms{% elif 'ODD' in row.framework %}auth-reports-ref--odd{% else %}auth-reports-ref--dhis{% endif %}">{{ row.framework }}</span></td>
+            <td class="font-mono text-xs">{{ row.code }}</td>
+            <td>
+              <span class="block font-bold">{{ row.indicator }}</span>
+              <span class="text-xs text-ink-muted">{{ row.pillar }}</span>
+            </td>
+            <td class="font-bold">{{ row.value }}</td>
+            <td class="text-xs text-ink-muted">{{ row.target }}</td>
+            <td><span class="auth-reports-status auth-reports-status--{{ row.status }}">{% if row.status == "ok" %}Atteint{% elif row.status == "warn" %}À surveiller{% elif row.status == "critical" %}Critique{% else %}—{% endif %}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Dimensions DHIS2 (synthèse)</h3>
+    <div class="auth-pharma-nc-bars">
+      {% for d in report.dhis_dimensions %}
+      <div class="auth-pharma-nc-row">
+        <span class="auth-pharma-nc-row__label">{{ d.label }}</span>
+        <span class="auth-pharma-nc-row__bar"><span style="width:{{ d.bar_pct }}%"></span></span>
+        <span class="auth-pharma-nc-row__pct">{{ d.value }}{{ d.unit }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<section class="auth-reports-bottom">
+  <article class="auth-panel">
+    <h3>Indicateurs par province</h3>
+    <div class="auth-pharma-table-wrap">
+      <table class="auth-pharma-table">
+        <thead>
+          <tr>
+            <th>Province</th>
+            <th>Pharmacies</th>
+            <th>Densité /100k</th>
+            <th>Commandes</th>
+            <th>Seuil OMS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in report.region_table %}
+          <tr>
+            <td class="font-bold">{{ r.name }}</td>
+            <td>{{ r.pharmacies }}</td>
+            <td>{{ r.density }}</td>
+            <td>{{ r.orders|intcomma }}</td>
+            <td>
+              {% if r.meets_density %}
+              <span class="auth-reports-status auth-reports-status--ok">OK</span>
+              {% else %}
+              <span class="auth-reports-status auth-reports-status--warn">Sous seuil</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Médicaments les plus demandés</h3>
+    <div class="auth-pharma-nc-bars">
+      {% for m in report.top_meds %}
+      <div class="auth-pharma-nc-row">
+        <span class="auth-pharma-nc-row__label">{{ m.name }}</span>
+        <span class="auth-pharma-nc-row__bar"><span style="width:{{ m.pct }}%;background:#2563eb"></span></span>
+        <span class="auth-pharma-nc-row__pct">{{ m.qty }}</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ink-muted py-4">Pas de données sur la période.</p>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<footer class="auth-national-footer auth-national-footer--info">
+  <p><span class="material-symbols-rounded text-sm align-middle">info</span> Dernière mise à jour : {{ report.last_updated|date:"d/m/Y H:i" }}</p>
+</footer>
+{% endblock %}

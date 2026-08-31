@@ -1,0 +1,6 @@
+<nav class="ins-claims-tabs" aria-label="Filtres contrats">
+  <a href="{% url 'bo_insurer_contracts' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'all' or not tab %} is-active{% endif %}">Tous les contrats <span class="ins-claims-tabs__count">({{ contract_stats.total|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_contracts' %}?tab=active{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'active' %} is-active{% endif %}">Contrats actifs <span class="ins-claims-tabs__count">({{ contract_stats.active|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_contracts' %}?tab=expiring{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'expiring' %} is-active{% endif %}">En cours d'expiration <span class="ins-claims-tabs__count">({{ contract_stats.expiring|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_contracts' %}?tab=expired{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'expired' %} is-active{% endif %}">Résiliés / expirés <span class="ins-claims-tabs__count">({{ contract_stats.expired|default:0 }})</span></a>
+</nav>

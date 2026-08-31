@@ -1,0 +1,80 @@
+{% load bo_extras %}
+{# Navigation Espace Autorités sanitaires #}
+{% if nav_variant != "admin" %}
+<p class="auth-side-space">
+  <span class="material-symbols-rounded sm">account_balance</span>
+  Espace Autorités sanitaires
+</p>
+{% endif %}
+{% if portal_permissions.dashboard %}
+{% authority_nav_link_class nav_variant "dashboard" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_dashboard' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">dashboard</span> Tableau de bord
+</a>
+{% endif %}
+{% if portal_permissions.map %}
+{% authority_nav_link_class nav_variant "map" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_map' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">map</span> Carte sanitaire
+</a>
+{% endif %}
+{% if portal_permissions.stocks %}
+{% authority_nav_link_class nav_variant "stocks" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_stocks' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">inventory_2</span> Stocks de médicaments
+</a>
+{% endif %}
+{% if portal_permissions.alerts %}
+{% authority_nav_link_class nav_variant "alerts" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_alerts' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">warning</span> Alertes sanitaires
+</a>
+{% endif %}
+{% if portal_permissions.trends %}
+{% authority_nav_link_class nav_variant "trends" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_trends' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">monitoring</span> Analyse et tendances
+</a>
+{% endif %}
+{% if portal_permissions.patients %}
+{% authority_nav_link_class nav_variant "patients" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_patients' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">groups</span> Patients (données anonymisées)
+</a>
+{% endif %}
+{% if portal_permissions.pharmacies %}
+{% authority_nav_link_class nav_variant "pharmacies" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_pharmacies' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">local_pharmacy</span> Pharmacies &amp; établissements
+</a>
+{% endif %}
+{% if portal_permissions.deliveries %}
+{% authority_nav_link_class nav_variant "deliveries" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_deliveries' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">local_shipping</span> Livraisons
+</a>
+{% endif %}
+{% if is_superadmin %}
+{% authority_nav_link_class nav_variant "disputes" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_disputes' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">gavel</span> Litiges &amp; réclamations
+</a>
+{% endif %}
+{% if portal_permissions.reports %}
+{% authority_nav_link_class nav_variant "reports" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_reports' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">analytics</span> Rapports &amp; indicateurs
+</a>
+{% endif %}
+{% if portal_permissions.campaigns %}
+{% authority_nav_link_class nav_variant "campaigns" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_campaigns' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">campaign</span> Campagnes de santé
+</a>
+{% endif %}
+{% if portal_permissions.decision %}
+{% authority_nav_link_class nav_variant "decision" bo_nav_active_section as link_class %}
+<a href="{% url 'bo_authority_decision' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">track_changes</span> Centre de décision
+</a>
+{% endif %}

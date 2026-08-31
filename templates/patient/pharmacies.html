@@ -1,0 +1,12 @@
+{% extends "patient/base_patient.html" %}
+{% block title %}Pharmacies{% endblock %}
+{% block content %}
+<h1 class="text-xl md:text-2xl font-semibold text-ink mb-4">Pharmacies à proximité</h1>
+<div class="space-y-3 max-w-2xl">
+  {% for pharmacy in pharmacies %}
+  {% include "components/pharmacy_row.html" with pharmacy=pharmacy distance=forloop.counter0 %}
+  {% empty %}
+  <p class="text-sm text-ink-muted">Aucune pharmacie active.</p>
+  {% endfor %}
+</div>
+{% endblock %}

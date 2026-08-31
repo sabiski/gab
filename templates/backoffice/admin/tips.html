@@ -1,0 +1,68 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Conseils{% endblock %}
+{% block bo_label %}Site public{% endblock %}
+{% block bo_title %}Conseils pharmacien{% endblock %}
+{% block bo_content %}
+<form method="get" class="mb-4 flex justify-end">
+  <a href="?new=1" class="bg-primary text-white font-bold text-sm px-4 py-2 rounded-xl inline-flex items-center gap-1"><span class="material-symbols-rounded sm">add</span> Ajouter</a>
+</form>
+<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} conseil{{ total_count|pluralize }}</p>
+
+{% if show_create %}
+<section class="bg-white rounded-2xl border p-5 mb-4">
+  <div class="flex justify-between mb-3"><h2 class="font-extrabold">Nouveau conseil</h2><a href="{% url 'bo_admin_tips' %}" class="text-xs font-bold text-ink-muted">Fermer</a></div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-2 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="create">
+    <input name="title" required placeholder="Titre *" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <input name="category" value="Santé" placeholder="Catégorie" class="border rounded-xl px-3 py-2">
+    <select name="pharmacy" class="border rounded-xl px-3 py-2"><option value="">Pharmacie (optionnel)</option>{% for p in pharmacies %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
+    <input name="excerpt" placeholder="Résumé court" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <textarea name="body" rows="3" placeholder="Contenu" class="border rounded-xl px-3 py-2 sm:col-span-2"></textarea>
+    <input name="icon" value="health_and_safety" placeholder="Icône Material" class="border rounded-xl px-3 py-2">
+    {% include "backoffice/partials/image_field.html" with name="cover_image" label="Image de couverture" %}
+    <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="is_published" checked> Publié</label>
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Créer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if edit_obj %}
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-5 mb-4">
+  <div class="flex justify-between mb-3"><h2 class="font-extrabold">Modifier — {{ edit_obj.title }}</h2><a href="{% url 'bo_admin_tips' %}" class="text-xs font-bold text-ink-muted">Fermer</a></div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-2 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="update"><input type="hidden" name="tip_id" value="{{ edit_obj.id }}">
+    <input name="title" value="{{ edit_obj.title }}" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <input name="category" value="{{ edit_obj.category }}" class="border rounded-xl px-3 py-2">
+    <select name="pharmacy" class="border rounded-xl px-3 py-2"><option value="">—</option>{% for p in pharmacies %}<option value="{{ p.id }}" {% if edit_obj.pharmacy_id == p.id %}selected{% endif %}>{{ p.name }}</option>{% endfor %}</select>
+    <input name="excerpt" value="{{ edit_obj.excerpt }}" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <textarea name="body" rows="3" class="border rounded-xl px-3 py-2 sm:col-span-2">{{ edit_obj.body }}</textarea>
+    <input name="icon" value="{{ edit_obj.icon }}" class="border rounded-xl px-3 py-2">
+    {% include "backoffice/partials/image_field.html" with name="cover_image" label="Image de couverture" current=edit_obj.cover_image %}
+    <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="is_published" {% if edit_obj.is_published %}checked{% endif %}> Publié</label>
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="bg-white rounded-2xl border overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+      <tr><th class="px-4 py-3">Conseil</th><th class="px-4 py-3">Pharmacie</th><th class="px-4 py-3">Statut</th><th class="px-4 py-3 text-right">Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for tip in page_obj %}
+      <tr class="border-t hover:bg-canvas/50">
+        <td class="px-4 py-3"><p class="font-bold">{{ tip.title }}</p><p class="text-xs text-ink-muted">{{ tip.category }}</p></td>
+        <td class="px-4 py-3 text-ink-muted">{{ tip.pharmacy.name|default:"—" }}</td>
+        <td class="px-4 py-3">{% if tip.is_published %}<span class="text-xs font-bold text-primary">Publié</span>{% else %}Brouillon{% endif %}</td>
+        <td class="px-4 py-3 text-right whitespace-nowrap">
+          <a href="?edit={{ tip.id }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-50 text-primary"><span class="material-symbols-rounded sm">edit</span></a>
+          <form method="post" class="inline" onsubmit="return confirm('Supprimer ?')">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="tip_id" value="{{ tip.id }}"><button class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-rose-50 text-rose-600"><span class="material-symbols-rounded sm">delete</span></button></form>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="4" class="px-4 py-10 text-center text-ink-muted">Aucun conseil</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endblock %}

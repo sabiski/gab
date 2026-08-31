@@ -1,0 +1,242 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}{{ page_title|default:"Gestion des pharmacies partenaires" }}{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claims-page-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-claims-back" aria-label="Retour">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </a>
+    <div>
+      <h1>{{ page_title|default:"Gestion des pharmacies partenaires" }}</h1>
+      <p>Consultez et gérez les pharmacies conventionnées avec votre compagnie.</p>
+    </div>
+  </div>
+  <div class="ins-header__actions">
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--sm">Déconnexion</a>
+  </div>
+</header>
+
+<form method="get" class="ins-claims-toolbar">
+  <div class="ins-claims-search">
+    <span class="material-symbols-rounded">search</span>
+    <input name="q" value="{{ q }}" placeholder="Rechercher par nom de pharmacie, code, ville, adresse…">
+    {% if tab and tab != 'all' %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+    {% if city %}<input type="hidden" name="city" value="{{ city }}">{% endif %}
+    {% if region %}<input type="hidden" name="region" value="{{ region }}">{% endif %}
+    {% if pharmacy_status %}<input type="hidden" name="pharmacy_status" value="{{ pharmacy_status }}">{% endif %}
+    {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+  </div>
+  <button type="button" class="ins-claims-filter-btn{% if show_filters %} is-open{% endif %}" data-toggle-filters aria-expanded="{% if show_filters %}true{% else %}false{% endif %}">
+    <span class="material-symbols-rounded sm">tune</span> Filtres
+    {% if active_filters %}<span class="ins-claims-filter-btn__badge">{{ active_filters }}</span>{% endif %}
+  </button>
+  <button type="button" class="ins-btn-primary ins-members-add-btn" data-open-add-pharmacy>
+    <span class="material-symbols-rounded sm">add</span> Ajouter une pharmacie
+  </button>
+</form>
+
+{% if show_filters %}
+<form method="get" class="ins-claims-filters-panel"{% if show_filters %} data-open{% endif %}>
+  <input type="hidden" name="q" value="{{ q }}">
+  <input type="hidden" name="filters" value="1">
+  {% if tab and tab != 'all' %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+  {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+  <label class="ins-claims-filters-panel__field">
+    <span>Ville</span>
+    <select name="city">
+      <option value="">Toutes</option>
+      {% for c in filter_cities %}
+      <option value="{{ c }}" {% if city == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="ins-claims-filters-panel__field">
+    <span>Région</span>
+    <select name="region">
+      <option value="">Toutes</option>
+      {% for r in filter_regions %}
+      <option value="{{ r }}" {% if region == r %}selected{% endif %}>{{ r }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="ins-claims-filters-panel__field">
+    <span>Statut</span>
+    <select name="pharmacy_status">
+      <option value="">Tous</option>
+      <option value="active" {% if pharmacy_status == 'active' %}selected{% endif %}>Active</option>
+      <option value="pending" {% if pharmacy_status == 'pending' %}selected{% endif %}>En attente</option>
+      <option value="suspended" {% if pharmacy_status == 'suspended' %}selected{% endif %}>Suspendue</option>
+    </select>
+  </label>
+  <button type="submit" class="ins-btn-primary">Appliquer</button>
+  <a href="{{ pharmacies_reset_url }}" class="ins-btn-outline">Réinitialiser</a>
+</form>
+{% endif %}
+
+<section class="ins-claims-kpi">
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--purple">
+    <span class="material-symbols-rounded">local_pharmacy</span>
+    <div>
+      <p class="ins-claims-kpi__label">Total des pharmacies</p>
+      <p class="ins-claims-kpi__value">{{ pharmacy_stats.total|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ pharmacy_stats.pct_total }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--green">
+    <span class="material-symbols-rounded">verified</span>
+    <div>
+      <p class="ins-claims-kpi__label">Pharmacies actives</p>
+      <p class="ins-claims-kpi__value">{{ pharmacy_stats.active|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ pharmacy_stats.pct_active }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--amber">
+    <span class="material-symbols-rounded">schedule</span>
+    <div>
+      <p class="ins-claims-kpi__label">En attente de validation</p>
+      <p class="ins-claims-kpi__value">{{ pharmacy_stats.pending|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ pharmacy_stats.pct_pending }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--red">
+    <span class="material-symbols-rounded">pause_circle</span>
+    <div>
+      <p class="ins-claims-kpi__label">Suspendues</p>
+      <p class="ins-claims-kpi__value">{{ pharmacy_stats.suspended|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ pharmacy_stats.pct_suspended }} %</p>
+    </div>
+  </article>
+</section>
+
+{% include "backoffice/insurer/partials/pharmacies_tabs.html" %}
+
+<p class="ins-pharmacies-list-title">Liste des pharmacies partenaires</p>
+
+<div class="ins-claims-table-wrap">
+  <table class="ins-claims-table ins-pharmacies-table">
+    <thead>
+      <tr>
+        <th>Pharmacie</th>
+        <th>Code partenaire</th>
+        <th>Ville</th>
+        <th>Statut</th>
+        <th>Date d'adhésion</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ph in page_obj %}
+      <tr>
+        <td>
+          <div class="ins-pharmacy-cell">
+            <span class="ins-pharmacy-icon ins-pharmacy-icon--{{ ph.logo_color|default:'green' }}">
+              {% if ph.ui_logo_url %}
+              <img src="{{ ph.ui_logo_url }}" alt="" class="ins-pharmacy-logo">
+              {% else %}
+              <span class="material-symbols-rounded">local_pharmacy</span>
+              {% endif %}
+            </span>
+            <div>
+              <p class="ins-pharmacy-name">{{ ph.name }}</p>
+              <p class="ins-pharmacy-location">{{ ph.ui_location }}</p>
+            </div>
+          </div>
+        </td>
+        <td class="font-mono text-xs font-bold">{{ ph.code }}</td>
+        <td>{{ ph.city }}</td>
+        <td>
+          <span class="ins-pharmacy-status ins-pharmacy-status--{{ ph.ui_status.tone }}">
+            <span class="material-symbols-rounded sm">{{ ph.ui_status.icon }}</span>{{ ph.ui_status.label }}
+          </span>
+        </td>
+        <td>{{ ph.ui_adhesion|date:"d/m/Y" }}</td>
+        <td>
+          <div class="ins-pharmacy-actions">
+            <a href="{% url 'bo_insurer_pharmacy_detail' ph.id %}" class="ins-pharmacy-view">Voir</a>
+            <details class="ins-claims-actions">
+              <summary aria-label="Actions"><span class="material-symbols-rounded">more_vert</span></summary>
+              <div class="ins-claims-actions__menu">
+                <a href="{% url 'bo_insurer_pharmacy_detail' ph.id %}">Voir la fiche pharmacie</a>
+                <a href="{% url 'bo_insurer_claims' %}?pharmacy={{ ph.id }}&amp;filters=1">Demandes de prise en charge</a>
+                {% if ph.phone %}<a href="tel:{{ ph.phone }}">Appeler {{ ph.phone }}</a>{% endif %}
+              </div>
+            </details>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="ins-claims-empty">
+          <span class="material-symbols-rounded">storefront</span>
+          Aucune pharmacie partenaire trouvée.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "backoffice/insurer/partials/pharmacies_pagination.html" %}
+
+<div class="ins-members-footer">
+  <div class="ins-claims-info-banner">
+    <span class="material-symbols-rounded">info</span>
+    <p>Les modifications de statut des pharmacies partenaires sont soumises aux règles de conventionnement de votre compagnie et à la validation Gab'Pharma.</p>
+  </div>
+  <a href="?export=csv{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if tab and tab != 'all' %}&amp;tab={{ tab }}{% endif %}{% if city %}&amp;city={{ city|urlencode }}{% endif %}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% if pharmacy_status %}&amp;pharmacy_status={{ pharmacy_status }}{% endif %}" class="ins-btn-outline ins-members-export">
+    <span class="material-symbols-rounded sm">download</span> Exporter la liste
+  </a>
+</div>
+
+<dialog id="add-pharmacy-dialog" class="ins-members-dialog">
+  <form method="dialog" class="ins-members-dialog__inner">
+    <h2 class="font-extrabold text-lg">Ajouter une pharmacie</h2>
+    <p class="text-sm text-ink-muted mt-2">Les pharmacies rejoignent le réseau Gab'Pharma via l'inscription officine. Une fois validées par l'administration, elles apparaissent dans votre liste de partenaires.</p>
+    <p class="text-sm mt-2">Pour une convention spécifique avec votre compagnie, contactez le support Gab'Pharma.</p>
+    <div class="flex gap-2 mt-4 justify-end">
+      <button type="submit" class="ins-btn-primary">Compris</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  const filterBtn = document.querySelector("[data-toggle-filters]");
+  const panel = document.querySelector(".ins-claims-filters-panel");
+  if (filterBtn && panel) {
+    filterBtn.addEventListener("click", () => {
+      const open = panel.style.display === "grid" || panel.classList.contains("is-visible");
+      panel.style.display = open ? "none" : "grid";
+      panel.classList.toggle("is-visible", !open);
+      filterBtn.setAttribute("aria-expanded", open ? "false" : "true");
+    });
+    const initiallyOpen = panel.hasAttribute("data-open");
+    if (!initiallyOpen) {
+      panel.style.display = "none";
+    } else {
+      panel.style.display = "grid";
+      panel.classList.add("is-visible");
+    }
+  }
+
+  const addBtn = document.querySelector("[data-open-add-pharmacy]");
+  const dialog = document.getElementById("add-pharmacy-dialog");
+  addBtn?.addEventListener("click", () => dialog?.showModal());
+
+  const searchInput = document.querySelector(".ins-claims-search input[name='q']");
+  const toolbarForm = document.querySelector(".ins-claims-toolbar");
+  let searchTimer;
+  searchInput?.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => toolbarForm?.submit(), 450);
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% load portal_urls %}
+{% if client_portal %}<div class="space-y-5">{% else %}<div class="max-w-site mx-auto px-4 py-8">{% endif %}
+  <nav class="portal-hide-in-espace text-xs text-ink-muted mb-4 flex items-center gap-1.5">
+    <a href="{% portal_url 'home' %}" class="hover:text-primary">Accueil</a>
+    <span>/</span>
+    <span class="text-ink">Panier</span>
+  </nav>
+
+  <h1 class="portal-hide-in-espace text-2xl font-extrabold mb-6">Votre panier</h1>
+
+  {% if lines %}
+  <div class="grid lg:grid-cols-12 gap-8 items-start">
+    <div class="lg:col-span-8 space-y-4">
+      {% if needs_rx %}
+      <div class="text-sm bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl px-4 py-3 font-medium">
+        <p class="font-extrabold">Ordonnance obligatoire</p>
+        <p class="mt-1">
+          Médicament{{ rx_meds|length|pluralize }} concerné{{ rx_meds|length|pluralize }} :
+          <strong>{% for n in rx_meds %}{{ n }}{% if not forloop.last %}, {% endif %}{% endfor %}</strong>.
+        </p>
+        {% if dossier_rx_count %}
+        <p class="mt-1">Vous avez <strong>{{ dossier_rx_count }}</strong> ordonnance{{ dossier_rx_count|pluralize }} dans votre dossier.</p>
+        {% else %}
+        <p class="mt-1"><a href="{% url 'bo_client_prescriptions' %}" class="font-bold underline">Déposez une ordonnance</a> avant de commander.</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <form method="post" id="cart-update-form" class="bg-white rounded-2xl border overflow-hidden">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update">
+        <div class="divide-y">
+          {% for line in lines %}
+          <div class="p-4 flex flex-wrap gap-4 items-center">
+            <a href="{% portal_url 'product_detail' line.stock.id %}" class="shrink-0 w-20 h-20 rounded-xl bg-canvas border flex items-center justify-center overflow-hidden">
+              {% if line.stock.medicine.image %}
+              <img src="{{ line.stock.medicine.image.url }}" alt="" class="max-h-full max-w-full object-contain">
+              {% else %}
+              <span class="material-symbols-rounded text-primary opacity-60">medication</span>
+              {% endif %}
+            </a>
+            <div class="flex-1 min-w-[180px]">
+              <a href="{% portal_url 'product_detail' line.stock.id %}" class="font-bold text-sm hover:text-primary">{{ line.stock.medicine }}</a>
+              <p class="text-xs text-ink-muted mt-0.5">{{ line.stock.pharmacy.name }}</p>
+              {% if line.stock.medicine.requires_prescription %}
+              <p class="text-xs text-amber-700 font-bold mt-0.5">Ordonnance obligatoire</p>
+              {% endif %}
+              <p class="text-xs text-ink-muted mt-1">{{ line.stock.display_price }} F / unité</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <input type="number" name="qty_{{ line.stock.id }}" value="{{ line.qty }}" min="0" max="{{ line.stock.quantity }}" class="w-16 border rounded-lg px-2 py-1.5 text-sm text-center">
+              <span class="font-extrabold text-primary w-24 text-right">{{ line.line_total }} F</span>
+            </div>
+            <button type="submit" form="remove-{{ line.stock.id }}" class="shrink-0 text-ink-muted hover:text-rose-600" title="Retirer">
+              <span class="material-symbols-rounded sm">delete</span>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="p-4 bg-canvas flex flex-wrap justify-between gap-2 items-center border-t">
+          <button type="submit" form="cart-clear-form" class="text-xs font-bold text-rose-600">Vider le panier</button>
+          <button type="submit" class="text-sm font-bold border rounded-xl px-4 py-2 bg-white">Mettre à jour les quantités</button>
+        </div>
+      </form>
+      {% for line in lines %}
+      <form method="post" id="remove-{{ line.stock.id }}" class="hidden">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="remove">
+        <input type="hidden" name="stock_id" value="{{ line.stock.id }}">
+      </form>
+      {% endfor %}
+      <form method="post" id="cart-clear-form" class="hidden">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="clear">
+      </form>
+
+      <a href="{% portal_url 'search' %}" class="inline-flex items-center gap-1 text-sm font-bold text-primary">
+        <span class="material-symbols-rounded sm">arrow_back</span> Continuer les achats
+      </a>
+    </div>
+
+    <aside class="lg:col-span-4 space-y-4">
+      <div class="bg-white border rounded-2xl p-5 sticky top-24">
+        <h2 class="font-extrabold mb-4">Récapitulatif</h2>
+        <dl class="text-sm space-y-2">
+          <div class="flex justify-between"><dt class="text-ink-muted">Sous-total</dt><dd class="font-bold">{{ total }} F</dd></div>
+          <div class="flex justify-between"><dt class="text-ink-muted">Livraison (estimée)</dt><dd class="font-bold">{% if premium_delivery and delivery_fee == 0 %}<span class="text-emerald-600">Offerte Premium</span>{% else %}{{ delivery_fee }} F{% endif %}</dd></div>
+          <div class="flex justify-between border-t pt-3 text-base"><dt class="font-extrabold">Total</dt><dd class="font-extrabold text-primary">{{ grand_total }} F</dd></div>
+        </dl>
+        {% if pharmacy %}
+        <p class="text-xs text-ink-muted mt-3">Pharmacie : <strong class="text-ink">{{ pharmacy.name }}</strong></p>
+        {% endif %}
+
+        <form method="post" class="mt-5 space-y-3 border-t pt-4">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="payment">
+          <p class="text-xs font-bold text-ink-muted uppercase">Mode de paiement</p>
+          {% for code, label, kind in payment_methods %}
+          <label class="flex items-center gap-3 border rounded-xl p-3 cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary-50 text-sm">
+            <input type="radio" name="payment_method" value="{{ code }}" {% if payment_method == code %}checked{% endif %} class="shrink-0">
+            <span class="material-symbols-rounded sm text-ink-muted">
+              {% if kind == "mobile" %}smartphone{% elif kind == "card" %}credit_card{% elif kind == "cod" %}local_shipping{% else %}storefront{% endif %}
+            </span>
+            <span class="font-bold">{{ label }}</span>
+          </label>
+          {% endfor %}
+          <button class="w-full text-sm font-bold border rounded-xl py-2">Enregistrer le paiement</button>
+        </form>
+
+        <a href="{% portal_url 'checkout' %}" class="mt-4 w-full inline-flex justify-center bg-primary hover:bg-primary-600 text-white font-bold text-sm px-5 py-3 rounded-full">
+          Commander
+        </a>
+
+        <div class="mt-4 pt-4 border-t text-xs text-ink-muted space-y-2">
+          <p class="flex items-center gap-2"><span class="material-symbols-rounded sm text-primary">verified_user</span> Paiement 100% sécurisé</p>
+          <p class="flex items-center gap-2"><span class="material-symbols-rounded sm text-primary">support_agent</span> Service client Gab'Pharma</p>
+        </div>
+      </div>
+    </aside>
+  </div>
+  {% else %}
+  <div class="bg-white border rounded-2xl p-12 text-center max-w-lg mx-auto">
+    <span class="material-symbols-rounded text-5xl text-ink-muted/40">shopping_cart</span>
+    <p class="text-ink-muted font-medium mt-4 mb-6">Votre panier est vide</p>
+    <a href="{% portal_url 'search' %}" class="inline-flex bg-primary text-white font-bold text-sm px-6 py-2.5 rounded-full">Voir le catalogue</a>
+  </div>
+  {% endif %}
+</div>

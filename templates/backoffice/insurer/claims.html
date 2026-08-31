@@ -1,0 +1,459 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+
+{% load humanize %}
+
+{% block ins_page_title %}{{ page_title|default:"Demandes de prise en charge" }}{% endblock %}
+
+
+
+{% block ins_content %}
+
+<header class="ins-claims-page-header">
+
+  <div class="ins-claims-page-header__title">
+
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-claims-back" aria-label="Retour">
+
+      <span class="material-symbols-rounded">arrow_back</span>
+
+    </a>
+
+    <div>
+
+      <h1>{{ page_title|default:"Demandes de prise en charge" }}</h1>
+
+      <p>Consultez et gérez toutes les demandes de prise en charge en temps réel.</p>
+
+    </div>
+
+  </div>
+
+  <div class="ins-header__actions">
+
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+
+      <span class="material-symbols-rounded">notifications</span>
+
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+
+    </a>
+
+    <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--sm">Déconnexion</a>
+
+  </div>
+
+</header>
+
+{% if filter_pharmacy %}
+<div class="ins-claims-info-banner ins-claims-pharmacy-banner">
+  <span class="material-symbols-rounded">local_pharmacy</span>
+  <p>Demandes pour <strong>{{ filter_pharmacy.name }}</strong> ({{ filter_pharmacy.code }})</p>
+  <a href="{{ claims_reset_url }}" class="ins-btn-outline ins-btn-outline--sm">Voir toutes les demandes</a>
+</div>
+{% endif %}
+
+<form method="get" class="ins-claims-toolbar">
+
+  <div class="ins-claims-search">
+
+    <span class="material-symbols-rounded">search</span>
+
+    <input name="q" value="{{ q }}" placeholder="Rechercher par nom, numéro assuré, référence, pharmacie…">
+
+    {% if filter_status %}<input type="hidden" name="status" value="{{ filter_status }}">{% endif %}
+
+    {% if pharmacy_id %}<input type="hidden" name="pharmacy" value="{{ pharmacy_id }}">{% endif %}
+
+    {% if overdue_only %}<input type="hidden" name="overdue" value="1">{% endif %}
+
+    {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+
+  </div>
+
+  <button type="button" class="ins-claims-filter-btn{% if show_filters %} is-open{% endif %}" data-toggle-filters aria-expanded="{% if show_filters %}true{% else %}false{% endif %}">
+
+    <span class="material-symbols-rounded sm">tune</span> Filtres
+
+    {% if active_filters %}<span class="ins-claims-filter-btn__badge">{{ active_filters }}</span>{% endif %}
+
+  </button>
+
+  <button type="submit" class="ins-btn-primary hidden">Rechercher</button>
+
+</form>
+
+
+
+{% if show_filters %}
+
+<form method="get" class="ins-claims-filters-panel">
+
+  <input type="hidden" name="q" value="{{ q }}">
+
+  <input type="hidden" name="filters" value="1">
+
+  {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+
+  <label class="ins-claims-filters-panel__field">
+
+    <span>Pharmacie</span>
+
+    <select name="pharmacy">
+
+      <option value="">Toutes</option>
+
+      {% for ph in filter_pharmacies %}
+
+      <option value="{{ ph.id }}" {% if pharmacy_id == ph.id|stringformat:"s" %}selected{% endif %}>{{ ph.name }} — {{ ph.city }}</option>
+
+      {% endfor %}
+
+    </select>
+
+  </label>
+
+  <label class="ins-claims-filters-panel__check">
+
+    <input type="checkbox" name="overdue" value="1" {% if overdue_only %}checked{% endif %}>
+
+    En attente depuis plus de 24 h
+
+  </label>
+
+  <button type="submit" class="ins-btn-primary">Appliquer</button>
+
+  <a href="{{ claims_reset_url }}" class="ins-btn-outline">Réinitialiser</a>
+
+</form>
+
+{% endif %}
+
+
+
+<section class="ins-claims-kpi">
+
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--purple">
+
+    <span class="material-symbols-rounded">description</span>
+
+    <div>
+
+      <p class="ins-claims-kpi__label">Total demandes</p>
+
+      <p class="ins-claims-kpi__value">{{ claim_stats.total|intcomma }}</p>
+
+      <p class="ins-claims-kpi__pct">{{ claim_stats.pct_total }} %</p>
+
+    </div>
+
+  </article>
+
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--amber">
+
+    <span class="material-symbols-rounded">schedule</span>
+
+    <div>
+
+      <p class="ins-claims-kpi__label">En attente</p>
+
+      <p class="ins-claims-kpi__value">{{ claim_stats.pending|intcomma }}</p>
+
+      <p class="ins-claims-kpi__pct">{{ claim_stats.pct_pending }} %</p>
+
+    </div>
+
+  </article>
+
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--green">
+
+    <span class="material-symbols-rounded">check_circle</span>
+
+    <div>
+
+      <p class="ins-claims-kpi__label">Validées</p>
+
+      <p class="ins-claims-kpi__value">{{ claim_stats.validated|intcomma }}</p>
+
+      <p class="ins-claims-kpi__pct">{{ claim_stats.pct_validated }} %</p>
+
+    </div>
+
+  </article>
+
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--red">
+
+    <span class="material-symbols-rounded">cancel</span>
+
+    <div>
+
+      <p class="ins-claims-kpi__label">Refusées</p>
+
+      <p class="ins-claims-kpi__value">{{ claim_stats.rejected|intcomma }}</p>
+
+      <p class="ins-claims-kpi__pct">{{ claim_stats.pct_rejected }} %</p>
+
+    </div>
+
+  </article>
+
+</section>
+
+
+
+{% include "backoffice/insurer/partials/claims_tabs.html" %}
+
+
+
+<div class="ins-claims-table-wrap">
+
+  <table class="ins-claims-table">
+
+    <thead>
+
+      <tr>
+
+        <th>Référence</th>
+
+        <th>Assuré</th>
+
+        <th>Pharmacie</th>
+
+        <th>Montant</th>
+
+        <th>Date demande</th>
+
+        <th>Statut</th>
+
+        <th class="text-right">Actions</th>
+
+      </tr>
+
+    </thead>
+
+    <tbody>
+
+      {% for c in page_obj %}
+
+      <tr>
+
+        <td>
+
+          <a href="{% url 'bo_insurer_claim_detail' c.id %}" class="font-mono text-xs font-bold text-primary hover:underline block">{{ c.display_reference }}</a>
+
+          {% if c.has_prescription %}
+
+          <a href="{{ c.prescription_url }}" target="_blank" rel="noopener" class="ins-claims-rx-link">
+
+            <span class="material-symbols-rounded sm">medication</span> Ordonnance
+
+          </a>
+
+          {% endif %}
+
+        </td>
+
+        <td>
+
+          <p class="font-bold">{{ c.client.get_full_name|default:c.client.username }}</p>
+
+          <p class="text-xs text-ink-muted">N° assuré : {{ c.insured_number }}</p>
+
+        </td>
+
+        <td>
+
+          {% if c.order.pharmacy %}
+
+          <p class="font-semibold">{{ c.order.pharmacy.name }}</p>
+
+          <p class="text-xs text-ink-muted">{{ c.order.pharmacy.city|default:c.order.pharmacy.district|default:"—" }}</p>
+
+          {% else %}
+
+          <span class="text-ink-muted">—</span>
+
+          {% endif %}
+
+        </td>
+
+        <td class="font-extrabold whitespace-nowrap">{{ c.amount|intcomma }} FCFA</td>
+
+        <td class="text-sm text-ink-muted whitespace-nowrap">{{ c.created_at|date:"d M Y H:i" }}</td>
+
+        <td>
+
+          <span class="ins-claims-status ins-claims-status--{{ c.ui_status.tone }}">
+
+            <span class="material-symbols-rounded sm">{{ c.ui_status.icon }}</span>
+
+            {{ c.ui_status.label }}
+
+          </span>
+
+        </td>
+
+        <td class="text-right">
+
+          <details class="ins-claims-actions">
+
+            <summary aria-label="Actions"><span class="material-symbols-rounded">more_vert</span></summary>
+
+            <div class="ins-claims-actions__menu">
+              <a href="{% url 'bo_insurer_claim_detail' c.id %}">Voir le détail</a>
+
+              {% if c.order.pharmacy %}
+
+              {% if c.order.pharmacy %}<a href="{% url 'bo_insurer_pharmacy_detail' c.order.pharmacy.id %}">Voir la pharmacie</a>{% endif %}
+
+              {% endif %}
+
+              <a href="{% url 'bo_insurer_members' %}?q={{ c.client.email|urlencode }}">Voir l'assuré</a>
+
+              {% if c.status == 'pending' %}
+
+              <form method="post">
+
+                {% csrf_token %}
+
+                <input type="hidden" name="action" value="approve_claim">
+
+                <input type="hidden" name="claim_id" value="{{ c.id }}">
+
+                <button type="submit">Valider la demande</button>
+
+              </form>
+
+              <form method="post" class="ins-claims-reject-form">
+
+                {% csrf_token %}
+
+                <input type="hidden" name="action" value="reject_claim">
+
+                <input type="hidden" name="claim_id" value="{{ c.id }}">
+
+                <input name="review_notes" required placeholder="Motif du refus" class="ins-claims-reject-input">
+
+                <button type="submit">Refuser</button>
+
+              </form>
+
+              {% elif c.status == 'approved' %}
+
+              <form method="post">
+
+                {% csrf_token %}
+
+                <input type="hidden" name="action" value="mark_paid">
+
+                <input type="hidden" name="claim_id" value="{{ c.id }}">
+
+                <button type="submit">Marquer comme payée</button>
+
+              </form>
+
+              {% endif %}
+
+            </div>
+
+          </details>
+
+        </td>
+
+      </tr>
+
+      {% empty %}
+
+      <tr>
+
+        <td colspan="7" class="ins-claims-empty">
+
+          <span class="material-symbols-rounded">inbox</span>
+
+          <p>Aucune demande de prise en charge pour le moment.</p>
+
+          <p class="text-xs text-ink-muted mt-1">Les demandes sont créées automatiquement lorsqu'un patient assuré chez vous demande un remboursement après livraison d'une commande pharmacie.</p>
+
+        </td>
+
+      </tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+
+</div>
+
+
+
+{% include "backoffice/insurer/partials/claims_pagination.html" %}
+
+
+
+{% if claim_stats.overdue_pending %}
+
+<div class="ins-claims-info-banner">
+
+  <span class="material-symbols-rounded">info</span>
+
+  <div class="flex-1">
+
+    <p><strong>Bon à savoir :</strong> Les demandes en attente depuis plus de 24 h sont automatiquement signalées pour un traitement prioritaire.</p>
+
+    <p class="text-xs mt-0.5">{{ claim_stats.overdue_pending }} demande(s) concernée(s) actuellement.</p>
+
+  </div>
+
+  <a href="{% url 'bo_insurer_claims_pending' %}?overdue=1&amp;filters=1" class="ins-btn-outline ins-btn-outline--sm">Voir les alertes</a>
+
+</div>
+
+{% else %}
+
+<div class="ins-claims-info-banner">
+
+  <span class="material-symbols-rounded">info</span>
+
+  <p class="flex-1"><strong>Bon à savoir :</strong> Les demandes en attente depuis plus de 24 h sont automatiquement signalées pour un traitement prioritaire.</p>
+
+</div>
+
+{% endif %}
+
+
+
+<script>
+
+document.querySelectorAll('[data-toggle-filters]').forEach((btn) => {
+
+  btn.addEventListener('click', () => {
+
+    const url = new URL(window.location.href);
+
+    if (url.searchParams.get('filters') === '1') {
+
+      url.searchParams.delete('filters');
+
+    } else {
+
+      url.searchParams.set('filters', '1');
+
+    }
+
+    window.location.href = url.toString();
+
+  });
+
+});
+
+document.querySelector('.ins-claims-search input')?.addEventListener('keydown', (e) => {
+
+  if (e.key === 'Enter') e.target.form.requestSubmit();
+
+});
+
+</script>
+
+{% endblock %}
+

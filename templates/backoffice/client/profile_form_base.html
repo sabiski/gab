@@ -1,0 +1,14 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block extra_head %}{% block profile_extra_head %}{% endblock %}{% endblock %}
+{% block portal_title %}{{ page_title }}{% endblock %}
+{% block portal_heading %}{{ page_title }}{% endblock %}
+{% block portal_lead %}{% block profile_lead %}{% endblock %}{% endblock %}
+{% block portal_body %}
+<a href="{% block profile_back_href %}{% url 'bo_client_settings' %}{% endblock %}" class="c-chat-back">
+  <span class="material-symbols-rounded sm">arrow_back</span> {% block profile_back_label %}Retour au profil{% endblock %}
+</a>
+<div class="c-form-card mt-3">
+  {% block profile_form %}{% endblock %}
+</div>
+{% endblock %}
+{% block scripts %}{% block profile_scripts %}{% endblock %}{% endblock %}

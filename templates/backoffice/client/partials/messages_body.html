@@ -1,0 +1,57 @@
+{% load portal_urls %}
+<div class="grid lg:grid-cols-5 gap-5">
+  <section class="c-card c-card--lift lg:col-span-3 p-5">
+    <div class="c-card__head">
+      <div>
+        <h2 class="c-card__title">Mes conversations</h2>
+        <p class="c-card__sub">Reprenez un fil existant avec votre pharmacie</p>
+      </div>
+      <span class="c-pill c-pill--muted">{{ conversations|length }} active{{ conversations|length|pluralize }}</span>
+    </div>
+    <div class="space-y-1">
+      {% for c in conversations %}
+      <a href="{% portal_url 'pharmacy_chat' c.pharmacy.slug %}" class="c-thread">
+        <span class="c-thread__avatar">
+          <span class="material-symbols-rounded sm">local_pharmacy</span>
+        </span>
+        <span class="flex-1 min-w-0">
+          <span class="c-thread__name block truncate">{{ c.pharmacy.name }}</span>
+          <span class="c-thread__meta">Dernière activité · {{ c.updated_at|date:"d/m/Y H:i" }}</span>
+        </span>
+        <span class="material-symbols-rounded sm text-[#A78BFA]">chevron_right</span>
+      </a>
+      {% empty %}
+      <div class="c-empty">
+        <div class="c-empty__icon"><span class="material-symbols-rounded">forum</span></div>
+        <p class="text-sm font-bold text-[#374151]">Aucune conversation</p>
+        <p class="text-xs text-[#6B7280] mt-1 max-w-xs mx-auto">Choisissez une pharmacie à droite pour démarrer un échange.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="c-card c-card--lift lg:col-span-2 p-5">
+    <div class="c-card__head">
+      <div>
+        <h2 class="c-card__title">Nouveau message</h2>
+        <p class="c-card__sub">Contacter une officine</p>
+      </div>
+    </div>
+    <ul class="space-y-2 max-h-[min(60vh,420px)] overflow-y-auto pr-1">
+      {% for ph in pharmacies %}
+      <li>
+        <a href="{% portal_url 'pharmacy_chat' ph.slug %}" class="c-thread border border-[#F3F4F6]">
+          <span class="c-thread__avatar">
+            <span class="material-symbols-rounded sm">chat</span>
+          </span>
+          <span class="flex-1 min-w-0">
+            <span class="c-thread__name block truncate">{{ ph.name }}</span>
+            <span class="c-thread__meta">{{ ph.city|default:"Libreville" }}{% if ph.district %} · {{ ph.district }}{% endif %}</span>
+          </span>
+          <span class="c-pill">Ouvrir</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>

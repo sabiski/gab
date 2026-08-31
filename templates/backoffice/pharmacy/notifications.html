@@ -1,0 +1,24 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Notifications pharmacie{% endblock %}
+{% block bo_label %}Portail Pharmacie{% endblock %}
+{% block bo_title %}Notifications{% endblock %}
+{% block bo_content %}
+
+<div class="flex flex-wrap gap-2 mb-4">
+  <a href="{% url 'bo_pharmacy_orders' %}" class="inline-flex items-center gap-1 border font-bold text-xs px-4 py-2 rounded-full">Commandes</a>
+  <a href="{% url 'bo_pharmacy_messages' %}" class="inline-flex items-center gap-1 border font-bold text-xs px-4 py-2 rounded-full">Messages</a>
+  <a href="{% url 'bo_pharmacy_stocks' %}?tab=low" class="inline-flex items-center gap-1 border font-bold text-xs px-4 py-2 rounded-full">Stocks</a>
+</div>
+
+<div class="space-y-3 max-w-3xl">
+  {% for n in notifs %}
+  {% include "backoffice/pharmacy/partials/notification_card.html" %}
+  {% empty %}
+  <div class="bg-white border rounded-2xl p-10 text-center text-ink-muted">
+    <span class="material-symbols-rounded text-4xl text-ink-muted/40">notifications_off</span>
+    <p class="text-sm font-bold mt-3">Aucune notification</p>
+    <p class="text-xs mt-1">Les alertes commandes, messages et stocks apparaîtront ici.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "backoffice/base_bo.html" %}
+{% load humanize %}
+{% block title %}Ruptures{% endblock %}
+{% block bo_label %}Santé publique{% endblock %}
+{% block bo_title %}Statistiques stocks & ruptures{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/authority-portal.css?v=2">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block bo_content %}
+
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Références suivies</p><p class="text-2xl font-extrabold">{{ tracked }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Disponibles</p><p class="text-2xl font-extrabold text-primary">{{ available_count }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Taux dispo.</p><p class="text-2xl font-extrabold text-primary">{{ availability_rate }}%</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Ruptures</p><p class="text-2xl font-extrabold text-rose-600">{{ ruptures|length }}</p></div>
+</div>
+
+<form method="get" class="bg-white rounded-2xl border p-3 mb-5 flex flex-wrap gap-2 items-end text-sm">
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Région</label>
+    <select name="region" class="block border rounded-xl px-3 py-2 mt-1">
+      <option value="">Toutes</option>
+      {% for reg in regions %}<option value="{{ reg }}" {% if filter_region == reg %}selected{% endif %}>{{ reg }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="flex-1 min-w-[180px]">
+    <label class="text-xs font-bold text-ink-muted">Catégorie</label>
+    <input name="category" value="{{ filter_category }}" placeholder="Ex. Anti-infectieux" class="w-full border rounded-xl px-3 py-2 mt-1">
+  </div>
+  <button class="bg-primary text-white font-bold px-4 py-2 rounded-xl">Filtrer</button>
+</form>
+
+<div class="bg-primary-50 border border-primary/20 rounded-2xl p-4 mb-6 text-sm">
+  <p class="font-extrabold text-primary mb-1">Analyse automatique</p>
+  <p class="text-ink-muted">Un médicament est en rupture lorsque le stock agrégé tombe à 0 sur le réseau. Stock faible : ≤ 20 unités nationales. Seuil critique paramétrable par zone dans les prochaines versions.</p>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-6">
+  <section class="bg-white rounded-2xl border p-5">
+    <h2 class="font-extrabold text-rose-600 mb-4">Top ruptures (qty = 0)</h2>
+    <div class="space-y-2 text-sm max-h-96 overflow-y-auto">
+      {% for s in ruptures %}
+      <div class="flex justify-between py-2 border-b border-slate-50">
+        <div>
+          <p class="font-bold">{{ s.medicine__name }}</p>
+          <p class="text-xs text-ink-muted">{{ s.medicine__dci }} · {{ s.medicine__category__name|default:"—" }}</p>
+        </div>
+        <span class="text-xs font-bold text-rose-600">{{ s.pharmacies_count }} off.</span>
+      </div>
+      {% empty %}<p class="text-ink-muted">Aucune rupture totale.</p>{% endfor %}
+    </div>
+  </section>
+  <section class="bg-white rounded-2xl border p-5">
+    <h2 class="font-extrabold text-amber-600 mb-4">Stock faible national</h2>
+    <div class="space-y-2 text-sm max-h-96 overflow-y-auto">
+      {% for s in low %}
+      <div class="flex justify-between py-2 border-b border-slate-50">
+        <div>
+          <p class="font-bold">{{ s.medicine__name }}</p>
+          <p class="text-xs text-ink-muted">{{ s.medicine__category__name|default:"—" }}</p>
+        </div>
+        <span class="text-xs font-bold text-amber-600">{{ s.total_qty }} u.</span>
+      </div>
+      {% empty %}<p class="text-ink-muted">Rien à signaler.</p>{% endfor %}
+    </div>
+  </section>
+</div>
+<section class="bg-white rounded-2xl border p-5 mt-6">
+  <h2 class="font-extrabold mb-4">Répartition par catégorie thérapeutique</h2>
+  <div class="flex flex-wrap gap-2">
+    {% for c in by_category %}
+    <span class="px-3 py-1.5 rounded-full bg-canvas text-sm font-bold">{{ c.category__name|default:"Sans catégorie" }} · {{ c.n }}</span>
+    {% endfor %}
+  </div>
+</section>
+
+{% if portal_permissions.map %}
+{% include "backoffice/authority/partials/map_preview.html" with map_data=map_data %}
+<p class="text-center mt-2 mb-4">
+  <a href="{% url 'bo_authority_map' %}" class="text-sm font-extrabold text-[#6c3aed]">Voir la carte complète des stocks par région →</a>
+</p>
+{{ map_data|json_script:"authority-map-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=1"></script>
+{% endif %}
+{% endblock %}

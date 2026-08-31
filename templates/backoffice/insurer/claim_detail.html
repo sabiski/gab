@@ -1,0 +1,315 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}Validation / Refus — {{ detail.reference }}{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claim-detail-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{{ back_url }}" class="ins-claims-back" aria-label="Retour"><span class="material-symbols-rounded">arrow_back</span></a>
+    <div>
+      <h1>Validation / Refus d'une prise en charge</h1>
+      <p>Examinez la demande, vérifiez les documents et confirmez votre décision.</p>
+    </div>
+  </div>
+  <div class="ins-header__actions">
+    <button type="button" class="ins-btn-outline ins-btn-outline--sm" onclick="window.print()">
+      <span class="material-symbols-rounded sm">print</span> Imprimer
+    </button>
+  </div>
+</header>
+
+<section class="ins-claim-summary">
+  <article class="ins-claim-summary__card">
+    <p class="ins-claim-summary__label">Statut actuel</p>
+    <span class="ins-claims-status ins-claims-status--{{ detail.status.tone }}">
+      <span class="material-symbols-rounded sm">{{ detail.status.icon }}</span>{{ detail.status.label }}
+    </span>
+  </article>
+  <article class="ins-claim-summary__card">
+    <p class="ins-claim-summary__label">Référence demande</p>
+    <p class="ins-claim-summary__value font-mono">{{ detail.reference }}</p>
+  </article>
+  <article class="ins-claim-summary__card">
+    <p class="ins-claim-summary__label">Date de la demande</p>
+    <p class="ins-claim-summary__value">{{ detail.received_at|date:"d M Y" }} à {{ detail.received_at|date:"H:i" }}</p>
+  </article>
+  <article class="ins-claim-summary__card">
+    <p class="ins-claim-summary__label">Type de demande</p>
+    <span class="ins-claim-tag">{{ detail.request_type }}</span>
+  </article>
+</section>
+
+<div class="ins-claim-main-grid">
+  <div class="ins-claim-main-col">
+    <section class="ins-claim-entities ins-claim-entities--two">
+      <article class="ins-claim-entity">
+        <h3><span class="material-symbols-rounded sm">person</span> Informations sur l'assuré</h3>
+        <p class="ins-claim-entity__name">{{ detail.client_name }}</p>
+        <ul class="ins-claim-entity__meta">
+          <li>N° assuré : <strong>{{ detail.insured_number }}</strong></li>
+          {% if detail.client_dob %}
+          <li>Date de naissance : {{ detail.client_dob|date:"d/m/Y" }}{% if detail.client_age %} ({{ detail.client_age }} ans){% endif %}</li>
+          {% endif %}
+          <li>Téléphone : {{ detail.client_phone }}</li>
+          <li>E-mail : {{ detail.client_email }}</li>
+          <li>Formule : <strong>{{ detail.plan_label }}</strong></li>
+          <li>Validité : {{ detail.contract_valid_from }} — {{ detail.contract_valid_to }}</li>
+        </ul>
+      </article>
+      <article class="ins-claim-entity">
+        <h3><span class="material-symbols-rounded sm">local_pharmacy</span> Informations sur la pharmacie</h3>
+        <p class="ins-claim-entity__name">{{ detail.pharmacy_name }}</p>
+        <ul class="ins-claim-entity__meta">
+          <li>Code partenaire : <strong>{{ detail.pharmacy_code }}</strong></li>
+          <li>{{ detail.pharmacy_address }}</li>
+          <li>{{ detail.pharmacy_city }}</li>
+          <li>Téléphone : {{ detail.pharmacy_phone }}</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="ins-panel">
+      <h3 class="ins-claim-section-title">Détails de la prescription</h3>
+      <dl class="ins-claim-meta-grid">
+        <div><dt>Date ordonnance</dt><dd>{{ detail.rx_date|date:"d M Y" }}</dd></div>
+        <div><dt>Prescripteur</dt><dd>{{ detail.prescriber }}</dd></div>
+        <div><dt>N° ordonnance</dt><dd class="font-mono">{{ detail.prescription_ref }}</dd></div>
+        <div><dt>Réf. commande</dt><dd class="font-mono">{{ claim.order.code }}</dd></div>
+      </dl>
+      {% if detail.rx_reason != "—" %}
+      <p class="ins-claim-note"><strong>Motif / notes :</strong> {{ detail.rx_reason }}</p>
+      {% endif %}
+    </section>
+
+    <section class="ins-panel">
+      <h3 class="ins-claim-section-title">Médicaments demandés</h3>
+      <div class="ins-claim-meds-wrap">
+        <table class="ins-claim-meds">
+          <thead>
+            <tr><th>#</th><th>Médicament</th><th>Forme / Dosage</th><th>Qté</th><th>Prix unit.</th><th>Montant</th></tr>
+          </thead>
+          <tbody>
+            {% for line in detail.items %}
+            <tr>
+              <td>{{ line.index }}</td>
+              <td class="font-semibold">{{ line.name }}</td>
+              <td>{{ line.form_dosage }}</td>
+              <td>{{ line.quantity }}</td>
+              <td>{{ line.unit_price|intcomma }} F</td>
+              <td class="font-bold">{{ line.line_total|intcomma }} F</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-ink-muted py-4">Aucune ligne — montant global {{ detail.amount|intcomma }} FCFA</td></tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr><td colspan="5" class="text-right font-bold">Total</td><td class="font-extrabold text-primary">{{ detail.items_total|intcomma }} FCFA</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+    {% if detail.documents %}
+    <section class="ins-panel">
+      <h3 class="ins-claim-section-title">Documents joints</h3>
+      <div class="ins-claim-docs ins-claim-docs--thumbs">
+        {% for doc in detail.documents %}
+        {% if doc.url %}
+        <a href="{{ doc.url }}" target="_blank" rel="noopener" class="ins-claim-doc ins-claim-doc--thumb">
+          {% if doc.thumb %}<img src="{{ doc.thumb }}" alt="{{ doc.label }}" class="ins-claim-doc__img">{% else %}
+          <span class="material-symbols-rounded">{{ doc.icon }}</span>{% endif %}
+          <span>{{ doc.label }}</span>
+        </a>
+        {% else %}
+        <div class="ins-claim-doc ins-claim-doc--thumb ins-claim-doc--placeholder">
+          <span class="material-symbols-rounded">{{ doc.icon }}</span>
+          <span>{{ doc.label }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="ins-panel">
+      <h3 class="ins-claim-section-title">Historique de la demande</h3>
+      <ol class="ins-claim-timeline">
+        {% for step in detail.request_history %}
+        <li class="ins-claim-timeline__step ins-claim-timeline__step--{{ step.state }}">
+          <span class="ins-claim-timeline__dot"></span>
+          <div><p class="font-bold text-sm">{{ step.label }}</p><p class="text-xs text-ink-muted">{{ step.meta }}</p></div>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+
+  <aside class="ins-claim-side">
+    {% if detail.can_decide %}
+    <section class="ins-panel ins-claim-decision">
+      <h3 class="ins-claim-decision__title">Prise en charge</h3>
+
+      <div class="ins-claim-coverage {% if not detail.coverage_ok %}ins-claim-coverage--warn{% endif %}">
+        <span class="material-symbols-rounded">{% if detail.coverage_ok %}verified_user{% else %}warning{% endif %}</span>
+        <div>
+          <p class="ins-claim-coverage__rate">Couverture de l'assuré {{ detail.coverage_rate }} %</p>
+          <p class="ins-claim-coverage__hint">{{ detail.coverage_hint }}</p>
+        </div>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" class="ins-claim-decision-form" id="claim-decision-form">
+        {% csrf_token %}
+
+        <label class="ins-claim-decision__amount-label" for="approved-amount">Montant à prendre en charge</label>
+        <div class="ins-claim-amount-input-wrap">
+          <input type="number" id="approved-amount" name="approved_amount" min="1" max="{{ detail.amount }}"
+            value="{{ detail.amount }}" class="ins-claim-amount-input" data-full="{{ detail.amount }}" data-partial="{{ detail.max_coverage }}">
+          <span class="ins-claim-amount-input__suffix">FCFA</span>
+        </div>
+
+        <fieldset class="ins-claim-radio-group">
+          <legend class="ins-claim-decision__legend">Décision</legend>
+          <label class="ins-claim-radio is-checked" data-decision="validate">
+            <input type="radio" name="decision" value="validate" checked>
+            <span class="ins-claim-radio__body">
+              <span class="ins-claim-radio__title">Valider la demande</span>
+              <span class="ins-claim-radio__sub">Prise en charge totale</span>
+            </span>
+          </label>
+          <label class="ins-claim-radio" data-decision="partial">
+            <input type="radio" name="decision" value="partial">
+            <span class="ins-claim-radio__body">
+              <span class="ins-claim-radio__title">Valider partiellement</span>
+              <span class="ins-claim-radio__sub">Prise en charge partielle</span>
+            </span>
+          </label>
+          <label class="ins-claim-radio" data-decision="reject">
+            <input type="radio" name="decision" value="reject">
+            <span class="ins-claim-radio__body">
+              <span class="ins-claim-radio__title">Refuser la demande</span>
+              <span class="ins-claim-radio__sub">Ne pas prendre en charge</span>
+            </span>
+          </label>
+        </fieldset>
+
+        <label class="ins-claim-comment-label">
+          <span>Commentaire <span class="text-ink-muted font-normal">(obligatoire en cas de prise en charge partielle ou de refus)</span> <span class="text-rose-600" id="comment-required" hidden>*</span></span>
+          <textarea name="review_notes" rows="3" maxlength="300" placeholder="Votre commentaire…" class="ins-filters__input w-full">{{ detail.review_notes }}</textarea>
+          <span class="text-[10px] text-ink-muted"><span id="comment-count">0</span>/300</span>
+        </label>
+
+        <div class="ins-claim-upload" id="claim-upload-zone">
+          <label for="review-attachment" class="ins-claim-upload__label">
+            <span class="material-symbols-rounded">upload_file</span>
+            <span class="font-bold text-sm">Joindre un document</span>
+            <span class="text-xs text-ink-muted">PDF, JPG ou PNG — max. 5 Mo</span>
+            <input type="file" id="review-attachment" name="review_attachment" accept=".pdf,.jpg,.jpeg,.png,image/*,application/pdf" class="sr-only">
+          </label>
+          <p class="ins-claim-upload__filename hidden" id="upload-filename"></p>
+        </div>
+
+        <div class="ins-claim-decision__actions">
+          <button type="submit" class="ins-btn-primary w-full ins-claim-submit" id="btn-confirm">
+            <span class="material-symbols-rounded sm">check_circle</span> Confirmer la décision
+          </button>
+          <a href="{{ back_url }}" class="ins-btn-outline w-full ins-claim-cancel">
+            <span class="material-symbols-rounded sm">close</span> Annuler
+          </a>
+        </div>
+      </form>
+    </section>
+    {% else %}
+    <section class="ins-panel">
+      <h3 class="ins-claim-decision__title">Décision enregistrée</h3>
+      <p class="text-sm text-ink-muted mt-1">Statut : <strong>{{ detail.status.label }}</strong></p>
+      <p class="ins-claim-decision__amount-label mt-3">Montant pris en charge</p>
+      <p class="ins-claim-decision__amount-static">{{ detail.amount|intcomma }} FCFA</p>
+      {% if detail.review_notes %}<p class="text-sm mt-2"><strong>Commentaire :</strong> {{ detail.review_notes }}</p>{% endif %}
+      {% if detail.review_attachment_url %}
+      <a href="{{ detail.review_attachment_url }}" target="_blank" rel="noopener" class="ins-claim-link mt-2 inline-block">Voir le document joint →</a>
+      {% endif %}
+    </section>
+
+    <section class="ins-panel">
+      <h3 class="ins-claim-section-title">Suivi de la demande</h3>
+      <ol class="ins-claim-timeline">
+        {% for step in detail.timeline %}
+        <li class="ins-claim-timeline__step ins-claim-timeline__step--{{ step.state }}">
+          <span class="ins-claim-timeline__dot"></span>
+          <div><p class="font-bold text-sm">{{ step.label }}</p><p class="text-xs text-ink-muted">{{ step.meta }}</p></div>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+
+{% if detail.can_decide %}
+<div class="ins-claim-deadline-banner">
+  <span class="material-symbols-rounded">schedule</span>
+  <p>Vous disposez de <strong>{{ detail.hours_left }} h</strong> pour traiter cette demande. Passé ce délai, la demande sera automatiquement relancée.</p>
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById("claim-decision-form");
+  if (!form) return;
+
+  const amountInput = document.getElementById("approved-amount");
+  const radios = form.querySelectorAll('input[name="decision"]');
+  const comment = form.querySelector('textarea[name="review_notes"]');
+  const counter = document.getElementById("comment-count");
+  const commentRequired = document.getElementById("comment-required");
+  const uploadInput = document.getElementById("review-attachment");
+  const uploadName = document.getElementById("upload-filename");
+  const fullAmount = amountInput ? amountInput.getAttribute("data-full") : "";
+  const partialDefault = amountInput ? amountInput.getAttribute("data-partial") : "";
+
+  const sync = () => {
+    const val = form.querySelector('input[name="decision"]:checked')?.value;
+    if (amountInput) {
+      if (val === "validate") {
+        amountInput.value = fullAmount;
+        amountInput.readOnly = true;
+        amountInput.classList.add("is-readonly");
+      } else if (val === "partial") {
+        amountInput.readOnly = false;
+        amountInput.classList.remove("is-readonly");
+        if (parseInt(amountInput.value, 10) >= parseInt(fullAmount, 10)) {
+          amountInput.value = partialDefault || Math.max(1, parseInt(fullAmount, 10) - 1);
+        }
+      } else {
+        amountInput.readOnly = true;
+        amountInput.classList.add("is-readonly");
+      }
+    }
+    commentRequired?.toggleAttribute("hidden", val !== "partial" && val !== "reject");
+    form.querySelectorAll(".ins-claim-radio").forEach((l) => {
+      l.classList.remove("is-checked", "is-partial", "is-reject");
+      if (l.querySelector("input")?.checked) {
+        l.classList.add("is-checked");
+        if (val === "partial") l.classList.add("is-partial");
+        if (val === "reject") l.classList.add("is-reject");
+      }
+    });
+  };
+
+  radios.forEach((r) => r.addEventListener("change", sync));
+  comment?.addEventListener("input", () => { if (counter) counter.textContent = comment.value.length; });
+  if (comment && counter) counter.textContent = comment.value.length;
+
+  uploadInput?.addEventListener("change", () => {
+    const file = uploadInput.files && uploadInput.files[0];
+    if (file && uploadName) {
+      uploadName.textContent = file.name;
+      uploadName.classList.remove("hidden");
+    }
+  });
+
+  sync();
+})();
+</script>
+{% endif %}
+{% endblock %}

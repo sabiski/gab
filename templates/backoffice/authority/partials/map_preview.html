@@ -1,0 +1,27 @@
+{% load humanize %}
+<section class="auth-panel auth-map-preview">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <h3 class="!mb-0">Répartition des demandes par région</h3>
+    <a href="{% url 'bo_authority_map' %}" class="auth-map-link text-xs">
+      Voir la carte interactive <span class="material-symbols-rounded text-sm">arrow_forward</span>
+    </a>
+  </div>
+  <div class="auth-map-preview__grid">
+    <div class="auth-map-preview__map-wrap">
+      <div id="auth-map-mini" class="auth-map auth-map--mini" role="img" aria-label="Aperçu carte Gabon"></div>
+    </div>
+    <div class="auth-map-preview__table">
+      {% for r in map_data.regions|slice:":6" %}
+      <div class="auth-list-row">
+        <span class="inline-flex items-center gap-2 font-bold">
+          <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:{{ r.fill_color }}"></span>
+          {{ r.name }}
+        </span>
+        <span class="text-xs text-ink-muted shrink-0">{{ r.orders_pct }}%</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ink-muted">Pas de données régionales.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>

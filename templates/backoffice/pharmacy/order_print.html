@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+
+<head>
+
+  <meta charset="utf-8">
+
+  <title>Commande {{ order.code }}</title>
+
+  <style>
+
+    body { font-family: system-ui, sans-serif; padding: 2rem; max-width: 720px; margin: 0 auto; }
+
+    h1 { font-size: 1.25rem; }
+
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+
+    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; font-size: 0.875rem; }
+
+    .trace { display: flex; gap: 1.5rem; align-items: flex-start; margin: 1rem 0; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; }
+
+    .trace img { width: 140px; height: 140px; }
+
+    .code { font-size: 1.5rem; letter-spacing: 0.25em; font-weight: 800; color: #228545; }
+
+    @media print { .no-print { display: none; } }
+
+  </style>
+
+</head>
+
+<body>
+
+  <button class="no-print" onclick="window.print()">Imprimer</button>
+
+  <h1>Commande {{ order.code }}</h1>
+
+  <p>Client : {{ order.client }} · {{ order.created_at|date:"d/m/Y H:i" }}</p>
+
+  <p>Pharmacie : {{ order.pharmacy.name }}</p>
+
+  <p>Statut : <strong>{{ order.get_status_display }}</strong> · {{ order.get_delivery_mode_display }}</p>
+
+  {% if order.delivery_mode != "pickup" %}
+
+  <div class="trace">
+
+    <img src="{% url 'bo_pharmacy_order_qr' order.pk %}" alt="QR traçabilité">
+
+    <div>
+
+      <p><strong>Étiquette traçabilité — remise livreur</strong></p>
+
+      <p>Code suivi pharmacie : <span class="code">{{ order.pharmacy_handoff_code }}</span></p>
+
+      <p style="font-size:0.8rem;color:#555">Le QR contient : médicaments, pharmacie, client. À scanner à la remise au livreur.</p>
+
+      {% if order.pharmacy_handoff_at %}
+
+      <p style="font-size:0.8rem">Remise validée le {{ order.pharmacy_handoff_at|date:"d/m/Y H:i" }}</p>
+
+      {% endif %}
+
+    </div>
+
+  </div>
+
+  {% endif %}
+
+  <p>Code client (livraison) : <strong style="letter-spacing:0.2em">{{ order.validation_code_display }}</strong></p>
+
+  <table>
+
+    <thead><tr><th>Article</th><th>Qté</th><th>Prix</th></tr></thead>
+
+    <tbody>
+
+      {% for it in order.items.all %}
+
+      <tr><td>{{ it.medicine_name }}</td><td>{{ it.quantity }}</td><td>{{ it.line_total }} F</td></tr>
+
+      {% endfor %}
+
+    </tbody>
+
+  </table>
+
+  <p><strong>Total : {{ order.total }} FCFA</strong></p>
+
+  {% with pay=order.payments.first %}
+
+  {% if pay %}<p>Paiement : {{ pay.get_method_display }} — {{ pay.get_status_display }}</p>{% endif %}
+
+  {% endwith %}
+
+</body>
+
+</html>
+

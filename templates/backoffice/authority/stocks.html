@@ -1,0 +1,250 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Surveillance des stocks de médicaments{% endblock %}
+{% block auth_extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Surveillance des stocks de médicaments <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Suivez en temps réel la disponibilité des médicaments essentiels sur l'ensemble du territoire</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <div class="auth-date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{{ stock.last_updated|date:"d/m/Y" }}</span>
+    </div>
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline" id="auth-stocks-filter-toggle">
+      <span class="material-symbols-rounded text-sm">tune</span> Filtres
+    </button>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+    </a>
+    {% if bo_role != "admin" %}{% include "backoffice/authority/partials/user_chip.html" %}{% endif %}
+  </div>
+</header>
+
+<form method="get" id="auth-stocks-filters" class="auth-stocks-filters {% if filter_category or filter_region %}{% else %}hidden{% endif %}">
+  <div>
+    <label>Région</label>
+    <select name="region" class="auth-stocks-filters__input">
+      <option value="">Toutes les régions</option>
+      {% for reg in regions %}
+      <option value="{{ reg }}" {% if filter_region == reg %}selected{% endif %}>{{ reg }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="flex-1 min-w-[12rem]">
+    <label>Catégorie thérapeutique</label>
+    <input type="text" name="category" value="{{ filter_category }}" placeholder="Ex. Antibiotiques" class="auth-stocks-filters__input w-full">
+  </div>
+  <button type="submit" class="auth-filter-btn">Appliquer</button>
+  {% if filter_category or filter_region %}
+  <a href="{% url 'bo_authority_stocks' %}" class="auth-map-link text-xs">Réinitialiser</a>
+  {% endif %}
+</form>
+
+<section class="auth-kpi-grid auth-kpi-grid--5 auth-kpi-grid--national auth-stocks-kpis">
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded">medication</span>
+    <p class="auth-kpi__label">Médicaments suivis</p>
+    <p class="auth-kpi__value">{{ stock.tracked|intcomma }}</p>
+    <p class="auth-kpi__hint">Catégories essentielles</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-primary">inventory</span>
+    <p class="auth-kpi__label">Taux de disponibilité global</p>
+    <p class="auth-kpi__value">{{ stock.availability_rate }}%</p>
+    <p class="auth-kpi__trend is-up"><span class="material-symbols-rounded text-xs">trending_up</span> +{{ stock.availability_trend }}% vs période précédente</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-rose-500">warning</span>
+    <p class="auth-kpi__label">Ruptures de stock</p>
+    <p class="auth-kpi__value text-rose-600">{{ stock.rupture_count|intcomma }}</p>
+    <p class="auth-kpi__trend text-rose-600"><span class="material-symbols-rounded text-xs">trending_up</span> +{{ stock.rupture_trend }}% vs période précédente</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-amber-500">shopping_cart</span>
+    <p class="auth-kpi__label">Stock critique</p>
+    <p class="auth-kpi__value">{{ stock.critical_count|intcomma }}</p>
+    <p class="auth-kpi__hint">Nécessitent réapprovisionnement</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-emerald-500">check_circle</span>
+    <p class="auth-kpi__label">Stock suffisant</p>
+    <p class="auth-kpi__value">{{ stock.sufficient_count|intcomma }}</p>
+    <p class="auth-kpi__hint">Pas d'action requise</p>
+  </article>
+</section>
+
+<section class="auth-stocks-mid">
+  <article class="auth-panel auth-stocks-categories">
+    <h3>Taux de disponibilité par catégorie thérapeutique</h3>
+    <div class="auth-stocks-cat-list">
+      {% for c in stock.categories %}
+      <div class="auth-stocks-cat-row">
+        <span class="auth-stocks-cat-row__icon material-symbols-rounded">{{ c.icon }}</span>
+        <span class="auth-stocks-cat-row__name">{{ c.name }}</span>
+        <span class="auth-stocks-cat-row__bar"><span style="width:{{ c.rate }}%;"></span></span>
+        <span class="auth-stocks-cat-row__pct">{{ c.rate }}%</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ink-muted">Aucune catégorie renseignée.</p>
+      {% endfor %}
+    </div>
+    <div class="auth-stocks-donut-wrap">
+      <h4>Répartition globale</h4>
+      <div class="auth-stocks-donut">
+        <div class="auth-stocks-donut__ring" style="--d1: {{ stock.donut.disponible_pct }}; --d2: {{ stock.donut.limited_pct }};">
+          <span class="auth-stocks-donut__center">{{ stock.donut.disponible_pct }}%<small>Disponible</small></span>
+        </div>
+        <ul class="auth-stocks-donut__legend">
+          <li><span class="auth-dot auth-dot--green"></span> Disponible <span class="text-ink-muted">(≥ 70%)</span> <strong>{{ stock.donut.disponible|intcomma }} ({{ stock.donut.disponible_pct }}%)</strong></li>
+          <li><span class="auth-dot auth-dot--amber"></span> Stock limité <span class="text-ink-muted">(30-69%)</span> <strong>{{ stock.donut.limited|intcomma }} ({{ stock.donut.limited_pct }}%)</strong></li>
+          <li><span class="auth-dot auth-dot--red"></span> Rupture <span class="text-ink-muted">(&lt; 30%)</span> <strong>{{ stock.donut.rupture|intcomma }} ({{ stock.donut.rupture_pct }}%)</strong></li>
+        </ul>
+      </div>
+    </div>
+  </article>
+
+  <article class="auth-panel auth-stocks-ruptures">
+    <div class="flex items-center justify-between gap-2 mb-3">
+      <h3 class="!mb-0">Médicaments en rupture de stock</h3>
+      <a href="{% url 'bo_authority_stocks' %}?category=" class="auth-map-link text-xs">Voir tout →</a>
+    </div>
+    <ul class="auth-stocks-rupture-list">
+      {% for m in stock.rupture_list %}
+      <li class="auth-stocks-rupture-item">
+        <span class="material-symbols-rounded text-rose-500 shrink-0">error</span>
+        <div class="min-w-0 flex-1">
+          <p class="font-bold text-sm truncate">{{ m.name }}</p>
+          <p class="text-xs text-ink-muted">{{ m.form }}</p>
+        </div>
+        <span class="auth-stocks-rupture-badge">Régions : {{ m.regions }}</span>
+        <span class="material-symbols-rounded text-ink-muted text-sm">chevron_right</span>
+      </li>
+      {% empty %}
+      <li class="text-sm text-ink-muted py-6 text-center">Aucune rupture totale détectée.</li>
+      {% endfor %}
+    </ul>
+    <a href="{% url 'bo_authority_stocks' %}" class="auth-stocks-rupture-more">Voir toutes les ruptures →</a>
+  </article>
+</section>
+
+<section class="auth-stocks-bottom">
+  <article class="auth-panel auth-stocks-table-panel">
+    <h3>Disponibilité des médicaments par région</h3>
+    <div class="auth-stocks-table-wrap">
+      <table class="auth-stocks-table">
+        <thead>
+          <tr>
+            <th>Région</th>
+            <th>Taux de disponibilité</th>
+            <th>Disponibles</th>
+            <th>Stock limité</th>
+            <th>Ruptures</th>
+            <th>Stock critique</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in stock.region_table %}
+          <tr>
+            <td class="font-bold">{{ r.name }}</td>
+            <td>
+              <div class="auth-stocks-table-rate">
+                <span class="auth-stocks-table-rate__bar"><span style="width:{{ r.rate }}%;background:{{ r.bar_color }}"></span></span>
+                <span>{{ r.rate }}%</span>
+              </div>
+            </td>
+            <td>{{ r.disponible|intcomma }}</td>
+            <td>{{ r.limited|intcomma }}</td>
+            <td class="{% if r.rupture %}text-rose-600 font-bold{% endif %}">{{ r.rupture|intcomma }}</td>
+            <td class="{% if r.critical %}text-amber-600 font-bold{% endif %}">{{ r.critical|intcomma }}</td>
+            <td>
+              <a href="{% url 'bo_authority_map' %}" class="auth-stocks-table-link">Voir détails</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </article>
+
+  <div class="auth-stocks-map-col">
+    <article class="auth-panel auth-stocks-map-card">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <h3 class="!mb-0">Couverture des stocks par région</h3>
+        <a href="{% url 'bo_authority_map' %}" class="auth-map-link text-xs">Voir la carte complète →</a>
+      </div>
+      <div class="auth-map-panel__map auth-map-panel__map--choropleth auth-stocks-map-wrap">
+        <div id="auth-map-stocks" class="auth-map auth-map--stocks" role="img" aria-label="Carte stocks par région"></div>
+        <div class="auth-map-legend auth-map-legend--stocks">
+          <p class="auth-map-legend__title">Disponibilité</p>
+          <ul>
+            <li><span class="auth-map-legend__swatch" style="background:#059669"></span> ≥ 80%</li>
+            <li><span class="auth-map-legend__swatch" style="background:#34d399"></span> 60 – 79%</li>
+            <li><span class="auth-map-legend__swatch" style="background:#fbbf24"></span> 30 – 59%</li>
+            <li><span class="auth-map-legend__swatch" style="background:#f87171"></span> &lt; 30%</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <article class="auth-panel auth-stocks-replenish">
+      <h3>Résumé des besoins de réapprovisionnement</h3>
+      <div class="auth-stocks-replenish__grid">
+        <div class="auth-stocks-replenish__item auth-stocks-replenish__item--rupture">
+          <span class="material-symbols-rounded">remove_shopping_cart</span>
+          <div>
+            <p class="font-extrabold text-lg">{{ stock.replenishment.rupture|intcomma }}</p>
+            <p class="text-xs font-semibold">Ruptures de stock</p>
+            <p class="text-[0.6rem] text-ink-muted">Action immédiate</p>
+          </div>
+        </div>
+        <div class="auth-stocks-replenish__item auth-stocks-replenish__item--critical">
+          <span class="material-symbols-rounded">local_shipping</span>
+          <div>
+            <p class="font-extrabold text-lg">{{ stock.replenishment.critical|intcomma }}</p>
+            <p class="text-xs font-semibold">Stock critique</p>
+            <p class="text-[0.6rem] text-ink-muted">Priorité élevée</p>
+          </div>
+        </div>
+        <div class="auth-stocks-replenish__item auth-stocks-replenish__item--limited">
+          <span class="material-symbols-rounded">inventory_2</span>
+          <div>
+            <p class="font-extrabold text-lg">{{ stock.replenishment.limited|intcomma }}</p>
+            <p class="text-xs font-semibold">Stock limité</p>
+            <p class="text-[0.6rem] text-ink-muted">À surveiller</p>
+          </div>
+        </div>
+      </div>
+      <a href="{% url 'bo_authority_reports' %}?type=stocks&export=csv" class="auth-stocks-report-btn">
+        <span class="material-symbols-rounded">description</span>
+        Générer le rapport des stocks
+      </a>
+    </article>
+  </div>
+</section>
+
+<footer class="auth-national-footer">
+  <p>
+    <span class="material-symbols-rounded text-sm align-middle text-sky-600">info</span>
+    Les données affichées sont mises à jour en temps réel à partir des pharmacies et établissements de santé.
+  </p>
+  <span class="flex items-center gap-1 text-[0.65rem]">
+    <span class="material-symbols-rounded text-sm">schedule</span>
+    Dernière mise à jour : {{ stock.last_updated|date:"d/m/Y" }} à {{ stock.last_updated|date:"H:i" }}
+  </span>
+</footer>
+
+{{ stock.map_data|json_script:"authority-map-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=2"></script>
+<script>
+document.getElementById('auth-stocks-filter-toggle')?.addEventListener('click', function () {
+  document.getElementById('auth-stocks-filters')?.classList.toggle('hidden');
+});
+</script>
+{% endblock %}

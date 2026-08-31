@@ -1,0 +1,513 @@
+{% extends "backoffice/base_bo.html" %}
+{% load bo_extras %}
+{% block title %}Stocks{% endblock %}
+{% block bo_title %}Stocks{% endblock %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/pharmacy-orders.css?v=2">
+<link rel="stylesheet" href="/static/css/pharmacy-stocks.css?v=2">
+<link rel="stylesheet" href="/static/css/stats-mobile.css?v=1">
+{% endblock %}
+{% block bo_content %}
+<div class="pharmacy-stocks pharmacy-orders" id="pharmacy-stocks-root">
+
+  <section class="po-hero" aria-label="Vue d'ensemble stocks">
+    <div class="po-hero__row">
+      <div>
+        {% if pharmacy %}<p class="po-hero__eyebrow">{{ pharmacy.name }}</p>{% endif %}
+        <h2 class="po-hero__title">Stocks &amp; médicaments</h2>
+        {% if pharmacy_job_label %}
+        <span class="po-hero__role po-hero__role--{{ pharmacy_job_role|default:'staff' }}">
+          <span class="material-symbols-rounded sm">{{ pharmacy_job_role|pharmacy_job_icon }}</span>
+          {{ pharmacy_job_label }}
+        </span>
+        {% endif %}
+      </div>
+      <a href="?new=1&mode=product&tab={{ tab }}&q={{ q|urlencode }}&category={{ filter_category }}&visibility={{ filter_visibility }}&sort={{ sort }}" class="po-hero__create" title="Créer un médicament" aria-label="Créer un médicament">
+        <span class="material-symbols-rounded">add</span>
+      </a>
+    </div>
+    <div class="po-kpi-scroll" role="tablist" aria-label="Filtres stock">
+      <a href="?tab=all&q={{ q|urlencode }}&category={{ filter_category }}&visibility={{ filter_visibility }}&sort={{ sort }}" class="po-kpi {% if tab == 'all' %}is-active{% endif %}">
+        <div class="po-kpi__n">{{ counts.all }}</div>
+        <div class="po-kpi__label">Tous</div>
+      </a>
+      <a href="?tab=low&q={{ q|urlencode }}&category={{ filter_category }}&visibility={{ filter_visibility }}&sort={{ sort }}" class="po-kpi po-kpi--warn {% if tab == 'low' %}is-active{% endif %}">
+        <div class="po-kpi__n">{{ counts.low }}</div>
+        <div class="po-kpi__label">Stock faible</div>
+      </a>
+      <a href="?tab=out&q={{ q|urlencode }}&category={{ filter_category }}&visibility={{ filter_visibility }}&sort={{ sort }}" class="po-kpi {% if tab == 'out' %}is-active{% endif %}">
+        <div class="po-kpi__n">{{ counts.out }}</div>
+        <div class="po-kpi__label">Rupture</div>
+      </a>
+      <a href="?tab=expiring&q={{ q|urlencode }}&category={{ filter_category }}&visibility={{ filter_visibility }}&sort={{ sort }}" class="po-kpi po-kpi--warn {% if tab == 'expiring' %}is-active{% endif %}">
+        <div class="po-kpi__n">{{ counts.expiring }}</div>
+        <div class="po-kpi__label">Péremption</div>
+      </a>
+      <a href="?tab=inventory" class="po-kpi {% if tab == 'inventory' %}is-active{% endif %}">
+        <div class="po-kpi__n">{% if inventory_session %}●{% else %}—{% endif %}</div>
+        <div class="po-kpi__label">Inventaire</div>
+      </a>
+      <a href="?tab=movements" class="po-kpi {% if tab == 'movements' %}is-active{% endif %}">
+        <div class="po-kpi__n">↻</div>
+        <div class="po-kpi__label">Historique</div>
+      </a>
+    </div>
+  </section>
+
+  <div class="stk-actions">
+    <a href="?new=1&mode=catalog&tab={{ tab }}&q={{ q|urlencode }}&category={{ filter_category }}&visibility={{ filter_visibility }}&sort={{ sort }}" class="stk-action-btn stk-action-btn--primary">
+      <span class="material-symbols-rounded sm">playlist_add</span> Catalogue
+    </a>
+    <a href="?new=1&mode=product&tab={{ tab }}&q={{ q|urlencode }}&category={{ filter_category }}&visibility={{ filter_visibility }}&sort={{ sort }}" class="stk-action-btn stk-action-btn--outline">
+      <span class="material-symbols-rounded sm">medication</span> Créer
+    </a>
+    <a href="?export=csv" class="stk-action-btn">
+      <span class="material-symbols-rounded sm">download</span> Export
+    </a>
+    <a href="javascript:window.print()" class="stk-action-btn hidden sm:inline-flex">
+      <span class="material-symbols-rounded sm">print</span> Imprimer
+    </a>
+    <form method="post" enctype="multipart/form-data" class="stk-import">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="import_csv">
+      <input type="hidden" name="tab" value="{{ tab }}">
+      <input type="file" name="csv_file" accept=".csv,text/csv">
+      <button type="submit" class="font-bold">Import CSV</button>
+    </form>
+  </div>
+
+  <details class="stk-help">
+    <summary><span class="material-symbols-rounded sm">help</span> Guide gestion du stock</summary>
+    <div class="stk-help__body">
+      <ol>
+        <li><strong>Depuis catalogue</strong> — médicament déjà créé par l'admin national.</li>
+        <li><strong>Créer médicament</strong> — fiche + catégorie + stock local si le catalogue est incomplet.</li>
+        <li>Modifiez la <strong>quantité</strong> puis <strong>Enregistrer</strong> — l'historique se met à jour.</li>
+        <li>Alertes : stock faible, rupture, péremption &lt; 60 jours.</li>
+        <li><strong>Inventaire</strong> — comptage physique et validation des écarts.</li>
+      </ol>
+    </div>
+  </details>
+
+  <form method="get" class="po-search" id="stk-search-form">
+    {% if show_create %}<input type="hidden" name="new" value="1">{% endif %}
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <div class="po-search__row">
+      <div class="po-search__input-wrap">
+        <span class="material-symbols-rounded">search</span>
+        <input type="search" name="q" value="{{ q }}" placeholder="Nom, DCI, labo, lot…" class="po-search__input" autocomplete="off">
+      </div>
+      <button type="button" class="po-search__toggle" id="stk-filter-toggle" aria-expanded="false" aria-controls="stk-advanced-filters" title="Filtres">
+        <span class="material-symbols-rounded sm">tune</span>
+      </button>
+    </div>
+    <div class="po-search__advanced" id="stk-advanced-filters">
+      <select name="category" aria-label="Catégorie">
+        <option value="">Toutes catégories</option>
+        {% for c in categories %}
+        <option value="{{ c.id }}" {% if filter_category == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+      <select name="visibility" aria-label="Visibilité">
+        <option value="">Visibilité</option>
+        <option value="visible" {% if filter_visibility == "visible" %}selected{% endif %}>Visible sur le site</option>
+        <option value="hidden" {% if filter_visibility == "hidden" %}selected{% endif %}>Masqué</option>
+      </select>
+      <select name="sort" aria-label="Tri">
+        <option value="name" {% if sort == "name" %}selected{% endif %}>Nom A→Z</option>
+        <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>Prix croissant</option>
+        <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>Prix décroissant</option>
+        <option value="qty_asc" {% if sort == "qty_asc" %}selected{% endif %}>Quantité croissante</option>
+        <option value="qty_desc" {% if sort == "qty_desc" %}selected{% endif %}>Quantité décroissante</option>
+      </select>
+      <div class="po-search__actions">
+        <button type="submit" class="po-search__btn po-search__btn--primary">Filtrer</button>
+        <a href="?tab={{ tab }}" class="po-search__btn po-search__btn--ghost">Réinitialiser</a>
+      </div>
+    </div>
+  </form>
+
+  <p class="stk-results">{% if tab == 'inventory' %}Inventaire physique{% elif tab == 'movements' %}Historique des mouvements{% else %}{{ stocks|length }} produit{{ stocks|length|pluralize }} affiché{{ stocks|length|pluralize }}{% endif %}</p>
+{% if tab == 'inventory' %}
+<section class="stk-panel">  {% if inventory_session %}
+  <div class="flex flex-wrap justify-between gap-3 mb-4">
+    <div>
+      <h2 class="font-extrabold">Inventaire en cours</h2>
+      <p class="text-xs text-ink-muted font-medium mt-1">
+        Démarré le {{ inventory_session.created_at|date:"d/m/Y H:i" }}
+        {% if inventory_session.started_by %}par {{ inventory_session.started_by.get_full_name|default:inventory_session.started_by.username }}{% endif %}
+        — {{ inventory_session.lines_counted }}/{{ inventory_session.lines_total }} compté(s)
+        {% if inventory_session.variance_lines %}· <span class="text-amber-600 font-bold">{{ inventory_session.variance_lines }} écart(s)</span>{% endif %}
+      </p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <form method="post" onsubmit="return confirm('Valider l\'inventaire et appliquer les écarts au stock ?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="complete_inventory">
+        <button class="bg-primary text-white font-bold text-sm px-4 py-2 rounded-xl">Valider inventaire</button>
+      </form>
+      <form method="post" onsubmit="return confirm('Annuler cet inventaire ?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="cancel_inventory">
+        <button class="border font-bold text-sm px-4 py-2 rounded-xl text-rose-600">Annuler</button>
+      </form>
+    </div>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_inventory">
+    <div class="overflow-x-auto mb-3">
+      <table class="w-full text-sm">
+        <thead class="text-[11px] font-bold text-ink-muted uppercase text-left bg-canvas">
+          <tr>
+            <th class="px-3 py-2">Produit</th>
+            <th class="px-3 py-2">Attendu</th>
+            <th class="px-3 py-2">Compté</th>
+            <th class="px-3 py-2">Écart</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for line in inventory_lines %}
+          <tr class="border-t">
+            <td class="px-3 py-2 font-bold">{{ line.stock.medicine.name }}</td>
+            <td class="px-3 py-2">{{ line.expected_quantity }}</td>
+            <td class="px-3 py-2">
+              <input type="number" name="counted_{{ line.stock_id }}" value="{{ line.counted_quantity|default:'' }}" min="0" placeholder="—" class="w-24 border rounded-lg px-2 py-1">
+            </td>
+            <td class="px-3 py-2 font-bold {% if line.variance %}{% if line.variance > 0 %}text-primary{% else %}text-rose-600{% endif %}{% endif %}">
+              {% if line.variance is not None %}{% if line.variance > 0 %}+{% endif %}{{ line.variance }}{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="px-3 py-8 text-center text-ink-muted">Aucune ligne — ajoutez des produits au stock d'abord.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if inventory_lines %}
+    <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl">Enregistrer les comptages</button>
+    {% endif %}
+  </form>
+  {% else %}
+  <h2 class="font-extrabold mb-2">Démarrer un inventaire</h2>
+  <p class="text-xs text-ink-muted font-medium mb-4">Un instantané du stock actuel sera pris. Saisissez les quantités comptées en rayon, puis validez pour appliquer les écarts.</p>
+  <form method="post" class="flex flex-wrap gap-2 items-end max-w-xl">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="start_inventory">
+    <div class="flex-1 min-w-[200px]">
+      <label class="text-[10px] font-bold text-ink-muted">Note (optionnel)</label>
+      <input name="inventory_note" placeholder="Ex. Inventaire trimestriel" class="w-full border rounded-xl px-3 py-2 text-sm mt-0.5">
+    </div>
+    <button class="bg-violet-600 text-white font-bold text-sm px-5 py-2.5 rounded-xl">Démarrer l'inventaire</button>
+  </form>
+  {% endif %}
+</section>
+
+{% if past_inventories %}
+<section class="stk-panel">  <h2 class="font-extrabold mb-3">Inventaires précédents</h2>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-[11px] font-bold text-ink-muted uppercase text-left bg-canvas">
+        <tr><th class="px-3 py-2">Date</th><th class="px-3 py-2">Statut</th><th class="px-3 py-2">Lignes</th><th class="px-3 py-2">Écarts</th><th class="px-3 py-2">Par</th></tr>
+      </thead>
+      <tbody>
+        {% for inv in past_inventories %}
+        <tr class="border-t">
+          <td class="px-3 py-2 whitespace-nowrap">{{ inv.created_at|date:"d/m/Y H:i" }}</td>
+          <td class="px-3 py-2">{{ inv.get_status_display }}</td>
+          <td class="px-3 py-2">{{ inv.lines_total }}</td>
+          <td class="px-3 py-2">{{ inv.variance_lines }}</td>
+          <td class="px-3 py-2 text-ink-muted">{{ inv.completed_by.get_full_name|default:inv.started_by|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% elif tab == 'movements' %}
+<section class="stk-panel">  <h2 class="font-extrabold mb-1">Historique des mouvements</h2>
+  <p class="text-xs text-ink-muted font-medium mb-3">Entrées, sorties, ajustements et inventaires validés.</p>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-[11px] font-bold text-ink-muted uppercase text-left bg-canvas">
+        <tr><th class="px-3 py-2">Date</th><th class="px-3 py-2">Produit</th><th class="px-3 py-2">Type</th><th class="px-3 py-2">Δ</th><th class="px-3 py-2">Stock</th><th class="px-3 py-2">Par</th><th class="px-3 py-2">Note</th></tr>
+      </thead>
+      <tbody>
+        {% for m in movements_page %}
+        <tr class="border-t">
+          <td class="px-3 py-2 whitespace-nowrap">{{ m.created_at|date:"d/m/Y H:i" }}</td>
+          <td class="px-3 py-2 font-bold">{{ m.stock.medicine.name }}</td>
+          <td class="px-3 py-2">{{ m.get_movement_type_display }}</td>
+          <td class="px-3 py-2 {% if m.quantity_delta > 0 %}text-primary{% else %}text-rose-600{% endif %} font-bold">{% if m.quantity_delta > 0 %}+{% endif %}{{ m.quantity_delta }}</td>
+          <td class="px-3 py-2">{{ m.quantity_after }}</td>
+          <td class="px-3 py-2 text-ink-muted text-xs">{{ m.created_by.get_full_name|default:m.created_by|default:"—" }}</td>
+          <td class="px-3 py-2 text-ink-muted">{{ m.note|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="px-3 py-10 text-center text-ink-muted">Aucun mouvement enregistré.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if movements_page %}
+  <nav class="flex flex-wrap items-center justify-between gap-3 mt-4 text-sm">
+    {% if movements_page.paginator.num_pages > 1 %}
+    <p class="text-ink-muted font-medium">{{ movements_page.start_index }}–{{ movements_page.end_index }} sur {{ movements_page.paginator.count }}</p>
+    <div class="flex items-center gap-1">
+      {% if movements_page.has_previous %}
+      <a href="?tab=movements&page={{ movements_page.previous_page_number }}" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-canvas font-bold">←</a>
+      {% endif %}
+      <span class="px-3 py-1.5 font-bold text-primary">{{ movements_page.number }}/{{ movements_page.paginator.num_pages }}</span>
+      {% if movements_page.has_next %}
+      <a href="?tab=movements&page={{ movements_page.next_page_number }}" class="px-3 py-1.5 rounded-lg border bg-white hover:bg-canvas font-bold">→</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </nav>
+  {% endif %}
+</section>
+
+{% else %}
+
+{% if show_create %}
+<section class="stk-panel">
+  <div class="flex flex-wrap justify-between gap-2 mb-3">
+    <h2 class="font-extrabold">{% if create_mode == "product" %}Créer un médicament + stock{% else %}Ajouter depuis le catalogue{% endif %}</h2>
+    <a href="?tab={{ tab }}&q={{ q|urlencode }}&category={{ filter_category }}&visibility={{ filter_visibility }}&sort={{ sort }}" class="text-xs font-bold text-ink-muted">Fermer</a>
+  </div>
+
+  {% if create_mode == "product" %}
+  <p class="text-xs text-ink-muted font-medium mb-3">Si le produit n’existe pas dans le catalogue national, créez-le ici (catégorie incluse). Il sera lié à votre pharmacie.</p>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-2 gap-3 text-sm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="create_product">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <input type="hidden" name="q" value="{{ q }}">
+    <input type="hidden" name="category" value="{{ filter_category }}">
+    <input type="hidden" name="visibility" value="{{ filter_visibility }}">
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <input name="new_name" required placeholder="Nom du médicament *" class="border rounded-xl px-3 py-2">
+    <input name="new_dosage" placeholder="Dosage médicament (ex. 500 mg)" class="border rounded-xl px-3 py-2">
+    <input name="tagline" placeholder="Accroche courte" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <input name="barcode" placeholder="Référence / code-barres" class="border rounded-xl px-3 py-2">
+    <select name="contenance_preset" required class="border rounded-xl px-3 py-2">
+      <option value="">Contenance *</option>
+      {% for c in contenance_presets %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+      <option value="custom">Autre…</option>
+    </select>
+    <input name="contenance_custom" placeholder="Contenance personnalisée" class="border rounded-xl px-3 py-2">
+    <input name="new_dci" placeholder="DCI / principe actif" class="border rounded-xl px-3 py-2">
+    <input name="new_laboratory" placeholder="Laboratoire" class="border rounded-xl px-3 py-2">
+    <select name="new_form" class="border rounded-xl px-3 py-2">{% for val, label in forms %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select>
+    <select name="category_id" class="border rounded-xl px-3 py-2">
+      <option value="">Catégorie existante</option>
+      {% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+    </select>
+    <input name="new_category" placeholder="Ou nouvelle catégorie…" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    {% include "backoffice/partials/image_field.html" with name="image" label="Photo du médicament (optionnel)" %}
+    <input type="number" name="quantity" value="20" min="0" placeholder="Quantité" class="border rounded-xl px-3 py-2">
+    <input type="number" name="price" min="1" required placeholder="Prix FCFA *" class="border rounded-xl px-3 py-2">
+    <input name="lot_number" placeholder="N° lot" class="border rounded-xl px-3 py-2">
+    <input type="date" name="expiry_date" class="border rounded-xl px-3 py-2">
+    <input type="number" name="low_stock_threshold" value="10" min="0" class="border rounded-xl px-3 py-2" placeholder="Seuil alerte">
+    <label class="flex items-center gap-2 text-xs font-semibold"><input type="checkbox" name="requires_prescription"> Ordonnance</label>
+    <label class="flex items-center gap-2 text-xs font-semibold"><input type="checkbox" name="is_visible" checked> Visible sur le site</label>
+    <textarea name="description" rows="2" placeholder="Résumé court" class="border rounded-xl px-3 py-2 sm:col-span-2"></textarea>
+    <textarea name="presentation" rows="3" placeholder="Présentation détaillée" class="border rounded-xl px-3 py-2 sm:col-span-2"></textarea>
+    <textarea name="composition" rows="2" placeholder="Composition" class="border rounded-xl px-3 py-2"></textarea>
+    <textarea name="usage_advice" rows="2" placeholder="Conseils d'utilisation" class="border rounded-xl px-3 py-2"></textarea>
+    <input name="recommended_by" placeholder="Recommandé par…" class="border rounded-xl px-3 py-2">
+    <input name="pharmacist_name" placeholder="Nom pharmacien (avis signé)" class="border rounded-xl px-3 py-2">
+    <input name="pharmacist_rpps" placeholder="N° RPPS" class="border rounded-xl px-3 py-2">
+    <input name="delivery_promise" placeholder="Promesse livraison" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <textarea name="pharmacist_advice" rows="2" placeholder="Avis pharmacien (catalogue)" class="border rounded-xl px-3 py-2"></textarea>
+    <textarea name="stock_pharmacist_advice" rows="2" placeholder="Conseil affiché au client" class="border rounded-xl px-3 py-2"></textarea>
+    <button class="bg-primary text-white font-bold rounded-xl py-2.5 sm:col-span-2">Créer et mettre en stock</button>
+  </form>
+  {% else %}
+    {% if not available_medicines %}
+    <p class="text-sm text-ink-muted mb-3">Tous les médicaments du catalogue sont déjà dans votre stock, ou le catalogue est vide.</p>
+    <p class="text-xs text-ink-muted mb-3">Vous pouvez créer vos propres fiches (et catégories) sans attendre l’admin.</p>
+    <a href="?new=1&mode=product&tab={{ tab }}" class="inline-flex bg-primary text-white font-bold text-sm px-4 py-2 rounded-xl">Créer un nouveau médicament</a>
+    {% else %}
+    <form method="post" class="grid sm:grid-cols-2 gap-3 text-sm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <input type="hidden" name="tab" value="{{ tab }}">
+      <input type="hidden" name="q" value="{{ q }}">
+      <input type="hidden" name="category" value="{{ filter_category }}">
+      <input type="hidden" name="visibility" value="{{ filter_visibility }}">
+      <input type="hidden" name="sort" value="{{ sort }}">
+      <div class="sm:col-span-2">
+        <label class="text-xs font-bold text-ink-muted">Médicament (catalogue) *</label>
+        <select name="medicine_id" required class="mt-1 w-full border rounded-xl px-3 py-2">
+          <option value="">— Choisir —</option>
+          {% for m in available_medicines %}
+          <option value="{{ m.id }}">{{ m.name }} {% if m.dosage %}{{ m.dosage }}{% endif %}{% if m.laboratory %} · {{ m.laboratory }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <input type="number" name="quantity" value="20" min="0" required placeholder="Quantité" class="border rounded-xl px-3 py-2">
+      <input type="number" name="price" min="1" required placeholder="Prix FCFA *" class="border rounded-xl px-3 py-2">
+      <input name="lot_number" placeholder="N° lot" class="border rounded-xl px-3 py-2">
+      <input type="date" name="expiry_date" class="border rounded-xl px-3 py-2">
+      <input type="number" name="low_stock_threshold" value="10" min="0" class="border rounded-xl px-3 py-2">
+      <label class="flex items-center gap-2 text-xs font-semibold self-end pb-2"><input type="checkbox" name="is_visible" checked> Visible sur le site</label>
+      <button class="bg-primary text-white font-bold rounded-xl py-2.5 sm:col-span-2">Ajouter au stock</button>
+    </form>
+    {% endif %}
+  {% endif %}
+</section>
+{% endif %}
+
+<div class="space-y-2">
+  {% for s in stocks %}
+  <div class="stk-stock-card {% if s.quantity == 0 %}stk-stock-card--out{% elif s.availability == 'low' %}stk-stock-card--low{% elif tab == 'expiring' %}stk-stock-card--expiring{% endif %}">
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update">
+    <input type="hidden" name="stock_id" value="{{ s.id }}">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <input type="hidden" name="q" value="{{ q }}">
+    <input type="hidden" name="category" value="{{ filter_category }}">
+    <input type="hidden" name="visibility" value="{{ filter_visibility }}">
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <div class="stk-stock-card__main stk-stock-card__main--wide">
+      <div class="stk-stock-card__head">
+        <div class="stk-stock-card__dot" aria-hidden="true"></div>
+        <div>
+          <p class="stk-stock-card__name">{{ s.medicine }}</p>
+          <p class="stk-stock-card__meta">{{ s.availability_label }}{% if s.medicine.category %} · {{ s.medicine.category.name }}{% endif %}</p>
+          <a href="{% url 'bo_pharmacy_medicine_edit' s.id %}" class="stk-stock-card__edit">
+            <span class="material-symbols-rounded sm">edit_note</span> Fiche produit
+          </a>
+        </div>
+      </div>
+      <div class="stk-field">
+        <label>Quantité</label>
+        <input type="number" name="quantity" value="{{ s.quantity }}" min="0">
+      </div>
+      <div class="stk-field">
+        <label>Prix vente F</label>
+        <input type="number" name="price" value="{{ s.price }}" min="0">
+      </div>
+      <div class="stk-field">
+        <label>Prix achat F</label>
+        <input type="number" name="purchase_price" value="{{ s.purchase_price|default:'' }}" min="0" placeholder="—">
+      </div>
+      <div class="stk-field">
+        <label>Promo</label>
+        <input type="number" name="promotional_price" value="{{ s.promotional_price|default:'' }}" min="0" placeholder="—">
+      </div>
+      <div class="stk-field">
+        <label>Lot</label>
+        <input name="lot_number" value="{{ s.lot_number }}">
+      </div>
+      <div class="stk-field">
+        <label>Péremption</label>
+        <input type="date" name="expiry_date" value="{{ s.expiry_date|date:'Y-m-d' }}">
+      </div>
+      <div class="stk-field">
+        <label>Seuil alerte</label>
+        <input type="number" name="low_stock_threshold" value="{{ s.low_stock_threshold }}" min="0">
+      </div>
+      <div class="stk-field bo-prof-span-2 sm:col-span-2">
+        <label>Conseil client</label>
+        <input name="pharmacist_advice" value="{{ s.pharmacist_advice }}" placeholder="Affiché sur la fiche produit">
+      </div>
+      <label class="flex items-center gap-1.5 text-[11px] font-semibold self-end pb-1"><input type="checkbox" name="is_visible" {% if s.is_visible %}checked{% endif %}> Visible</label>
+    </div>
+    <div class="stk-stock-card__footer">
+      <button type="submit" class="stk-save-btn">
+        <span class="material-symbols-rounded sm">save</span> Enregistrer
+      </button>
+    </div>
+  </form>
+  <form method="post" class="stk-movement">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="quick_movement">
+    <input type="hidden" name="stock_id" value="{{ s.id }}">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <input type="hidden" name="q" value="{{ q }}">
+    <input type="hidden" name="category" value="{{ filter_category }}">
+    <input type="hidden" name="visibility" value="{{ filter_visibility }}">
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <span class="font-bold text-ink-muted">Mouvement</span>
+    <select name="movement_type">
+      <option value="in">Entrée</option>
+      <option value="out">Sortie</option>
+    </select>
+    <input type="number" name="quantity" min="1" value="1" class="w-14" title="Quantité">
+    <input name="movement_note" placeholder="Note" class="flex-1 min-w-[100px]">
+    <button type="submit" class="font-bold text-primary">Appliquer</button>
+  </form>
+  <form method="post" class="stk-delete" onsubmit="return confirm('Retirer ce médicament du stock ?')">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="stock_id" value="{{ s.id }}">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <input type="hidden" name="q" value="{{ q }}">
+    <input type="hidden" name="category" value="{{ filter_category }}">
+    <input type="hidden" name="visibility" value="{{ filter_visibility }}">
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <button type="submit">Supprimer {{ s.medicine.name }}</button>
+  </form>
+  </div>
+  {% empty %}
+  <div class="stk-empty">
+    <span class="material-symbols-rounded text-4xl text-slate-300 block mb-2">inventory_2</span>
+    <p class="font-bold text-ink">Aucun produit dans cet onglet</p>
+    <a href="?new=1&mode=product&tab=all" class="stk-action-btn stk-action-btn--primary inline-flex mt-3">Créer un premier médicament</a>
+  </div>
+  {% endfor %}
+</div>
+{% if recent_movements %}
+<section class="stk-panel">
+  <h2 class="stk-panel__title">Historique automatique</h2>
+  <p class="text-xs text-ink-muted font-medium mb-3">Enregistré à chaque changement de quantité (ajout ou mise à jour). <a href="?tab=movements" class="text-primary font-bold">Voir tout l'historique →</a></p>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-[11px] font-bold text-ink-muted uppercase text-left bg-canvas">
+        <tr><th class="px-3 py-2">Date</th><th class="px-3 py-2">Produit</th><th class="px-3 py-2">Type</th><th class="px-3 py-2">Δ</th><th class="px-3 py-2">Stock</th><th class="px-3 py-2">Note</th></tr>
+      </thead>
+      <tbody>
+        {% for m in recent_movements %}
+        <tr class="border-t">
+          <td class="px-3 py-2 whitespace-nowrap">{{ m.created_at|date:"d/m H:i" }}</td>
+          <td class="px-3 py-2 font-bold">{{ m.stock.medicine.name }}</td>
+          <td class="px-3 py-2">{{ m.get_movement_type_display }}</td>
+          <td class="px-3 py-2 {% if m.quantity_delta > 0 %}text-primary{% else %}text-rose-600{% endif %} font-bold">{% if m.quantity_delta > 0 %}+{% endif %}{{ m.quantity_delta }}</td>
+          <td class="px-3 py-2">{{ m.quantity_after }}</td>
+          <td class="px-3 py-2 text-ink-muted">{{ m.note|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endif %}
+</div>
+
+{% include "backoffice/partials/pharmacy_bottom_nav.html" %}
+
+<script>
+(function () {
+  var toggle = document.getElementById('stk-filter-toggle');
+  var panel = document.getElementById('stk-advanced-filters');
+  if (toggle && panel) {
+    toggle.addEventListener('click', function () {
+      var open = panel.classList.toggle('is-open');
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    {% if filter_category or filter_visibility or sort != "name" %}
+    panel.classList.add('is-open');
+    toggle.setAttribute('aria-expanded', 'true');
+    {% endif %}
+  }
+})();
+</script>
+{% endblock %}

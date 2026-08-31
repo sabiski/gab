@@ -1,0 +1,100 @@
+{% extends "backoffice/client/profile_form_base.html" %}
+{% block profile_lead %}
+<p class="c-lead">Choisissez comment vous réglez vos commandes par défaut — modifiable à tout moment au panier.</p>
+{% endblock %}
+{% block profile_form %}
+
+{% if payment_method %}
+<div class="c-alert c-alert--info mb-4">
+  <span class="material-symbols-rounded sm">payments</span>
+  <span>Moyen actuel : <strong>{% for code, label, kind in payment_methods %}{% if payment_method == code %}{{ label }}{% endif %}{% endfor %}</strong></span>
+</div>
+{% endif %}
+
+<form method="post" class="space-y-5 text-sm" id="payment-form">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="payment">
+
+  <div>
+    <p class="c-label mb-2">Mobile money</p>
+    <div class="space-y-2">
+      {% for code, label, kind in payment_methods %}
+      {% if kind == 'mobile' %}
+      <label class="c-choice c-payment-choice {% if payment_method == code %}is-selected{% endif %}">
+        <input type="radio" name="payment_method" value="{{ code }}" {% if payment_method == code %}checked{% endif %} class="sr-only">
+        <span class="c-payment-choice__icon c-payment-choice__icon--mobile">
+          <span class="material-symbols-rounded sm">smartphone</span>
+        </span>
+        <span class="flex-1 min-w-0">
+          <span class="block font-semibold text-[#374151]">{{ label }}</span>
+          <span class="block text-xs text-[#6B7280] mt-0.5">Paiement sécurisé depuis votre téléphone</span>
+        </span>
+        <span class="material-symbols-rounded text-[#6C3AED] c-choice__check">check_circle</span>
+      </label>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <p class="c-label mb-2">Carte &amp; autres</p>
+    <div class="space-y-2">
+      {% for code, label, kind in payment_methods %}
+      {% if kind != 'mobile' %}
+      <label class="c-choice c-payment-choice {% if payment_method == code %}is-selected{% endif %}">
+        <input type="radio" name="payment_method" value="{{ code }}" {% if payment_method == code %}checked{% endif %} class="sr-only">
+        <span class="c-payment-choice__icon {% if kind == 'card' %}c-payment-choice__icon--card{% elif kind == 'cod' %}c-payment-choice__icon--cod{% else %}c-payment-choice__icon--store{% endif %}">
+          <span class="material-symbols-rounded sm">{% if kind == 'card' %}credit_card{% elif kind == 'cod' %}local_shipping{% else %}storefront{% endif %}</span>
+        </span>
+        <span class="flex-1 min-w-0">
+          <span class="block font-semibold text-[#374151]">{{ label }}</span>
+          <span class="block text-xs text-[#6B7280] mt-0.5">
+            {% if kind == 'card' %}Visa, Mastercard — débit immédiat
+            {% elif kind == 'cod' %}Espèces ou mobile à la livraison
+            {% else %}Règlement directement en officine{% endif %}
+          </span>
+        </span>
+        <span class="material-symbols-rounded text-[#6C3AED] c-choice__check">check_circle</span>
+      </label>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <p class="text-xs text-[#9CA3AF] text-center" id="payment-status" aria-live="polite"></p>
+</form>
+
+<div class="mt-5 pt-5 border-t border-[#F3F4F6] flex gap-3 items-start text-xs text-[#6B7280]">
+  <span class="material-symbols-rounded text-emerald-600 shrink-0">verified_user</span>
+  <p>Transactions chiffrées. Aucun numéro de carte n’est stocké sur nos serveurs — vous confirmez chaque paiement sur votre appareil.</p>
+</div>
+{% endblock %}
+{% block profile_scripts %}
+<script>
+(function () {
+  var form = document.getElementById('payment-form');
+  if (!form) return;
+  var statusEl = document.getElementById('payment-status');
+  var saving = false;
+
+  function syncChoices() {
+    form.querySelectorAll('.c-payment-choice').forEach(function (label) {
+      var input = label.querySelector('input[type="radio"]');
+      if (input) label.classList.toggle('is-selected', input.checked);
+    });
+  }
+
+  form.querySelectorAll('input[name="payment_method"]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      if (saving) return;
+      syncChoices();
+      if (statusEl) statusEl.textContent = 'Enregistrement…';
+      saving = true;
+      form.submit();
+    });
+  });
+
+  syncChoices();
+})();
+</script>
+{% endblock %}

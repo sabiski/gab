@@ -1,0 +1,186 @@
+{% load portal_urls %}
+{% if client_portal %}<div class="space-y-5">{% else %}<div class="urgence-page max-w-site mx-auto px-4 py-8">{% endif %}
+  <div class="grid lg:grid-cols-3 gap-6 lg:gap-8">
+    <div class="lg:col-span-2 space-y-5">
+      <header class="portal-hide-in-espace">
+        <h1 class="text-2xl font-extrabold text-ink">Urgence</h1>
+        <p class="text-sm text-ink-muted mt-1">Le système assigne automatiquement la pharmacie la plus proche selon votre position et le type d'alerte.</p>
+      </header>
+      {% if client_portal %}
+      <p class="text-sm text-[#6B7280] font-medium -mt-1">Le système assigne automatiquement la pharmacie la plus proche selon votre position et le type d'alerte.</p>
+      {% endif %}
+
+      {% if not premium %}
+      <section class="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+        <span class="material-symbols-rounded text-4xl text-amber-600">lock</span>
+        <h2 class="font-extrabold text-lg mt-3">Réservé au forfait Premium</h2>
+        <a href="{% portal_url 'subscription_plans' %}" class="inline-flex mt-4 bg-[#F59E0B] text-white font-bold text-sm px-6 py-3 rounded-full">Passer Premium</a>
+      </section>
+      {% else %}
+
+      {% if nearest %}
+      <div class="bg-[#EFF6FF] border border-[#2563EB]/25 rounded-2xl p-4 text-sm">
+        <p class="text-xs font-bold text-[#2563EB] uppercase">Pharmacie assignée par l'algorithme</p>
+        <p class="font-extrabold text-lg mt-1">{{ nearest.pharmacy.name }}</p>
+        <p class="text-ink-muted mt-0.5">
+          ~{{ nearest.distance_km }} km · env. {{ nearest.eta_min }} min
+          {% if nearest.pharmacy.is_on_duty %} · <span class="text-amber-700 font-bold">De garde</span>{% endif %}
+          {% if nearest.pharmacy.is_24h %} · <span class="text-emerald-700 font-bold">24h</span>{% endif %}
+        </p>
+      </div>
+      {% endif %}
+
+      <div class="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-sm text-rose-900">
+        <p class="font-extrabold">Besoin d'aide immédiate ?</p>
+        <p class="mt-1">1) Type d'urgence · 2) Activez la position · 3) SOS ou discussion auto avec la pharmacie la plus proche.</p>
+      </div>
+
+      <section>
+        <p class="font-extrabold mb-2">Que se passe-t-il ?</p>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {% for val, label, icon in categories %}
+          <form method="post" class="contents">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="select_category">
+            <input type="hidden" name="category" value="{{ val }}">
+            <button type="submit"
+              class="border-2 rounded-2xl p-3 text-center text-xs font-bold transition w-full
+              {% if sos_category == val %}border-rose-500 bg-rose-50 ring-2 ring-rose-300{% else %}border-slate-200 hover:border-rose-400{% endif %}">
+              <span class="material-symbols-rounded text-rose-600 block mx-auto mb-1">{{ icon }}</span>
+              {{ label }}
+            </button>
+          </form>
+          {% endfor %}
+        </div>
+        {% if sos_category_label %}
+        <p class="mt-3 text-sm font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 inline-flex items-center gap-2">
+          <span class="material-symbols-rounded sm">check_circle</span> Alerte : {{ sos_category_label }}
+        </p>
+        {% endif %}
+      </section>
+
+      <div class="bg-white border rounded-2xl p-4 space-y-3">
+        <div class="flex flex-wrap justify-between gap-2 items-center">
+          <div>
+            <p class="text-xs font-bold text-ink-muted uppercase">Position GPS</p>
+            <p id="geo-label" class="font-bold text-sm">{{ user_location }}</p>
+          </div>
+          <button type="button" id="btn-geo" class="text-xs font-bold text-primary border border-primary/30 px-3 py-2 rounded-full hover:bg-primary-50">
+            Actualiser ma position
+          </button>
+        </div>
+        <p id="geo-status" class="text-xs text-ink-muted"></p>
+      </div>
+
+      <form method="post" id="sos-form" class="text-center bg-white border rounded-2xl p-6 space-y-4">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="alert">
+        <input type="hidden" name="category" value="{{ sos_category }}">
+        <input type="hidden" name="latitude" id="sos-lat" value="">
+        <input type="hidden" name="longitude" id="sos-lng" value="">
+        <input type="hidden" name="address" id="sos-address" value="">
+        <button type="submit" class="mx-auto h-40 w-40 rounded-full bg-[#EF4444] hover:bg-rose-600 active:scale-95 text-white shadow-lift flex flex-col items-center justify-center transition">
+          <span class="material-symbols-rounded text-5xl">e911_emergency</span>
+        </button>
+        <p class="font-extrabold text-rose-700 tracking-wide">APPUYER POUR ALERTER</p>
+        <p class="text-xs text-ink-muted">Assignation auto → pharmacie la plus proche + chat ouvert</p>
+      </form>
+
+      <form method="post" id="discuss-form" class="flex flex-wrap gap-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="discuss">
+        <input type="hidden" name="category" value="{{ sos_category }}">
+        <input type="hidden" name="latitude" id="discuss-lat" value="">
+        <input type="hidden" name="longitude" id="discuss-lng" value="">
+        <input type="hidden" name="address" id="discuss-address" value="">
+        <a href="tel:1410" class="flex-1 min-w-[120px] text-center border-2 border-rose-500 text-rose-700 font-bold py-2.5 rounded-full">Appeler le 1410</a>
+        <button type="submit" class="flex-[2] min-w-[200px] bg-[#2563EB] text-white font-bold py-2.5 rounded-full inline-flex items-center justify-center gap-1 hover:opacity-90">
+          <span class="material-symbols-rounded sm">chat</span>
+          Discuter — pharmacie la plus proche
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <aside class="space-y-5">
+      <section class="bg-white border rounded-2xl p-5 text-sm">
+        <h2 class="font-extrabold mb-3">Algorithme Gab'Pharma</h2>
+        <ol class="space-y-2 text-ink-muted list-decimal list-inside">
+          <li>Distance GPS (Haversine)</li>
+          <li>Priorité pharmacies de garde / 24h</li>
+          <li>Ajustement selon le type d'alerte</li>
+          <li>Ouverture chat avec l'officine retenue</li>
+        </ol>
+      </section>
+      <section class="bg-white border rounded-2xl p-5 text-sm">
+        <h2 class="font-extrabold mb-3">Classement à proximité</h2>
+        {% for r in ranked_pharmacies %}
+        <div class="flex justify-between py-2 border-b border-slate-50 text-xs">
+          <span class="font-bold {% if forloop.first %}text-[#2563EB]{% endif %}">{{ forloop.counter }}. {{ r.pharmacy.name }}</span>
+          <span class="text-ink-muted">{{ r.distance_km }} km · ~{{ r.eta_min }} min</span>
+        </div>
+        {% empty %}<p class="text-ink-muted">Position requise pour le classement.</p>{% endfor %}
+      </section>
+      {% if premium and history %}
+      <section class="bg-white border rounded-2xl p-5 text-sm">
+        <h2 class="font-extrabold mb-3">Historique</h2>
+        {% for a in history %}
+        <div class="py-2 border-b border-slate-50">
+          <p class="font-bold">{{ a.code }} · {{ a.get_category_display }}</p>
+          <p class="text-xs text-ink-muted">
+            {% if a.assigned_pharmacy %}{{ a.assigned_pharmacy.name }} ({{ a.distance_km }} km){% else %}—{% endif %}
+          </p>
+        </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+<script>
+(function () {
+  var latIn = document.getElementById('sos-lat');
+  var lngIn = document.getElementById('sos-lng');
+  var addrIn = document.getElementById('sos-address');
+  var dLat = document.getElementById('discuss-lat');
+  var dLng = document.getElementById('discuss-lng');
+  var dAddr = document.getElementById('discuss-address');
+  var status = document.getElementById('geo-status');
+  var label = document.getElementById('geo-label');
+  var btn = document.getElementById('btn-geo');
+
+  function sync(lat, lng, addr) {
+    [latIn, dLat].forEach(function (el) { if (el) el.value = lat; });
+    [lngIn, dLng].forEach(function (el) { if (el) el.value = lng; });
+    [addrIn, dAddr].forEach(function (el) { if (el) el.value = addr || ''; });
+    if (label && addr) label.textContent = addr;
+  }
+
+  function locate() {
+    if (!navigator.geolocation) {
+      if (status) status.textContent = 'Géolocalisation non disponible — position approximative utilisée.';
+      return;
+    }
+    if (status) status.textContent = 'Localisation en cours…';
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var lat = pos.coords.latitude.toFixed(6);
+      var lng = pos.coords.longitude.toFixed(6);
+      var addr = 'GPS (' + lat + ', ' + lng + ')';
+      sync(lat, lng, addr);
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('lat') !== lat || params.get('lng') !== lng) {
+        params.set('lat', lat);
+        params.set('lng', lng);
+        window.location.search = params.toString();
+        return;
+      }
+      if (status) status.textContent = 'Position enregistrée — classement mis à jour par l\'algorithme.';
+    }, function () {
+      if (status) status.textContent = 'GPS refusé — classement basé sur votre profil / Libreville.';
+    }, { enableHighAccuracy: true, timeout: 12000 });
+  }
+
+  if (btn) btn.addEventListener('click', locate);
+  locate();
+})();
+</script>

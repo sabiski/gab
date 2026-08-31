@@ -1,0 +1,261 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Statistiques des patients (données anonymisées){% endblock %}
+{% block auth_extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Statistiques des patients (données anonymisées) <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Vue d'ensemble démographique et comportementale agrégée — aucune donnée nominative.</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <div class="auth-date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{{ patients.period_start|date:"d/m/Y" }} – {{ patients.period_end|date:"d/m/Y" }}</span>
+    </div>
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline" id="auth-patients-filter-toggle">
+      <span class="material-symbols-rounded text-sm">tune</span> Filtres
+    </button>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-icon-btn relative" aria-label="Alertes sanitaires">
+      <span class="material-symbols-rounded">notifications</span>
+    </a>
+    {% if bo_role != "admin" %}{% include "backoffice/authority/partials/user_chip.html" %}{% endif %}
+  </div>
+</header>
+
+<form method="get" id="auth-patients-filters" class="auth-stocks-filters {% if filter_region %}{% else %}hidden{% endif %}">
+  <div>
+    <label>Région</label>
+    <select name="region" class="auth-stocks-filters__input">
+      <option value="">Toutes les régions</option>
+      {% for r in regions %}
+      <option value="{{ r.slug }}" {% if filter_region == r.slug %}selected{% endif %}>{{ r.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="auth-filter-btn">Appliquer</button>
+  {% if filter_region %}
+  <a href="{% url 'bo_authority_patients' %}" class="auth-map-link text-xs">Réinitialiser</a>
+  {% endif %}
+</form>
+
+<section class="auth-kpi-grid auth-kpi-grid--6 auth-kpi-grid--national">
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-primary">groups</span>
+    <p class="auth-kpi__label">Patients actifs (30 jours)</p>
+    <p class="auth-kpi__value">{{ patients.kpis.active_patients|intcomma }}</p>
+    <p class="auth-kpi__trend {% if patients.kpis.active_patients_trend >= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      {% if patients.kpis.active_patients_trend >= 0 %}+{% endif %}{{ patients.kpis.active_patients_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-sky-500">medical_services</span>
+    <p class="auth-kpi__label">Consultations (30 jours)</p>
+    <p class="auth-kpi__value">{{ patients.kpis.consultations|intcomma }}</p>
+    <p class="auth-kpi__trend {% if patients.kpis.consultations_trend >= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      {% if patients.kpis.consultations_trend >= 0 %}+{% endif %}{{ patients.kpis.consultations_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-violet-500">person_add</span>
+    <p class="auth-kpi__label">Nouvelles inscriptions</p>
+    <p class="auth-kpi__value">{{ patients.kpis.new_signups|intcomma }}</p>
+    <p class="auth-kpi__trend {% if patients.kpis.new_signups_trend >= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      {% if patients.kpis.new_signups_trend >= 0 %}+{% endif %}{{ patients.kpis.new_signups_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-emerald-500">medication</span>
+    <p class="auth-kpi__label">Traitements en cours</p>
+    <p class="auth-kpi__value">{{ patients.kpis.ongoing_treatments|intcomma }}</p>
+    <p class="auth-kpi__trend {% if patients.kpis.ongoing_treatments_trend >= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      {% if patients.kpis.ongoing_treatments_trend >= 0 %}+{% endif %}{{ patients.kpis.ongoing_treatments_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-amber-500">cake</span>
+    <p class="auth-kpi__label">Âge moyen</p>
+    <p class="auth-kpi__value">{% if patients.kpis.avg_age %}{{ patients.kpis.avg_age }} ans{% else %}—{% endif %}</p>
+    <p class="auth-kpi__hint">{{ patients.kpis.profiles_with_age|intcomma }} profils renseignés</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-pink-500">wc</span>
+    <p class="auth-kpi__label">Répartition F/H</p>
+    {% if patients.kpis.gender_available %}
+    <p class="auth-kpi__value">{{ patients.gender_split.female_pct }}% / {{ patients.gender_split.male_pct }}%</p>
+    {% else %}
+    <p class="auth-kpi__value">—</p>
+    <p class="auth-kpi__hint">Non collecté sur la plateforme</p>
+    {% endif %}
+  </article>
+</section>
+
+{% if not patients.has_data %}
+<div class="auth-portal__banner !bg-sky-50 !text-sky-900 border border-sky-200 mb-3">
+  Aucune activité patient sur la période sélectionnée. Les statistiques se mettent à jour automatiquement avec les commandes du réseau.
+</div>
+{% endif %}
+
+<section class="auth-patients-mid">
+  <article class="auth-panel">
+    <h3>Répartition des patients par tranche d'âge</h3>
+    <div class="auth-patients-age-bars">
+      {% for a in patients.age_chart %}
+      <div class="auth-patients-age-row">
+        <span class="auth-patients-age-row__label">{{ a.label }}</span>
+        <span class="auth-patients-age-row__bar"><span style="width:{{ a.bar_pct }}%"></span></span>
+        <span class="auth-patients-age-row__pct">{{ a.pct }}%</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ink-muted">Date de naissance non renseignée sur les profils actifs.</p>
+      {% endfor %}
+    </div>
+    <ul class="auth-patients-age-summary">
+      {% for s in patients.age_summary %}
+      <li><span>{{ s.label }}</span><strong>{{ s.pct }}%</strong></li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Répartition par sexe</h3>
+    {% if patients.kpis.gender_available %}
+    <div class="auth-patients-gender-donut">
+      <div class="auth-trends-donut__ring" style="background: conic-gradient(#ec4899 0 {{ patients.gender_split.female_pct }}%, #2563eb {{ patients.gender_split.female_pct }}% 100%);">
+        <span class="auth-trends-donut__center">{{ patients.kpis.active_patients|intcomma }}<small>Patients</small></span>
+      </div>
+    </div>
+    {% else %}
+    <p class="text-sm text-ink-muted py-8 text-center">Le genre n'est pas enregistré dans les profils patients. Seules les tranches d'âge et la géographie sont disponibles.</p>
+    {% endif %}
+  </article>
+</section>
+
+<section class="auth-patients-geo">
+  <article class="auth-panel auth-patients-geo-panel">
+    <h3>Répartition géographique des patients</h3>
+    <div class="auth-patients-geo-grid">
+      <div class="auth-patients-map-wrap">
+        <div id="auth-map-patients" class="auth-map auth-map--trends" role="img" aria-label="Carte patients Gabon"></div>
+      </div>
+      <div class="auth-patients-geo-table-wrap">
+        <table class="auth-trends-table">
+          <thead>
+            <tr><th>Région</th><th>Patients</th><th>Part</th></tr>
+          </thead>
+          <tbody>
+            {% for r in patients.geo_rows %}
+            <tr>
+              <td class="font-bold">{{ r.name }}</td>
+              <td>{{ r.count|intcomma }}</td>
+              <td>{{ r.pct }}%</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Top 5 des motifs (catégories thérapeutiques)</h3>
+    <div class="auth-patients-motives">
+      {% for m in patients.top_motives %}
+      <div class="auth-patients-motive-row">
+        <span class="auth-patients-motive-row__label">{{ m.label }}</span>
+        <span class="auth-patients-motive-row__bar"><span style="width:{{ m.bar_pct }}%"></span></span>
+        <span class="auth-patients-motive-row__val">{{ m.pct }}%</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ink-muted">Aucune commande sur la période.</p>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Nouveaux patients par période</h3>
+    <div class="auth-trends-evo">
+      <svg viewBox="0 0 280 72" preserveAspectRatio="none" class="auth-trends-evo__svg">
+        <polyline class="auth-trends-evo__line" style="stroke:#228545" points="{{ patients.new_patients_line }}" />
+      </svg>
+      <div class="auth-trends-evo__labels">
+        <span>{{ patients.new_patients_evo.0.label }}</span>
+        <span>{{ patients.new_patients_evo.14.label }}</span>
+        <span>{{ patients.new_patients_evo.29.label }}</span>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="auth-patients-bottom">
+  <article class="auth-panel">
+    <h3>Maladies chroniques (patients distincts)</h3>
+    <div class="auth-patients-chronic-grid">
+      {% for c in patients.chronic_stats %}
+      <div class="auth-patients-chronic-card">
+        <span class="material-symbols-rounded">{{ c.icon }}</span>
+        <p class="auth-patients-chronic-card__value">{{ c.count|intcomma }}</p>
+        <p class="auth-patients-chronic-card__label">{{ c.label }}</p>
+        <p class="auth-patients-chronic-card__pct">{{ c.pct }}%</p>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ink-muted col-span-full">Aucun traitement chronique identifié via les commandes de la période.</p>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Consultations par mode de livraison</h3>
+    <div class="auth-trends-donut">
+      <div class="auth-trends-donut__ring" style="background: {{ patients.channel_gradient }};">
+        <span class="auth-trends-donut__center">{{ patients.channel_total|intcomma }}<small>Commandes</small></span>
+      </div>
+      <ul class="auth-trends-donut__legend">
+        {% for c in patients.channel_donut %}
+        <li>
+          <span class="inline-flex items-center gap-2"><span class="auth-dot" style="background:{{ c.color }}"></span>{{ c.label }}</span>
+          <strong>{{ c.pct }}%</strong>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Tendances d'activité (90 derniers jours)</h3>
+    <div class="auth-patients-activity-evo">
+      <svg viewBox="0 0 280 72" preserveAspectRatio="none" class="auth-trends-evo__svg">
+        <polyline class="auth-trends-evo__line" style="stroke:#2563eb;opacity:.7" points="{{ patients.activity_lines.medicine_searches }}" />
+        <polyline class="auth-trends-evo__line" style="stroke:#f59e0b;opacity:.7" points="{{ patients.activity_lines.deliveries }}" />
+        <polyline class="auth-trends-evo__line" style="stroke:#228545" points="{{ patients.activity_lines.consultations }}" />
+      </svg>
+    </div>
+    <div class="auth-trends-legend">
+      <span><i class="auth-dot auth-dot--green"></i> Consultations</span>
+      <span><i class="auth-dot" style="background:#2563eb"></i> Unités médicaments</span>
+      <span><i class="auth-dot auth-dot--amber"></i> Livraisons</span>
+    </div>
+  </article>
+</section>
+
+<footer class="auth-national-footer auth-national-footer--info">
+  <p>
+    <span class="material-symbols-rounded text-sm align-middle">shield</span>
+    Toutes les données sont anonymisées et agrégées. Aucune donnée personnelle n'est accessible.
+  </p>
+  <span class="flex items-center gap-1 text-[0.65rem]">
+    Dernière mise à jour : {{ patients.last_updated|date:"d/m/Y" }} à {{ patients.last_updated|date:"H:i" }}
+  </span>
+</footer>
+
+{{ patients.map_data|json_script:"authority-map-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=5"></script>
+<script>
+document.getElementById('auth-patients-filter-toggle')?.addEventListener('click', function () {
+  document.getElementById('auth-patients-filters')?.classList.toggle('hidden');
+});
+</script>
+{% endblock %}

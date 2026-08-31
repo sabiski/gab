@@ -1,0 +1,61 @@
+{% extends "web/profile_subpage.html" %}
+{% block profile_form %}
+<form method="post" enctype="multipart/form-data" class="profile-card p-5 space-y-4 text-sm">
+  {% csrf_token %}
+  <div class="flex items-center gap-4">
+    <div class="h-20 w-20 rounded-full bg-[#EDE9FE] text-[#6C3AED] text-2xl font-bold flex items-center justify-center overflow-hidden shrink-0">
+      {% if user.avatar %}
+      <img src="{{ user.avatar.url }}" alt="" class="h-full w-full object-cover" id="avatar-preview">
+      {% else %}
+      <span id="avatar-preview">{{ user.first_name|default:user.username|slice:":1"|upper }}</span>
+      {% endif %}
+    </div>
+    <div>
+      <label class="text-xs font-bold text-[#6B7280]">Photo de profil</label>
+      <input type="file" name="avatar" accept="image/*" class="mt-1 text-xs w-full">
+    </div>
+  </div>
+  <div class="grid sm:grid-cols-2 gap-3">
+    <div>
+      <label class="text-xs font-bold text-[#6B7280]">Prénom</label>
+      <input name="first_name" value="{{ user.first_name }}" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+    </div>
+    <div>
+      <label class="text-xs font-bold text-[#6B7280]">Nom</label>
+      <input name="last_name" value="{{ user.last_name }}" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+    </div>
+    <div class="sm:col-span-2">
+      <label class="text-xs font-bold text-[#6B7280]">E-mail</label>
+      <input name="email" type="email" value="{{ user.email }}" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+    </div>
+    <div>
+      <label class="text-xs font-bold text-[#6B7280]">Téléphone</label>
+      <input name="phone" value="{{ user.phone }}" placeholder="+241…" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+    </div>
+    <div>
+      <label class="text-xs font-bold text-[#6B7280]">Date de naissance</label>
+      <input type="date" name="date_of_birth" value="{{ profile.date_of_birth|date:'Y-m-d' }}" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+    </div>
+    <div class="sm:col-span-2">
+      <label class="text-xs font-bold text-[#6B7280]">N° assurance</label>
+      <input name="insurance_number" value="{{ profile.insurance_number }}" placeholder="Ex. ASS-123456" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+    </div>
+    {% if insurance_providers %}
+    <div class="sm:col-span-2">
+      <label class="text-xs font-bold text-[#6B7280]">Organisme d'assurance</label>
+      <select name="insurance_provider" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+        <option value="">— Choisir —</option>
+        {% for p in insurance_providers %}
+        <option value="{{ p.id }}" {% if profile.insurance_provider_id == p.id %}selected{% endif %}>{{ p.name }} ({{ p.coverage_rate }} %)</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div class="sm:col-span-2">
+      <label class="text-xs font-bold text-[#6B7280]">Contact d'urgence</label>
+      <input name="emergency_contact" value="{{ profile.emergency_contact }}" placeholder="+241…" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+    </div>
+  </div>
+  <button class="w-full bg-[#6C3AED] hover:bg-[#5B21B6] text-white font-bold py-3 rounded-xl transition">Enregistrer</button>
+</form>
+{% endblock %}

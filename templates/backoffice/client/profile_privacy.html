@@ -1,0 +1,18 @@
+{% extends "backoffice/client/profile_form_base.html" %}
+{% block profile_back_href %}{% url 'bo_client_parametres' %}{% endblock %}
+{% block profile_back_label %}Retour aux paramètres{% endblock %}
+{% block profile_lead %}
+<p class="c-lead">Comment nous protégeons vos données de santé et de commande.</p>
+{% endblock %}
+{% block profile_form %}
+<div class="space-y-4 text-sm text-[#374151]">
+  <p class="font-bold">Protection de vos données</p>
+  <p class="text-[#6B7280] leading-relaxed">Gab'Pharma traite vos informations de santé et de commande conformément à la réglementation en vigueur au Gabon.</p>
+  <ul class="space-y-3 text-[#6B7280] list-disc list-inside leading-relaxed">
+    <li>Vos ordonnances et messages avec les pharmacies restent accessibles uniquement à vous et aux professionnels concernés.</li>
+    <li>Vous pouvez demander la correction de vos coordonnées depuis <a href="{% url 'bo_client_profile_personal' %}" class="text-[#6C3AED] font-bold hover:underline">Informations personnelles</a>.</li>
+    <li>Les données de géolocalisation ne sont utilisées que pour la livraison et les alertes urgence Premium.</li>
+    <li>Pour toute question : <a href="tel:+24111223344" class="text-[#2563EB] font-bold hover:underline">+241 11 22 33 44</a>.</li>
+  </ul>
+</div>
+{% endblock %}

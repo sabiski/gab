@@ -1,0 +1,285 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Campagnes de santé publique{% endblock %}
+{% block auth_extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Campagnes de santé <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Pilotage des campagnes de prévention, vaccination et promotion — aligné PEV/OMS (contexte Gabon).</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline" id="auth-campaign-filter-toggle">
+      <span class="material-symbols-rounded text-sm">tune</span> Filtres
+    </button>
+    <button type="button" class="auth-filter-btn" id="auth-campaign-create-toggle">
+      <span class="material-symbols-rounded text-sm">add</span> Nouvelle campagne
+    </button>
+    {% if bo_role != "admin" %}{% include "backoffice/authority/partials/user_chip.html" %}{% endif %}
+  </div>
+</header>
+
+<div class="auth-campaign-benchmark">
+  <p class="auth-campaign-benchmark__title"><span class="material-symbols-rounded text-sm">public</span> Référentiels internationaux</p>
+  <ul>
+    {% for b in campaign.benchmarks %}
+    <li><strong>{{ b.org }}</strong> — {{ b.label }}</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<form method="get" id="auth-campaign-filters" class="auth-stocks-filters auth-pharma-filters hidden">
+  <div>
+    <label>Thématique</label>
+    <select name="theme" class="auth-stocks-filters__input">
+      <option value="">Toutes</option>
+      {% for val, label in theme_choices %}
+      <option value="{{ val }}" {% if filter_theme == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Statut</label>
+    <select name="status" class="auth-stocks-filters__input">
+      <option value="">Tous</option>
+      {% for val, label in status_choices %}
+      <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Région</label>
+    <select name="region" class="auth-stocks-filters__input">
+      <option value="">Toutes</option>
+      {% for r in regions %}
+      <option value="{{ r.slug }}" {% if filter_region == r.slug %}selected{% endif %}>{{ r.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="auth-filter-btn">Appliquer</button>
+  <a href="{% url 'bo_authority_campaigns' %}" class="auth-map-link text-xs">Réinitialiser</a>
+</form>
+
+<form method="post" id="auth-campaign-create" class="auth-campaign-create hidden">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="create_campaign">
+  <div class="auth-campaign-create__grid">
+    <div class="auth-campaign-create__field auth-campaign-create__field--wide">
+      <label>Titre de la campagne</label>
+      <input type="text" name="title" required class="auth-stocks-filters__input w-full" placeholder="Ex. Campagne fièvre jaune — Estuaire 2026">
+    </div>
+    <div class="auth-campaign-create__field">
+      <label>Thématique</label>
+      <select name="theme" class="auth-stocks-filters__input w-full">
+        {% for val, label in theme_choices %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="auth-campaign-create__field">
+      <label>Statut</label>
+      <select name="status" class="auth-stocks-filters__input w-full">
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if val == "planned" %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="auth-campaign-create__field">
+      <label>Partenaire</label>
+      <input type="text" name="partner" class="auth-stocks-filters__input w-full" placeholder="MSNS, OMS, UNICEF…">
+    </div>
+    <div class="auth-campaign-create__field">
+      <label>Début</label>
+      <input type="date" name="start_date" required class="auth-stocks-filters__input w-full">
+    </div>
+    <div class="auth-campaign-create__field">
+      <label>Fin</label>
+      <input type="date" name="end_date" required class="auth-stocks-filters__input w-full">
+    </div>
+    <div class="auth-campaign-create__field">
+      <label>Population cible</label>
+      <input type="number" name="target_population" min="0" class="auth-stocks-filters__input w-full" placeholder="Ex. 50000">
+    </div>
+    <div class="auth-campaign-create__field auth-campaign-create__field--wide">
+      <label>Provinces ciblées <span class="text-ink-muted font-normal">(vide = national)</span></label>
+      <select name="regions" multiple class="auth-stocks-filters__input w-full auth-campaign-create__multi">
+        {% for r in regions %}
+        <option value="{{ r.slug }}">{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="auth-campaign-create__field auth-campaign-create__field--wide">
+      <label>Description</label>
+      <textarea name="description" rows="2" class="auth-stocks-filters__input w-full" placeholder="Objectifs, publics prioritaires, protocole…"></textarea>
+    </div>
+  </div>
+  <div class="flex gap-2 mt-2">
+    <button type="submit" class="auth-filter-btn">Enregistrer la campagne</button>
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline" id="auth-campaign-create-cancel">Annuler</button>
+  </div>
+</form>
+
+<section class="auth-kpi-grid auth-kpi-grid--5 auth-kpi-grid--national auth-delivery-kpis">
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-green">
+    <span class="auth-kpi__icon material-symbols-rounded">campaign</span>
+    <p class="auth-kpi__label">Campagnes actives</p>
+    <p class="auth-kpi__value">{{ campaign.kpis.active|intcomma }}</p>
+    <p class="auth-kpi__trend is-up">{% if campaign.kpis.active_trend >= 0 %}+{% endif %}{{ campaign.kpis.active_trend }}%</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-sky">
+    <span class="auth-kpi__icon material-symbols-rounded">groups</span>
+    <p class="auth-kpi__label">Population ciblée</p>
+    <p class="auth-kpi__value">{{ campaign.kpis.target_population|intcomma }}</p>
+    <p class="auth-kpi__hint">{{ campaign.kpis.planned }} planifiée{{ campaign.kpis.planned|pluralize }}</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-violet">
+    <span class="auth-kpi__icon material-symbols-rounded">diversity_3</span>
+    <p class="auth-kpi__label">Personnes touchées</p>
+    <p class="auth-kpi__value">{{ campaign.kpis.people_reached|intcomma }}</p>
+    <p class="auth-kpi__hint">{{ campaign.kpis.completed }} terminée{{ campaign.kpis.completed|pluralize }}</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-amber">
+    <span class="auth-kpi__icon material-symbols-rounded">percent</span>
+    <p class="auth-kpi__label">Taux de couverture</p>
+    <p class="auth-kpi__value">{{ campaign.kpis.coverage_pct }}%</p>
+    {% if campaign.kpis.dose_coverage_pct is not None %}
+    <p class="auth-kpi__hint">Doses : {{ campaign.kpis.dose_coverage_pct }}%</p>
+    {% endif %}
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-blue">
+    <span class="auth-kpi__icon material-symbols-rounded">local_pharmacy</span>
+    <p class="auth-kpi__label">Pharmacies mobilisées</p>
+    <p class="auth-kpi__value">{{ campaign.kpis.pharmacies_mobilized|intcomma }}</p>
+    <p class="auth-kpi__hint">Réseau Gab'Pharma actif</p>
+  </article>
+</section>
+
+{% if not campaign.has_data %}
+<div class="auth-portal__banner !bg-emerald-50 !text-emerald-900 border border-emerald-200 mb-3">
+  Aucune campagne enregistrée. Créez la première via le bouton <strong>Nouvelle campagne</strong> (données réelles, sans chiffres fictifs).
+</div>
+{% endif %}
+
+<section class="auth-campaign-mid">
+  <article class="auth-panel">
+    <h3>Répartition par thématique</h3>
+    <div class="auth-trends-donut auth-trends-donut--compact">
+      <div class="auth-trends-donut__ring" style="background: {{ campaign.theme_gradient }};">
+        <span class="auth-trends-donut__center">{{ campaign.theme_total|intcomma }}<small>Campagnes</small></span>
+      </div>
+      <ul class="auth-trends-donut__legend">
+        {% for s in campaign.theme_donut %}
+        <li>
+          <span class="inline-flex items-center gap-2"><span class="auth-dot" style="background:{{ s.color }}"></span>{{ s.label }}</span>
+          <strong>{{ s.pct }}%</strong>
+        </li>
+        {% empty %}
+        <li class="text-sm text-ink-muted">—</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Lancements (12 mois)</h3>
+    <div class="auth-delivery-line-chart">
+      <svg viewBox="0 0 280 56" preserveAspectRatio="none" class="auth-delivery-line-chart__svg">
+        <polyline class="auth-delivery-line-chart__line" points="{{ campaign.launch_polyline }}" />
+      </svg>
+    </div>
+  </article>
+
+  <article class="auth-panel auth-campaign-map-panel">
+    <h3>Couverture par province</h3>
+    <div class="auth-dispute-geo-grid">
+      <div id="auth-map-campaigns" class="auth-map auth-map--trends" role="img" aria-label="Carte campagnes"></div>
+      <ul class="auth-pharma-geo-list">
+        {% for r in campaign.geo_rows|slice:":7" %}
+        <li><span>{{ r.name }}</span><strong>{{ r.count|intcomma }}</strong></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section class="auth-panel mt-4">
+  <h3>Calendrier des campagnes</h3>
+  <div class="auth-campaign-timeline">
+    {% for t in campaign.timeline %}
+    <div class="auth-campaign-timeline__item auth-campaign-timeline__item--{{ t.status }}">
+      <span class="material-symbols-rounded auth-campaign-timeline__icon">{% if t.theme == "vaccination" %}vaccines{% elif t.theme == "malaria" %}coronavirus{% elif t.theme == "maternal" %}pregnant_woman{% elif t.theme == "cholera" %}water_drop{% elif t.theme == "hiv" %}science{% elif t.theme == "ncd" %}cardiology{% elif t.theme == "nutrition" %}restaurant{% elif t.theme == "tobacco" %}smoke_free{% else %}campaign{% endif %}</span>
+      <div class="auth-campaign-timeline__body">
+        <p class="auth-campaign-timeline__title">{{ t.title }} <span class="auth-campaign-status auth-campaign-status--{{ t.status }}">{{ t.status_label }}</span></p>
+        <p class="auth-campaign-timeline__meta">{{ t.code }} · {{ t.theme_label }} · {{ t.partner }} · {{ t.start|date:"d/m/Y" }} → {{ t.end|date:"d/m/Y" }}</p>
+        {% if t.coverage_pct %}
+        <div class="auth-campaign-timeline__bar"><span style="width:{{ t.coverage_pct }}%"></span></div>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-sm text-ink-muted py-4">Aucune campagne planifiée.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="auth-panel mt-4">
+  <h3>Registre des campagnes</h3>
+  <div class="auth-pharma-table-wrap">
+    <table class="auth-pharma-table">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Campagne</th>
+          <th>Thème</th>
+          <th>Zone</th>
+          <th>Statut</th>
+          <th>Période</th>
+          <th>Couverture</th>
+          <th>Pharmacies</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in campaign.table_rows %}
+        <tr>
+          <td class="font-bold">{{ row.code }}</td>
+          <td>{{ row.title }}</td>
+          <td><span class="inline-flex items-center gap-1"><span class="material-symbols-rounded text-sm text-primary">{{ row.icon }}</span> {{ row.theme_label }}</span></td>
+          <td class="text-xs">{{ row.regions }}</td>
+          <td><span class="auth-campaign-status auth-campaign-status--{{ row.status }}">{{ row.status_label }}</span></td>
+          <td class="text-xs whitespace-nowrap">{{ row.start_date|date:"d/m/y" }} – {{ row.end_date|date:"d/m/y" }}</td>
+          <td>{{ row.reached|intcomma }} / {{ row.target|intcomma }} ({{ row.coverage_pct }}%)</td>
+          <td>{{ row.pharmacies }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-sm text-ink-muted py-8">Aucune campagne pour ces filtres.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer class="auth-national-footer auth-national-footer--info">
+  <p>
+    <span class="material-symbols-rounded text-sm align-middle">info</span>
+    Indicateurs saisis par le MSNS / autorités — pharmacies partenaires Gab'Pharma comme relais de distribution et sensibilisation.
+  </p>
+  <span class="text-[0.65rem]">Dernière mise à jour : {{ campaign.last_updated|date:"d/m/Y H:i" }}</span>
+</footer>
+
+{{ campaign.map_data|json_script:"authority-map-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=9"></script>
+<script>
+document.getElementById('auth-campaign-filter-toggle')?.addEventListener('click', function () {
+  document.getElementById('auth-campaign-filters')?.classList.toggle('hidden');
+});
+document.getElementById('auth-campaign-create-toggle')?.addEventListener('click', function () {
+  document.getElementById('auth-campaign-create')?.classList.toggle('hidden');
+});
+document.getElementById('auth-campaign-create-cancel')?.addEventListener('click', function () {
+  document.getElementById('auth-campaign-create')?.classList.add('hidden');
+});
+</script>
+{% endblock %}

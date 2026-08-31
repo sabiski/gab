@@ -1,0 +1,153 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Carte sanitaire interactive{% endblock %}
+{% block auth_extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Carte sanitaire interactive <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Visualisez la situation sanitaire par région en temps réel</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <div class="auth-date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{{ map_data.last_updated|date:"d/m/Y" }}</span>
+    </div>
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline">
+      <span class="material-symbols-rounded text-sm">tune</span> Filtres
+    </button>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if map_data.total_alerts %}<span class="auth-icon-btn__badge">{{ map_data.total_alerts }}</span>{% endif %}
+    </a>
+    {% if bo_role != "admin" %}{% include "backoffice/authority/partials/user_chip.html" %}{% endif %}
+  </div>
+</header>
+
+<section class="auth-kpi-grid auth-kpi-grid--5 auth-kpi-grid--national">
+  <article class="auth-kpi auth-kpi--national">
+    <p class="auth-kpi__label">Couverture sanitaire moyenne</p>
+    <p class="auth-kpi__value">{{ map_data.avg_coverage }}%</p>
+    <p class="auth-kpi__trend is-up"><span class="material-symbols-rounded text-xs">trending_up</span> +{{ map_data.avg_coverage_trend }}% vs période précédente</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national">
+    <p class="auth-kpi__label">Régions couvertes</p>
+    <p class="auth-kpi__value">{{ map_data.covered_count }} / {{ map_data.province_count }}</p>
+    <p class="auth-kpi__trend text-ink-muted text-[0.65rem]">100% du territoire</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national">
+    <p class="auth-kpi__label">Établissements actifs</p>
+    <p class="auth-kpi__value">{{ map_data.establishments|intcomma }}</p>
+    <p class="auth-kpi__trend is-up"><span class="material-symbols-rounded text-xs">trending_up</span> +{{ map_data.establishments_trend }}%</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national">
+    <p class="auth-kpi__label">Population couverte</p>
+    <p class="auth-kpi__value">{{ map_data.population_covered|intcomma }}</p>
+    <p class="auth-kpi__trend is-up"><span class="material-symbols-rounded text-xs">trending_up</span> +{{ map_data.population_trend }}%</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national">
+    <p class="auth-kpi__label">Zones à risque</p>
+    <p class="auth-kpi__value text-rose-600">{{ map_data.risk_zones }}</p>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-kpi__link">Voir les zones →</a>
+  </article>
+</section>
+
+<div class="auth-map-layout auth-map-layout--interactive">
+  <section class="auth-map-panel auth-map-panel--large">
+    <div class="auth-map-panel__head">
+      <h3>Taux de couverture sanitaire par province</h3>
+      <button type="button" id="auth-map-fullscreen" class="auth-map-link">
+        <span class="material-symbols-rounded text-sm">fullscreen</span> Voir en plein écran
+      </button>
+    </div>
+    <div class="auth-map-panel__map auth-map-panel__map--choropleth">
+      <div id="auth-map-full" class="auth-map auth-map--choropleth" role="img" aria-label="Carte choroplèthe du Gabon"></div>
+      <div class="auth-map-legend auth-map-legend--interactive">
+        <p class="auth-map-legend__title">Taux de couverture sanitaire</p>
+        <ul>
+          <li><span class="auth-map-legend__swatch" style="background:#059669"></span> 90% et plus</li>
+          <li><span class="auth-map-legend__swatch" style="background:#34d399"></span> 70% – 89%</li>
+          <li><span class="auth-map-legend__swatch" style="background:#fbbf24"></span> 50% – 69%</li>
+          <li><span class="auth-map-legend__swatch" style="background:#fb923c"></span> 30% – 49%</li>
+          <li><span class="auth-map-legend__swatch" style="background:#f87171"></span> Moins de 30%</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <aside class="auth-map-detail auth-map-detail--rich" id="auth-map-detail">
+    <p class="auth-map-detail__eyebrow">Région sélectionnée</p>
+    <h3 data-field="name">—</h3>
+    <p class="auth-map-detail__status" data-field="status">—</p>
+
+    <ul class="auth-map-detail__list">
+      <li><span>Population</span><strong data-field="population">—</strong></li>
+      <li><span>Établissements de santé</span><strong data-field="establishments">—</strong></li>
+      <li><span>Pharmacies actives</span><strong data-field="pharmacies">—</strong></li>
+      <li><span>Demandes de médicaments (7 j)</span><strong data-field="orders">—</strong></li>
+      <li data-field="ruptures-wrap"><span>Ruptures de stock</span><strong data-field="ruptures">—</strong></li>
+      <li data-field="alerts-wrap"><span>Alertes sanitaires actives</span><strong data-field="alerts">—</strong></li>
+    </ul>
+
+    <div class="auth-map-detail__chart">
+      <p class="auth-map-detail__chart-title">Évolution de la couverture</p>
+      <div data-field="sparkline" class="auth-sparkline-wrap"></div>
+    </div>
+
+    <a href="{% url 'bo_authority_stocks' %}" class="auth-map-detail__cta">
+      Voir le rapport régional <span class="material-symbols-rounded text-sm">arrow_forward</span>
+    </a>
+  </aside>
+</div>
+
+<div class="auth-map-bottom auth-map-bottom--interactive">
+  <section class="auth-panel">
+    <h3>Classement des régions par couverture sanitaire</h3>
+    <div class="auth-map-ranking">
+      {% for r in map_data.regions %}
+      <button type="button" class="auth-map-rank-row" data-region-row="{{ r.slug }}">
+        <span class="auth-map-rank-row__idx">{{ forloop.counter }}</span>
+        <span class="auth-map-rank-row__name">{{ r.name }}</span>
+        <span class="auth-map-rank-row__bar"><span style="width:{{ r.availability_rate }}%;background:{{ r.fill_color }}"></span></span>
+        <span class="auth-map-rank-row__pct">{{ r.availability_rate }}%</span>
+      </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="auth-panel">
+    <h3>Indicateurs clés par région</h3>
+    <div class="auth-key-grid auth-key-grid--map">
+      {% for ind in map_data.national_indicators %}
+      <div class="auth-key-tile">
+        <p class="auth-key-tile__label">{{ ind.label }}</p>
+        <p class="auth-key-tile__value">{{ ind.value }}</p>
+        {% if ind.trend %}
+        <p class="auth-key-tile__trend {% if ind.up %}is-up{% elif ind.up == False %}text-rose-600{% endif %}">{{ ind.trend }}</p>
+        {% endif %}
+        {% if ind.link %}
+        <a href="{% url 'bo_authority_alerts' %}" class="text-[0.6rem] font-extrabold text-primary mt-1 inline-block">Voir tout →</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<footer class="auth-national-footer">
+  <p>
+    <span class="material-symbols-rounded text-sm align-middle text-sky-600">verified_user</span>
+    Les données affichées sont anonymisées et agrégées conformément aux normes de protection des données.
+  </p>
+  <span class="flex items-center gap-1 text-[0.65rem]">
+    <span class="material-symbols-rounded text-sm">schedule</span>
+    Dernière mise à jour : {{ map_data.last_updated|date:"d/m/Y" }} à {{ map_data.last_updated|date:"H:i" }}
+  </span>
+</footer>
+
+{{ map_data|json_script:"authority-map-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=10"></script>
+{% endblock %}

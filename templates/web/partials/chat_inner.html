@@ -1,0 +1,48 @@
+{% load portal_urls %}
+{% if client_portal %}<div class="space-y-4">{% else %}<div class="max-w-lg mx-auto px-4 py-6 flex flex-col min-h-[70vh]">{% endif %}
+  <div class="flex items-center gap-3 mb-2">
+    {% if from_urgence %}
+    <a href="{% portal_url 'emergency' %}" class="text-primary font-bold text-sm shrink-0">← Urgence</a>
+    {% else %}
+    <a href="{% portal_url 'messages_inbox' %}" class="text-primary font-bold text-sm shrink-0">← Messages</a>
+    {% endif %}
+    <div class="flex-1 min-w-0 portal-hide-in-espace">
+      <h1 class="font-extrabold truncate">{{ pharmacy.name }}</h1>
+      <p class="text-xs text-ink-muted">
+        {% if emergency_alert %}Urgence {{ emergency_alert.code }} · {{ emergency_alert.get_category_display }}{% else %}Messagerie pharmacie{% endif %}
+      </p>
+    </div>
+    {% if pharmacy.phone %}
+    <a href="tel:{{ pharmacy.phone }}" class="shrink-0 h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center" title="Appeler">
+      <span class="material-symbols-rounded sm">call</span>
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="flex-1 bg-[#F5F3FF] border border-[#E5E7EB] rounded-2xl p-4 overflow-y-auto space-y-3 mb-4 min-h-[280px] max-h-[min(55vh,520px)]" id="chat-scroll">
+    {% for m in chat_messages %}
+    <div class="flex {% if m.sender_id == user.id %}justify-end{% else %}justify-start{% endif %}">
+      <div class="max-w-[85%] rounded-2xl px-3 py-2 text-sm {% if m.sender_id == user.id %}bg-primary text-white rounded-br-md{% else %}bg-white border rounded-bl-md{% endif %}">
+        <p class="whitespace-pre-wrap">{{ m.body }}</p>
+        <p class="text-[10px] mt-1 opacity-70">{{ m.created_at|date:"d/m H:i" }}{% if m.sender_id != user.id %} · Pharmacie{% endif %}</p>
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-sm text-ink-muted text-center py-8">Décrivez votre situation. Un pharmacien de {{ pharmacy.name }} vous répondra ici.</p>
+    {% endfor %}
+  </div>
+
+  <form method="post" class="flex gap-2">
+    {% csrf_token %}
+    <textarea name="body" required rows="2" placeholder="Votre message…" class="flex-1 border rounded-2xl px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-primary/20 outline-none"></textarea>
+    <button type="submit" class="shrink-0 h-12 w-12 rounded-full bg-primary hover:bg-primary-600 text-white flex items-center justify-center shadow-sm" aria-label="Envoyer">
+      <span class="material-symbols-rounded">send</span>
+    </button>
+  </form>
+</div>
+<script>
+(function () {
+  var el = document.getElementById('chat-scroll');
+  if (el) el.scrollTop = el.scrollHeight;
+})();
+</script>

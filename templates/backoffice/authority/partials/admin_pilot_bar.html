@@ -1,0 +1,10 @@
+<div class="auth-admin-pilot-bar">
+  <a href="{% url 'bo_admin_dashboard' %}" class="auth-admin-pilot-bar__back">
+    <span class="material-symbols-rounded">arrow_back</span>
+    Retour au pilotage administrateur
+  </a>
+  <div class="auth-admin-pilot-bar__meta">
+    <a href="{% url 'home' %}" class="auth-admin-pilot-bar__site">Site public</a>
+    {% include "backoffice/authority/partials/user_chip.html" %}
+  </div>
+</div>

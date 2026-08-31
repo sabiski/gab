@@ -1,0 +1,209 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}Notifications{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claims-page-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-claims-back" aria-label="Retour">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </a>
+    <div>
+      <h1>Notifications</h1>
+      <p>Gérez les notifications et les préférences d'alertes.</p>
+    </div>
+  </div>
+  <div class="ins-header__actions">
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--sm">Déconnexion</a>
+  </div>
+</header>
+
+<section class="ins-claims-kpi">
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--purple">
+    <span class="material-symbols-rounded">notifications</span>
+    <div>
+      <p class="ins-claims-kpi__label">Total des notifications</p>
+      <p class="ins-claims-kpi__value">{{ notif_stats.total|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ notif_stats.pct_total }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--green">
+    <span class="material-symbols-rounded">mark_email_unread</span>
+    <div>
+      <p class="ins-claims-kpi__label">Non lues</p>
+      <p class="ins-claims-kpi__value">{{ notif_stats.unread|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ notif_stats.pct_unread }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--amber">
+    <span class="material-symbols-rounded">send</span>
+    <div>
+      <p class="ins-claims-kpi__label">Envoyées ce mois</p>
+      <p class="ins-claims-kpi__value">{{ notif_stats.sent_month|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ notif_stats.pct_sent_month }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--blue">
+    <span class="material-symbols-rounded">schedule_send</span>
+    <div>
+      <p class="ins-claims-kpi__label">Planifiées</p>
+      <p class="ins-claims-kpi__value">{{ notif_stats.scheduled|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ notif_stats.pct_scheduled }} %</p>
+    </div>
+  </article>
+</section>
+
+{% include "backoffice/insurer/partials/notifications_tabs.html" %}
+
+<form method="get" class="ins-notif-toolbar">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <div class="ins-claims-search ins-fraud-search">
+    <span class="material-symbols-rounded">search</span>
+    <input name="q" value="{{ q }}" placeholder="Rechercher une notification…">
+  </div>
+  <select name="category" class="ins-filters__input ins-payments-select">
+    <option value="">Tous les types</option>
+    <option value="claim" {% if category == 'claim' %}selected{% endif %}>Demande</option>
+    <option value="payment" {% if category == 'payment' %}selected{% endif %}>Paiement</option>
+    <option value="alert" {% if category == 'alert' %}selected{% endif %}>Alerte</option>
+    <option value="contract" {% if category == 'contract' %}selected{% endif %}>Contrat</option>
+    <option value="system" {% if category == 'system' %}selected{% endif %}>Système</option>
+    <option value="reminder" {% if category == 'reminder' %}selected{% endif %}>Rappel</option>
+    <option value="info" {% if category == 'info' %}selected{% endif %}>Information</option>
+  </select>
+  <label class="ins-payments-date"><input type="date" name="date_from" value="{{ date_from }}"></label>
+  <label class="ins-payments-date"><input type="date" name="date_to" value="{{ date_to }}"></label>
+  {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+  <button type="submit" class="ins-btn-outline">Filtrer</button>
+</form>
+<form method="post" class="ins-notif-mark-all">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="mark_all_read">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <button type="submit" class="ins-btn-primary">Marquer tout comme lu</button>
+</form>
+
+<div class="ins-claims-table-wrap">
+  <table class="ins-claims-table ins-notif-table">
+    <thead>
+      <tr>
+        <th>Titre</th>
+        <th>Type</th>
+        <th>Destinataire</th>
+        <th>Date</th>
+        <th>Statut</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for n in page_obj %}
+      <tr class="{% if not n.is_read %}ins-notif-row--unread{% endif %}">
+        <td>
+          <div class="ins-notif-title-cell">
+            <span class="material-symbols-rounded ins-notif-icon ins-notif-icon--{{ n.ui.type_tone }}">{{ n.ui.icon }}</span>
+            <div>
+              <p class="font-bold text-sm">{{ n.ui.title }}</p>
+              <p class="text-xs text-ink-muted">{{ n.ui.subtitle }}</p>
+            </div>
+          </div>
+        </td>
+        <td><span class="ins-notif-type ins-notif-type--{{ n.ui.type_tone }}">{{ n.ui.type_label }}</span></td>
+        <td>
+          <p class="font-semibold text-sm">{{ n.ui.recipient }}</p>
+          {% if n.ui.recipient_sub %}<p class="text-xs text-ink-muted">{{ n.ui.recipient_sub }}</p>{% endif %}
+        </td>
+        <td class="text-xs">{{ n.created_at|date:"d/m/Y H:i" }}</td>
+        <td>
+          {% if n.is_read %}
+          <span class="ins-notif-read"><span class="ins-notif-dot is-read"></span> Lu</span>
+          {% else %}
+          <span class="ins-notif-read"><span class="ins-notif-dot"></span> Non lu</span>
+          {% endif %}
+        </td>
+        <td class="ins-reports-actions">
+          {% if n.ui.claim_id %}
+          <a href="{% url 'bo_insurer_claim_detail' n.ui.claim_id %}" title="Voir"><span class="material-symbols-rounded sm">visibility</span></a>
+          {% endif %}
+          {% if not n.is_read %}
+          <form method="post" class="inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="mark_read">
+            <input type="hidden" name="notification_id" value="{{ n.pk }}">
+            <input type="hidden" name="tab" value="{{ tab }}">
+            <button type="submit" class="ins-notif-mark-btn" title="Marquer comme lu"><span class="material-symbols-rounded sm">done</span></button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="ins-claims-empty">
+          <span class="material-symbols-rounded">notifications_off</span>
+          Aucune notification pour cette sélection.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "backoffice/insurer/partials/notifications_pagination.html" %}
+
+<section class="ins-notif-settings">
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Préférences de notification</h3>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_notification_prefs">
+      <ul class="ins-notif-prefs">
+        {% for cat in settings_ctx.categories %}
+        <li>
+          <span>{{ cat.label }}</span>
+          <label class="ins-toggle">
+            <input type="checkbox" name="cat_{{ cat.key }}" {% if cat.enabled %}checked{% endif %}>
+            <span class="ins-toggle__slider"></span>
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+      <button type="submit" class="ins-btn-primary mt-3" {% if partner_profile.preview %}disabled{% endif %}>Enregistrer les préférences</button>
+    </form>
+  </article>
+
+  <div class="ins-notif-settings-right">
+    <article class="ins-panel">
+      <h3 class="ins-claim-section-title">Canaux de notification</h3>
+      <ul class="ins-notif-channels">
+        {% for ch in settings_ctx.channels %}
+        <li>
+          <span class="material-symbols-rounded">{{ ch.icon }}</span>
+          <span>{{ ch.label }}</span>
+          <span class="ins-notif-channel-status {% if ch.active %}is-active{% endif %}">{% if ch.active %}Actif{% else %}Inactif{% endif %}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </article>
+    <article class="ins-panel">
+      <h3 class="ins-claim-section-title">Fréquence d'envoi</h3>
+      <form method="post" class="ins-notif-frequency">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_notification_prefs">
+        {% for cat in settings_ctx.categories %}
+        <input type="hidden" name="cat_{{ cat.key }}" value="{% if cat.enabled %}on{% endif %}">
+        {% endfor %}
+        <input type="hidden" name="channel_email" value="{% if notif_prefs.email_enabled %}on{% endif %}">
+        <input type="hidden" name="channel_sms" value="{% if notif_prefs.sms_enabled %}on{% endif %}">
+        <input type="hidden" name="channel_push" value="{% if notif_prefs.push_enabled %}on{% endif %}">
+        <label><input type="radio" name="notification_frequency" value="immediate" {% if not portal_settings or portal_settings.notification_frequency == 'immediate' %}checked{% endif %} onchange="this.form.submit()"> Immédiatement</label>
+        <label><input type="radio" name="notification_frequency" value="daily" {% if portal_settings.notification_frequency == 'daily' %}checked{% endif %} onchange="this.form.submit()"> Quotidiennement (18h00)</label>
+        <label><input type="radio" name="notification_frequency" value="weekly" {% if portal_settings.notification_frequency == 'weekly' %}checked{% endif %} onchange="this.form.submit()"> Hebdomadairement</label>
+      </form>
+    </article>
+  </div>
+</section>
+{% endblock %}

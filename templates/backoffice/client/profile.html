@@ -1,0 +1,9 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Mon profil{% endblock %}
+{% block portal_heading %}Mon profil{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Gérez votre compte, vos préférences et la sécurité de vos données de santé.</p>
+{% endblock %}
+{% block portal_body %}
+{% include "partials/client_profile_hub.html" with in_espace=True %}
+{% endblock %}

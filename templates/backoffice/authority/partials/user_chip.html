@@ -1,0 +1,15 @@
+<div class="auth-user-chip hidden sm:flex">
+  <span class="auth-user-chip__avatar">{{ user.first_name|default:user.username|slice:":1"|upper }}</span>
+  <div>
+    {% if bo_role == "admin" %}
+    <p class="auth-user-chip__name">{{ user.get_full_name|default:user.username }}</p>
+    <p class="auth-user-chip__role">{{ user.get_role_display }}</p>
+    {% elif authority_profile %}
+    <p class="auth-user-chip__name">{{ authority_profile.institution|default:"Autorité sanitaire" }}</p>
+    <p class="auth-user-chip__role">{% if authority_profile.region %}{{ authority_profile.region }}{% else %}MSNS — Gabon{% endif %}</p>
+    {% else %}
+    <p class="auth-user-chip__name">Autorité sanitaire</p>
+    <p class="auth-user-chip__role">MSNS — Gabon</p>
+    {% endif %}
+  </div>
+</div>

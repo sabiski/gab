@@ -1,0 +1,301 @@
+{% load humanize %}
+{# Panneau validation récupération / livraison — intégré à la page livraisons existante #}
+<div class="courier-validation-panel mt-4 border-t pt-4" id="validation-{{ d.id }}">
+  {% if d.status == "in_transit" %}
+  <nav class="cm-stepper" aria-label="Étapes livraison">
+    <div class="cm-stepper__item is-done"><span class="cm-stepper__dot"><span class="material-symbols-rounded text-sm">check</span></span><span class="cm-stepper__label">Récupération</span></div>
+    <div class="cm-stepper__item is-done"><span class="cm-stepper__dot"><span class="material-symbols-rounded text-sm">check</span></span><span class="cm-stepper__label">En route</span></div>
+    <div class="cm-stepper__item is-active"><span class="cm-stepper__dot">3</span><span class="cm-stepper__label">Livraison</span></div>
+  </nav>
+  {% elif d.status == "picking_up" %}
+  <nav class="cm-stepper" aria-label="Étapes récupération">
+    <div class="cm-stepper__item is-active"><span class="cm-stepper__dot">1</span><span class="cm-stepper__label">Récupération</span></div>
+    <div class="cm-stepper__item"><span class="cm-stepper__dot">2</span><span class="cm-stepper__label">Récupérée</span></div>
+    <div class="cm-stepper__item"><span class="cm-stepper__dot">3</span><span class="cm-stepper__label">Livraison</span></div>
+  </nav>
+  {% elif d.status == "assigned" or d.status == "picked_up" %}
+  <nav class="cm-stepper" aria-label="Étapes mission">
+    <div class="cm-stepper__item {% if d.status == 'assigned' %}is-active{% else %}is-done{% endif %}"><span class="cm-stepper__dot">1</span><span class="cm-stepper__label">Récupération</span></div>
+    <div class="cm-stepper__item {% if d.status == 'picked_up' %}is-active{% endif %}"><span class="cm-stepper__dot">2</span><span class="cm-stepper__label">En route</span></div>
+    <div class="cm-stepper__item"><span class="cm-stepper__dot">3</span><span class="cm-stepper__label">Livraison</span></div>
+  </nav>
+  {% endif %}
+
+  <div class="cm-layout">
+    <div class="cm-main">
+      {% if d.status == "picking_up" %}
+      <p class="text-sm font-extrabold mb-1">Validation de récupération de la commande</p>
+      <p class="text-xs text-ink-muted mb-3">À l'arrivée en pharmacie, validez la remise de la commande au livreur.</p>
+      <div class="cm-card">
+        <div class="cm-order-head">
+          <div class="cm-order-head__main">
+            <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <span class="material-symbols-rounded text-primary">local_pharmacy</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-extrabold break-words">{{ d.order.pharmacy.name }}</p>
+              <p class="text-xs text-ink-muted break-words">{{ d.order.pharmacy.city }}{% if d.order.pharmacy.district %}, {{ d.order.pharmacy.district }}{% endif %}</p>
+              <p class="text-xs text-ink-muted mt-0.5 break-words">{{ d.order.pharmacy.address }}</p>
+              {% if d.order.pharmacy.phone %}<a href="tel:{{ d.order.pharmacy.phone }}" class="text-xs font-bold text-primary mt-1 inline-flex items-center gap-1 break-all"><span class="material-symbols-rounded text-sm shrink-0">call</span>{{ d.order.pharmacy.phone }}</a>{% endif %}
+            </div>
+          </div>
+          <span class="cm-badge cm-badge--wait">En attente</span>
+        </div>
+        <div class="flex flex-wrap gap-4 mt-3 pt-3 border-t text-xs">
+          <span class="inline-flex items-center gap-1 text-ink-muted"><span class="material-symbols-rounded text-sm">schedule</span> {{ d.order.updated_at|date:"H:i" }}</span>
+          <span class="inline-flex items-center gap-1 text-ink-muted"><span class="material-symbols-rounded text-sm">route</span> {{ d.distance_km|default:"—" }} km</span>
+          <span class="inline-flex items-center gap-1 font-bold text-emerald-600">FCFA {{ d.order.total|intcomma }}</span>
+        </div>
+      </div>
+
+      <form method="post" class="courier-pharmacy-pickup-form" id="pharmacy-pickup-form-{{ d.id }}"{% if d.order.pharmacy_handoff_at %} data-handoff-validated="1"{% endif %}>
+        {% csrf_token %}
+        <input type="hidden" name="delivery_id" value="{{ d.id }}">
+        <input type="hidden" name="pharmacy_qr_payload" value="" class="courier-pharmacy-qr-input">
+
+        <div class="cm-card">
+          <p class="cm-section-title"><span class="cm-section-num">1</span> Scanner le code de la commande</p>
+          <p class="text-xs text-ink-muted mb-3">Scannez le QR code ou le code-barres sur le colis ou le bon de commande.</p>
+
+          {% if d.order.pharmacy_handoff_at %}
+          <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5 text-emerald-900 mb-3">
+            <p class="text-xs font-extrabold flex items-center gap-1"><span class="material-symbols-rounded sm">verified</span> Code validé — remise confirmée</p>
+          </div>
+          {% endif %}
+
+          <button type="button" class="cm-scan-btn courier-pharmacy-scan-btn" data-delivery-id="{{ d.id }}">
+            <span class="material-symbols-rounded cm-scan-btn__icon">qr_code_scanner</span>
+            <span class="cm-scan-btn__divider" aria-hidden="true"></span>
+            <span class="cm-scan-btn__label">Scanner le QR code</span>
+          </button>
+          <div class="courier-pharmacy-scanner hidden mt-3" data-pharmacy-scanner-panel="{{ d.id }}">
+            <div class="courier-pharmacy-scanner-view rounded-xl overflow-hidden max-w-full mx-auto" id="pharmacy-scanner-{{ d.id }}"></div>
+            <button type="button" class="text-xs font-bold text-ink-muted mt-2 underline courier-pharmacy-scan-close" data-delivery-id="{{ d.id }}">Fermer le scanner</button>
+          </div>
+
+          <p class="cm-manual-label">ou entrer le code manuellement</p>
+          <p class="text-[11px] text-ink-muted text-center mb-2">La vérification est automatique dès que le code est complet.</p>
+          <input name="pharmacy_handoff_code" maxlength="6" minlength="4" inputmode="numeric" autocomplete="one-time-code" placeholder="Saisir le code (4 à 6 chiffres)" class="cm-manual-row__input w-full" data-cm-auto-input="pharmacy" data-code-min="4">
+          <div class="cm-otp-feedback hidden" data-cm-otp-feedback aria-live="polite"></div>
+        </div>
+
+        <div class="cm-card">
+          <p class="cm-section-title"><span class="cm-section-num">2</span> Signature / cachet de la pharmacie</p>
+          <p class="text-xs text-ink-muted mb-3">Demandez la signature ou le cachet du responsable qui vous remet la commande.</p>
+          <div data-cm-signature>
+            <canvas class="cm-sig-pad w-full h-32"></canvas>
+            <p class="text-xs text-ink-muted mt-2 text-center">Pharmacien — signature sur place</p>
+            <button type="button" data-cm-sig-clear class="text-xs font-bold text-primary mt-1">Effacer</button>
+          </div>
+        </div>
+
+        <div class="cm-card">
+          <p class="cm-section-title"><span class="cm-section-num">3</span> Preuve de récupération <span class="font-normal normal-case">(optionnel)</span></p>
+          <p class="text-xs text-ink-muted mb-3">Prenez une photo du colis pour preuve de récupération.</p>
+          <div data-cm-photo>
+            <input type="file" accept="image/*" capture="environment" class="hidden">
+            <div class="cm-photo-drop">
+              <span class="material-symbols-rounded text-2xl text-ink-muted">photo_camera</span>
+              <p class="text-xs font-bold mt-1">Prendre une photo</p>
+            </div>
+            <img class="cm-photo-preview hidden mt-2" alt="Aperçu colis">
+          </div>
+        </div>
+
+        <div class="cm-actions">
+          <button type="submit" name="action" value="advance" class="cm-btn-primary">
+            <span class="material-symbols-rounded">check_circle</span> J'ai récupéré la commande
+          </button>
+        </div>
+      </form>
+      <form method="post" class="cm-actions" onsubmit="return confirm('Annuler cette mission ?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="fail">
+        <input type="hidden" name="delivery_id" value="{{ d.id }}">
+        <button type="submit" class="cm-btn-outline w-full">
+          <span class="material-symbols-rounded text-sm">undo</span> Annuler la mission
+        </button>
+      </form>
+
+      {% elif d.status == "in_transit" %}
+      <p class="text-sm font-extrabold mb-1 flex items-center gap-1.5">
+        <span class="material-symbols-rounded text-emerald-600">check_circle</span>
+        Validation de remise au client
+      </p>
+      <p class="text-xs text-ink-muted mb-3">Vous êtes arrivé chez le client. Faites valider la livraison pour terminer la mission.</p>
+
+      <div class="cm-card cm-order-summary">
+        <div class="cm-order-head">
+          <div class="min-w-0 flex-1">
+            <p class="text-[10px] font-bold text-ink-muted uppercase">Commande</p>
+            <p class="font-extrabold text-base">#{{ d.order.code }}</p>
+          </div>
+          <span class="cm-badge cm-badge--transit">En livraison</span>
+        </div>
+        <div class="cm-order-head mt-3">
+          <div class="cm-order-head__main">
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+              <span class="material-symbols-rounded text-emerald-600">person</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-extrabold break-words">{{ d.order.client.get_full_name|default:d.order.client.username }}</p>
+              <p class="text-xs text-ink-muted break-words">{{ d.order.delivery_address|default:"—" }}</p>
+              {% if d.order.client.phone %}
+              <a href="tel:{{ d.order.client.phone }}" class="text-xs font-bold text-primary mt-1 inline-flex items-center gap-1 break-all"><span class="material-symbols-rounded text-sm shrink-0">call</span>{{ d.order.client.phone }}</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-4 mt-3 pt-3 border-t text-xs">
+          <span class="inline-flex items-center gap-1 text-ink-muted"><span class="material-symbols-rounded text-sm">schedule</span> {{ d.picked_up_at|date:"H:i"|default:"—" }} Départ</span>
+          <span class="inline-flex items-center gap-1 text-ink-muted"><span class="material-symbols-rounded text-sm">route</span> {% if d.tracking_payload %}{{ d.tracking_payload.metrics.distance_total_label }}{% elif d.distance_km %}{{ d.distance_km }} km{% else %}—{% endif %}</span>
+        </div>
+        <div class="flex flex-wrap justify-between items-center gap-2 mt-3 pt-3 border-t">
+          <div>
+            <p class="text-[10px] font-bold text-ink-muted uppercase">Montant</p>
+            <p class="font-extrabold text-emerald-600">FCFA {{ d.order.total|intcomma }}</p>
+          </div>
+          {% with payment=d.order.payments.first %}
+          {% if payment and payment.status == "success" %}
+          <span class="cm-badge cm-badge--paid">Payé en ligne</span>
+          {% elif payment and payment.method == "cod" %}
+          <span class="cm-badge cm-badge--wait">Paiement à la livraison</span>
+          {% endif %}
+          {% endwith %}
+        </div>
+        <p class="text-xs text-ink-muted mt-2">{{ d.order.items.count }} article(s)</p>
+      </div>
+
+      <form method="post" class="courier-delivery-form" id="delivery-form-{{ d.id }}"{% if d.client_code_prevalidated %} data-client-code-validated="1"{% endif %}>
+        {% csrf_token %}
+        <input type="hidden" name="delivery_id" value="{{ d.id }}">
+        <input type="hidden" name="client_qr_payload" value="" class="courier-client-qr-input">
+
+        <div class="cm-card">
+          <p class="cm-section-title"><span class="cm-section-num">1</span> Code de validation (OTP)</p>
+          <p class="text-xs text-ink-muted mb-3">Demandez au client le code à 6 chiffres affiché sur son téléphone. <strong>La vérification est instantanée</strong> une fois les 6 chiffres saisis.</p>
+
+          <div class="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5 text-emerald-900 mb-3 {% if not d.client_code_prevalidated %}hidden{% endif %}" data-cm-validated-banner>
+            <p class="text-xs font-extrabold flex items-center gap-1"><span class="material-symbols-rounded sm">verified</span> Code validé</p>
+          </div>
+
+          <div data-cm-otp data-cm-auto-validate="client" data-code-length="6" class="mb-2">
+            <div class="cm-otp">
+              {% for i in "123456" %}
+              <input type="text" maxlength="1" inputmode="numeric" class="cm-otp__digit" aria-label="Chiffre {{ forloop.counter }}">
+              {% endfor %}
+            </div>
+            <input type="hidden" name="validation_code" class="cm-otp-hidden">
+          </div>
+          <div class="cm-otp-feedback {% if d.client_code_prevalidated %}cm-otp-feedback--ok{% else %}hidden{% endif %}" data-cm-otp-feedback aria-live="polite">{% if d.client_code_prevalidated %}Code valide — faites signer le client puis terminez la livraison.{% endif %}</div>
+
+          <button type="button" class="cm-scan-btn courier-client-scan-btn mb-3" data-delivery-id="{{ d.id }}">
+            <span class="material-symbols-rounded cm-scan-btn__icon">qr_code_scanner</span>
+            <span class="cm-scan-btn__divider" aria-hidden="true"></span>
+            <span class="cm-scan-btn__label">Scanner le QR client</span>
+          </button>
+          <div class="courier-client-scanner hidden" data-client-scanner-panel="{{ d.id }}">
+            <div class="courier-client-scanner-view rounded-xl overflow-hidden max-w-full" id="client-scanner-{{ d.id }}"></div>
+            <button type="button" class="text-xs font-bold text-ink-muted mt-2 underline courier-client-scan-close" data-delivery-id="{{ d.id }}">Fermer le scanner</button>
+          </div>
+
+          <p class="cm-manual-label">ou saisir le code en une fois</p>
+          <input type="text" name="validation_code_manual" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="Ex. 249404" class="cm-manual-row__input w-full cm-otp-manual-sync" data-delivery-id="{{ d.id }}" data-cm-auto-input="client" data-code-length="6">
+        </div>
+
+        <div class="cm-card" data-cm-tabs>
+          <p class="cm-section-title"><span class="cm-section-num">2</span> Signature du client (ou preuve de livraison)</p>
+          <p class="text-xs text-ink-muted mb-3">Faites signer le client ou prenez une photo comme preuve.</p>
+          <div class="cm-tabs">
+            <button type="button" class="is-active" data-cm-tab="sig-{{ d.id }}">Signature</button>
+            <button type="button" data-cm-tab="photo-{{ d.id }}">Photo</button>
+          </div>
+          <div data-cm-panel="sig-{{ d.id }}" data-cm-signature>
+            <canvas class="cm-sig-pad w-full h-32"></canvas>
+            <p class="text-xs text-ink-muted mt-2 text-center">{{ d.order.client.get_full_name|default:"Client" }} (Client)</p>
+            <button type="button" data-cm-sig-clear class="text-xs font-bold text-primary mt-1 inline-flex items-center gap-1"><span class="material-symbols-rounded text-sm">restart_alt</span> Effacer</button>
+          </div>
+          <div data-cm-panel="photo-{{ d.id }}" class="hidden" data-cm-photo>
+            <input type="file" accept="image/*" capture="environment" class="hidden">
+            <div class="cm-photo-drop">
+              <span class="material-symbols-rounded text-2xl text-ink-muted">photo_camera</span>
+              <p class="text-xs font-bold mt-1">Prendre une photo</p>
+            </div>
+            <img class="cm-photo-preview hidden mt-2" alt="Preuve livraison">
+          </div>
+        </div>
+
+        <div class="cm-actions">
+          <button type="submit" name="action" value="advance" class="cm-btn-primary">
+            <span class="material-symbols-rounded">check_circle</span> Livraison terminée
+          </button>
+          <button type="button" class="cm-btn-outline" onclick="window.location.href='{% url 'bo_courier_incident' d.id %}'">
+            <span class="material-symbols-rounded text-sm">flag</span> Signaler un problème
+          </button>
+        </div>
+      </form>
+
+      <form method="post" id="incident-form-{{ d.id }}" class="hidden cm-card mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="incident">
+        <input type="hidden" name="delivery_id" value="{{ d.id }}">
+        <select name="incident_type" class="w-full border rounded-lg px-2 py-2 text-sm mb-2">
+          {% for val, label in incident_types %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+        <textarea name="description" rows="2" placeholder="Décrivez le problème…" class="w-full border rounded-lg px-2 py-2 text-sm mb-2"></textarea>
+        <button class="cm-btn-outline">Envoyer le signalement</button>
+      </form>
+
+      {% elif d.status == "picked_up" %}
+      <p class="text-sm font-extrabold mb-1">Carte &amp; Suivi GPS</p>
+      <p class="text-xs text-ink-muted mb-3">Suivez votre itinéraire de livraison en temps réel.</p>
+      {% include "backoffice/courier/partials/route_map_panel.html" %}
+
+      <form method="post" id="incident-form-{{ d.id }}" class="hidden cm-card mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="incident">
+        <input type="hidden" name="delivery_id" value="{{ d.id }}">
+        <select name="incident_type" class="w-full border rounded-lg px-2 py-2 text-sm mb-2">
+          {% for val, label in incident_types %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+        <textarea name="description" rows="2" placeholder="Décrivez le problème…" class="w-full border rounded-lg px-2 py-2 text-sm mb-2"></textarea>
+        <button class="cm-btn-outline">Envoyer le signalement</button>
+      </form>
+
+      {% elif d.status == "assigned" %}
+      <div class="cm-card">
+        <p class="text-sm text-ink-muted mb-3">Partez vers la pharmacie pour récupérer la commande.</p>
+        <form method="post" class="courier-gps-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="advance">
+          <input type="hidden" name="delivery_id" value="{{ d.id }}">
+          <button type="submit" class="cm-btn-primary">Partir en retrait</button>
+        </form>
+      </div>
+
+      {% endif %}
+    </div>
+
+    <aside class="cm-sidebar space-y-3">
+      <div class="cm-card cm-recap">
+        <p class="font-extrabold text-sm mb-3">Récapitulatif</p>
+        <dl>
+          <dt>Commande</dt><dd>#{{ d.order.code }}</dd>
+          <dt>Pharmacie</dt><dd>{{ d.order.pharmacy.name|default:"—" }}</dd>
+          {% if d.status == "in_transit" and d.picked_up_at %}<dt>Retirée à</dt><dd>{{ d.picked_up_at|date:"H:i" }}</dd>{% endif %}
+          <dt>Client</dt><dd>{{ d.order.client.get_full_name|default:d.order.client.username }}</dd>
+          <dt>Adresse</dt><dd>{{ d.order.delivery_address|default:"—" }}</dd>
+          <dt>Montant</dt><dd class="text-emerald-600">FCFA {{ d.order.total|intcomma }}</dd>
+          {% with payment=d.order.payments.first %}
+          {% if payment %}<dt>Paiement</dt><dd>{{ payment.get_status_display }}{% if payment.status == "success" %} — {{ payment.get_method_display }}{% endif %}</dd>{% endif %}
+          {% endwith %}
+          <dt>Articles</dt><dd>{{ d.order.items.count }}</dd>
+        </dl>
+      </div>
+      <div class="cm-tip">
+        <span class="material-symbols-rounded text-lg shrink-0">shield</span>
+        <p>{% if d.status == "in_transit" %}Assurez-vous que la bonne personne reçoit la commande. Ne partagez pas le code de livraison et ne laissez pas le colis sans validation.{% elif d.status == "picked_up" %}Partagez régulièrement votre position GPS pour que le client puisse vous suivre.{% else %}Assurez-vous que la commande correspond avant de valider la récupération.{% endif %}</p>
+      </div>
+    </aside>
+  </div>
+</div>

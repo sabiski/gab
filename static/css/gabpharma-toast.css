@@ -1,0 +1,89 @@
+/* Toasts Gab'Pharma — tous les portails */
+.c-toast-root,
+.gp-toast-root {
+  position: fixed;
+  top: max(0.75rem, env(safe-area-inset-top));
+  right: max(0.75rem, env(safe-area-inset-right));
+  left: max(0.75rem, env(safe-area-inset-left));
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.c-toast,
+.gp-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  max-width: min(22rem, 100%);
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.85rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  animation: gp-toast-in 0.28s ease;
+}
+
+.c-toast.is-leaving,
+.gp-toast.is-leaving {
+  animation: gp-toast-out 0.28s ease forwards;
+}
+
+@keyframes gp-toast-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes gp-toast-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-6px); }
+}
+
+.c-toast--success,
+.gp-toast--success { border-color: #bbf7d0; background: #f0fdf4; }
+.c-toast--warning,
+.gp-toast--warning { border-color: #fde68a; background: #fffbeb; }
+.c-toast--error,
+.gp-toast--error { border-color: #fecaca; background: #fef2f2; }
+.c-toast--info,
+.gp-toast--info { border-color: #bfdbfe; background: #eff6ff; }
+
+.c-toast__icon,
+.gp-toast__icon { flex-shrink: 0; margin-top: 0.1rem; }
+.c-toast--success .c-toast__icon,
+.gp-toast--success .gp-toast__icon { color: #16a34a; }
+.c-toast--warning .c-toast__icon,
+.gp-toast--warning .gp-toast__icon { color: #d97706; }
+.c-toast--error .c-toast__icon,
+.gp-toast--error .gp-toast__icon { color: #dc2626; }
+.c-toast--info .c-toast__icon,
+.gp-toast--info .gp-toast__icon { color: #2563eb; }
+
+.c-toast__body,
+.gp-toast__body { flex: 1; min-width: 0; }
+.c-toast__msg,
+.gp-toast__msg { font-size: 0.8rem; font-weight: 600; color: #374151; line-height: 1.4; }
+.c-toast__link,
+.gp-toast__link {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6c3aed;
+}
+.c-toast__close,
+.gp-toast__close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.c-toast__close:hover,
+.gp-toast__close:hover { color: #6b7280; }

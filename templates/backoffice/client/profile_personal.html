@@ -1,0 +1,98 @@
+{% extends "backoffice/client/profile_form_base.html" %}
+{% block profile_lead %}
+<p class="c-lead">Nom, coordonnées, photo et informations d'assurance.</p>
+{% endblock %}
+{% block profile_form %}
+<form method="post" enctype="multipart/form-data" class="space-y-5 text-sm" id="profile-personal-form">
+  {% csrf_token %}
+  <div class="c-avatar-upload">
+    <div class="c-avatar-upload__img">
+      <img
+        data-preview-for="avatar"
+        src="{% if user.avatar %}{{ user.avatar.url }}{% endif %}"
+        alt=""
+        class="h-full w-full object-cover {% if not user.avatar %}hidden{% endif %}"
+      >
+      <span data-preview-placeholder="avatar" class="{% if user.avatar %}hidden{% endif %}">
+        {{ user.first_name|default:user.username|slice:":1"|upper }}
+      </span>
+    </div>
+    <div class="min-w-0 flex-1">
+      <label class="c-label" for="avatar-file-input">Photo de profil</label>
+      <input
+        type="file"
+        name="avatar"
+        id="avatar-file-input"
+        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,image/*"
+        data-image-preview="avatar"
+        data-max-bytes="2000000"
+        class="c-file mt-1 w-full"
+      >
+      <p class="text-[11px] text-[#9CA3AF] mt-1">JPG ou PNG, 2 Mo max. — aperçu instantané avant enregistrement.</p>
+      <p class="text-[11px] font-semibold text-[#6C3AED] mt-1 hidden" id="avatar-filename"></p>
+      <p class="text-[11px] text-rose-600 font-semibold mt-1 hidden" data-image-error="avatar"></p>
+    </div>
+  </div>
+  <div class="grid sm:grid-cols-2 gap-4">
+    <div class="c-field">
+      <label class="c-label">Prénom</label>
+      <input name="first_name" value="{{ user.first_name }}" class="c-input">
+    </div>
+    <div class="c-field">
+      <label class="c-label">Nom</label>
+      <input name="last_name" value="{{ user.last_name }}" class="c-input">
+    </div>
+    <div class="c-field sm:col-span-2">
+      <label class="c-label">E-mail</label>
+      <input name="email" type="email" value="{{ user.email }}" class="c-input">
+    </div>
+    <div class="c-field">
+      <label class="c-label">Téléphone</label>
+      <input name="phone" value="{{ user.phone }}" placeholder="+241 07 00 00 00" class="c-input">
+    </div>
+    <div class="c-field">
+      <label class="c-label">Date de naissance</label>
+      <input type="date" name="date_of_birth" value="{{ profile.date_of_birth|date:'Y-m-d' }}" class="c-input">
+    </div>
+    <div class="c-field sm:col-span-2">
+      <label class="c-label">N° assurance</label>
+      <input name="insurance_number" value="{{ profile.insurance_number }}" class="c-input" placeholder="Numéro d'assuré">
+    </div>
+    {% if insurance_providers %}
+    <div class="c-field sm:col-span-2">
+      <label class="c-label">Organisme d'assurance</label>
+      <select name="insurance_provider" class="c-select">
+        <option value="">— Choisir un organisme —</option>
+        {% for p in insurance_providers %}
+        <option value="{{ p.id }}" {% if profile.insurance_provider_id == p.id %}selected{% endif %}>{{ p.name }} ({{ p.coverage_rate }} %)</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div class="c-field sm:col-span-2">
+      <label class="c-label">Contact d'urgence</label>
+      <input name="emergency_contact" value="{{ profile.emergency_contact }}" placeholder="+241 07 00 00 00" class="c-input">
+    </div>
+  </div>
+  <button type="submit" class="c-btn c-btn--primary w-full">Enregistrer les modifications</button>
+</form>
+{% endblock %}
+{% block profile_scripts %}
+<script>
+(function () {
+  var input = document.getElementById('avatar-file-input');
+  var nameEl = document.getElementById('avatar-filename');
+  if (!input || !nameEl) return;
+  input.addEventListener('change', function () {
+    var file = input.files && input.files[0];
+    if (!file) {
+      nameEl.textContent = '';
+      nameEl.classList.add('hidden');
+      return;
+    }
+    nameEl.textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(2) + ' Mo)';
+    nameEl.classList.remove('hidden');
+  });
+})();
+</script>
+{% endblock %}

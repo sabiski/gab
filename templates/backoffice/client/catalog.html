@@ -1,0 +1,9 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}{% if q %}Recherche{% elif category %}{{ category.name }}{% else %}Catalogue{% endif %}{% endblock %}
+{% block portal_heading %}{% if q %}Résultats « {{ q }} »{% elif category %}{{ category.name }}{% else %}Catalogue médicaments{% endif %}{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Recherchez un médicament, parcourez les catégories et ajoutez au panier sans quitter votre espace.</p>
+{% endblock %}
+{% block portal_body %}
+{% include "backoffice/client/partials/catalog_body.html" %}
+{% endblock %}

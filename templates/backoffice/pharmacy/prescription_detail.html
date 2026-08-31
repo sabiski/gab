@@ -1,0 +1,372 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Détail ordonnance{% endblock %}
+{% block bo_label %}Portail Pharmacie{% endblock %}
+{% block bo_title %}Détail ordonnance{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/pharmacy-rx-detail.css?v=1">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>.rx-detail { font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif; }</style>
+{% endblock %}
+{% block bo_content %}
+<div class="rx-detail">
+
+  <header class="rx-detail__toolbar">
+    <a href="{% url 'bo_pharmacy_orders' %}{% if order_filter_query %}?{{ order_filter_query }}{% endif %}" class="rx-detail__back">
+      <span class="material-symbols-rounded sm">arrow_back</span>
+      <span class="hidden sm:inline">Retour</span>
+    </a>
+    <h2 class="rx-detail__title">Détail ordonnance</h2>
+    <a href="{% url 'bo_pharmacy_order_print' order.pk %}" target="_blank" rel="noopener" class="rx-detail__print" title="Imprimer la commande">
+      <span class="material-symbols-rounded sm">print</span>
+    </a>
+  </header>
+
+  {% if can_validate_rx and rx_pending %}
+  <div class="rx-detail__actions rx-detail__actions--desktop-top">
+    <button type="button" class="rx-detail__btn rx-detail__btn--reject" data-rx-toggle="reject">
+      <span class="material-symbols-rounded sm">close</span> Refuser l'ordonnance
+    </button>
+    <button type="button" class="rx-detail__btn rx-detail__btn--validate" data-rx-toggle="validate">
+      <span class="material-symbols-rounded sm">check</span> Valider l'ordonnance
+    </button>
+  </div>
+  {% endif %}
+
+  <div class="rx-detail__layout">
+    <main class="rx-detail__main">
+
+      <section class="rx-detail-card">
+        <div class="rx-detail-card__body">
+          <div class="rx-detail-hero">
+            <div class="rx-detail-hero__icon {% if rx.status == 'pending' or rx.status == 'draft' %}is-pending{% elif rx.status == 'rejected' %}is-rejected{% endif %}">
+              <span class="material-symbols-rounded">description</span>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="rx-detail-hero__id">Ordonnance #{{ rx_code }}</p>
+              <p class="text-xs text-[#6B7280] mt-0.5">Commande {{ order.code }}</p>
+              <span class="rx-badge rx-badge--{{ rx_badge }} mt-2">{{ rx.get_status_display }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rx-detail-card">
+        <div class="rx-detail-card__body">
+          <div class="rx-detail-patient">
+            <div class="rx-detail-patient__left">
+              <div class="rx-detail-patient__avatar">
+                {% if client.avatar %}
+                <img src="{{ client.avatar.url }}" alt="">
+                {% else %}
+                {{ client_initials }}
+                {% endif %}
+              </div>
+              <div class="min-w-0">
+                <p class="rx-detail-patient__name">{{ client.get_full_name|default:client.username }}</p>
+                <p class="rx-detail-patient__meta">
+                  {% if client_age %}{{ client_age }} ans{% endif %}{% if client_age and client_location %} · {% endif %}{{ client_location }}
+                </p>
+                {% if client.phone %}
+                <a href="tel:{{ client.phone }}" class="rx-detail-patient__phone">
+                  <span class="material-symbols-rounded text-sm">call</span> {{ client.phone }}
+                </a>
+                {% endif %}
+              </div>
+            </div>
+            <div class="rx-detail-patient__right">
+              <p class="rx-detail-patient__date">
+                <span class="material-symbols-rounded text-sm">event</span>
+                {{ rx.created_at|date:"j F Y" }} à {{ rx.created_at|date:"H:i" }}
+              </p>
+              <p class="mt-1">Reçu {{ rx.created_at|timesince }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {% if rx_pending and can_validate_rx %}
+      <div class="rx-detail-alert">
+        <span class="material-symbols-rounded sm">info</span>
+        <p>Veuillez examiner les médicaments prescrits et valider ou refuser cette ordonnance.</p>
+      </div>
+      {% endif %}
+
+      <section class="rx-detail-card">
+        <div class="rx-detail-card__body">
+          <h3 class="rx-detail-section__title">Médicaments prescrits</h3>
+
+          <div class="rx-med-cards">
+            {% for item in rx_items %}
+            <article class="rx-med-card">
+              <div class="rx-med-card__thumb">
+                {% if item.medicine.image %}
+                <img src="{{ item.medicine.image.url }}" alt="">
+                {% else %}
+                <span class="material-symbols-rounded text-[#6C3AED] text-lg">medication</span>
+                {% endif %}
+              </div>
+              <div>
+                <p class="rx-med-card__name">{{ item.medicine_name }}</p>
+                <p class="rx-med-card__form">{{ item.medicine.get_form_display }}</p>
+              </div>
+              <dl class="rx-med-card__grid">
+                <div><dt>Dosage</dt><dd>{{ item.medicine.dosage|default:"—" }}</dd></div>
+                <div><dt>Quantité</dt><dd>{{ item.quantity }}</dd></div>
+                <div><dt>Posologie</dt><dd>{% if item.medicine.usage_advice %}{{ item.medicine.usage_advice|truncatechars:40 }}{% else %}—{% endif %}</dd></div>
+              </dl>
+              {% if item.medicine.usage_advice %}
+              <p class="rx-med-card__posology">{{ item.medicine.usage_advice }}</p>
+              {% endif %}
+            </article>
+            {% empty %}
+            <p class="text-sm text-[#6B7280]">Aucun médicament listé sur la commande — vérifiez le document joint.</p>
+            {% endfor %}
+          </div>
+
+          <div class="rx-med-table-wrap">
+            <table class="rx-med-table">
+              <thead>
+                <tr>
+                  <th>Médicament</th>
+                  <th>Dosage</th>
+                  <th>Quantité</th>
+                  <th>Posologie</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in rx_items %}
+                <tr>
+                  <td>
+                    <div class="rx-med-table__product">
+                      <span class="rx-med-table__thumb">
+                        {% if item.medicine.image %}
+                        <img src="{{ item.medicine.image.url }}" alt="">
+                        {% else %}
+                        <span class="material-symbols-rounded text-[#6C3AED] text-base">medication</span>
+                        {% endif %}
+                      </span>
+                      <span>
+                        <span class="block font-bold">{{ item.medicine_name }}</span>
+                        <span class="block text-xs text-[#6B7280]">{{ item.medicine.get_form_display }}</span>
+                      </span>
+                    </div>
+                  </td>
+                  <td>{{ item.medicine.dosage|default:"—" }}</td>
+                  <td class="font-bold">{{ item.quantity }}</td>
+                  <td class="text-[#6B7280]">{{ item.medicine.usage_advice|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="4" class="text-[#6B7280]">Aucun médicament — consultez le document joint.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {% if rx.notes %}
+      <section class="rx-detail-card">
+        <div class="rx-detail-card__body">
+          <h3 class="rx-detail-section__title">Commentaires du prescripteur</h3>
+          <p class="rx-detail-quote">{{ rx.notes }}</p>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if file_url %}
+      <section class="rx-detail-card rx-detail-preview--mobile-only">
+        <div class="rx-detail-card__body">
+          <h3 class="rx-detail-section__title">Aperçu du document</h3>
+          <div class="rx-detail-preview">
+            {% if rx.is_image %}
+            <img src="{{ file_url }}" alt="Ordonnance">
+            {% elif rx.is_pdf %}
+            <iframe src="{{ file_url }}#toolbar=0" title="Ordonnance PDF"></iframe>
+            {% else %}
+            <iframe src="{{ file_url }}" title="Ordonnance"></iframe>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if rx.review_notes and not rx_pending %}
+      <section class="rx-detail-card">
+        <div class="rx-detail-card__body">
+          <h3 class="rx-detail-section__title">Note du pharmacien</h3>
+          <p class="text-sm text-[#6B7280]">{{ rx.review_notes }}</p>
+        </div>
+      </section>
+      {% endif %}
+    </main>
+
+    <aside class="rx-detail__aside">
+      <section class="rx-detail-card">
+        <div class="rx-detail-card__body">
+          <h3 class="rx-detail-section__title">Prescripteur</h3>
+          <div class="rx-detail-doctor">
+            <div class="rx-detail-doctor__avatar">{{ doctor_initials }}</div>
+            <div class="min-w-0">
+              <p class="rx-detail-doctor__name">{{ rx.doctor_name|default:"Non renseigné" }}</p>
+              <p class="rx-detail-doctor__role">Médecin prescripteur</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {% if file_url %}
+      <section class="rx-detail-card">
+        <div class="rx-detail-card__body">
+          <h3 class="rx-detail-section__title">Pièce jointe</h3>
+          <div class="rx-detail-file mb-3">
+            <div class="rx-detail-file__icon">
+              <span class="material-symbols-rounded sm">picture_as_pdf</span>
+            </div>
+            <div class="min-w-0">
+              <p class="rx-detail-file__name">{{ file_name }}</p>
+              <p class="rx-detail-file__size">{{ file_size_label }}</p>
+            </div>
+            <div class="rx-detail-file__actions">
+              <button type="button" class="rx-detail-file__btn" data-rx-fullscreen title="Agrandir">
+                <span class="material-symbols-rounded sm">visibility</span>
+              </button>
+              <a href="{{ file_url }}" download class="rx-detail-file__btn" title="Télécharger">
+                <span class="material-symbols-rounded sm">download</span>
+              </a>
+            </div>
+          </div>
+          <div class="rx-detail-preview">
+            {% if rx.is_image %}
+            <img src="{{ file_url }}" alt="Ordonnance">
+            {% elif rx.is_pdf %}
+            <iframe src="{{ file_url }}#toolbar=0" title="Ordonnance PDF"></iframe>
+            {% else %}
+            <iframe src="{{ file_url }}" title="Ordonnance"></iframe>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      <section class="rx-detail-card">
+        <div class="rx-detail-card__body">
+          <h3 class="rx-detail-section__title">Historique</h3>
+          <ul class="rx-timeline">
+            {% for step in rx_timeline %}
+            <li class="rx-timeline__item">
+              <span class="rx-timeline__dot {% if step.done %}is-done{% endif %}{% if step.current %} is-current{% endif %}"></span>
+              <div>
+                <p class="rx-timeline__label">{{ step.label }}</p>
+                {% if step.time %}<p class="rx-timeline__time">{{ step.time }}</p>{% endif %}
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  {% if can_validate_rx and rx_pending %}
+  <div class="rx-detail-forms" id="rx-detail-forms">
+    <form method="post" class="rx-detail-form-panel rx-detail-form-panel--validate" id="rx-form-validate">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="validate_rx">
+      <input type="hidden" name="order_id" value="{{ order.pk }}">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <label class="font-bold text-emerald-800 text-xs">Valider l'ordonnance</label>
+      <input name="review_notes" placeholder="Note pharmacien (optionnel)">
+      <button type="submit" class="bg-emerald-600 text-white">Confirmer la validation → préparer</button>
+    </form>
+    <form method="post" class="rx-detail-form-panel rx-detail-form-panel--reject" id="rx-form-reject" onsubmit="return confirm('Refuser l\'ordonnance et annuler la commande ?')">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="reject_rx">
+      <input type="hidden" name="order_id" value="{{ order.pk }}">
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <label class="font-bold text-rose-800 text-xs">Refuser l'ordonnance</label>
+      <select name="refusal_reason" required>
+        <option value="">Motif du refus *</option>
+        {% for val, label in refusal_reasons %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+      <input name="review_notes" placeholder="Précision (obligatoire si Autre)">
+      <button type="submit" class="bg-rose-600 text-white">Confirmer le refus</button>
+    </form>
+  </div>
+
+  <footer class="rx-detail__actions rx-detail__actions--mobile">
+    <button type="button" class="rx-detail__btn rx-detail__btn--reject" data-rx-toggle="reject">
+      <span class="material-symbols-rounded sm">close</span> Refuser
+    </button>
+    <button type="button" class="rx-detail__btn rx-detail__btn--validate" data-rx-toggle="validate">
+      <span class="material-symbols-rounded sm">check</span> Valider
+    </button>
+  </footer>
+  {% elif order.status == 'cancelled' and rx.status == 'rejected' %}
+  <div class="rx-detail-alert mt-4" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;">
+    <span class="material-symbols-rounded sm">cancel</span>
+    <p>Ordonnance refusée — {{ order.cancellation_reason|default:"motif non précisé" }}</p>
+  </div>
+  {% endif %}
+</div>
+
+{% if file_url %}
+<div id="rx-detail-modal" class="rx-detail-modal is-hidden" role="dialog" aria-modal="true">
+  <div class="rx-detail-modal__backdrop" data-rx-modal-close></div>
+  <div class="rx-detail-modal__panel">
+    <div class="rx-detail-modal__head">
+      <p class="font-bold text-sm">Ordonnance #{{ rx_code }}</p>
+      <button type="button" class="h-9 w-9 rounded-lg border flex items-center justify-center" data-rx-modal-close aria-label="Fermer">
+        <span class="material-symbols-rounded sm">close</span>
+      </button>
+    </div>
+    <div class="rx-detail-modal__body" id="rx-detail-modal-body">
+      {% if rx.is_image %}
+      <img src="{{ file_url }}" alt="Ordonnance">
+      {% elif rx.is_pdf %}
+      <iframe src="{{ file_url }}" title="Ordonnance PDF"></iframe>
+      {% else %}
+      <iframe src="{{ file_url }}" title="Ordonnance"></iframe>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var forms = document.getElementById('rx-detail-forms');
+  document.querySelectorAll('[data-rx-toggle]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!forms) return;
+      var target = btn.getAttribute('data-rx-toggle');
+      forms.classList.toggle('is-open', true);
+      var el = target === 'validate' ? document.getElementById('rx-form-validate') : document.getElementById('rx-form-reject');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  });
+
+  var modal = document.getElementById('rx-detail-modal');
+  var openBtn = document.querySelector('[data-rx-fullscreen]');
+  function closeModal() {
+    if (modal) modal.classList.add('is-hidden');
+    document.body.style.overflow = '';
+  }
+  if (openBtn && modal) {
+    openBtn.addEventListener('click', function () {
+      modal.classList.remove('is-hidden');
+      document.body.style.overflow = 'hidden';
+    });
+  }
+  document.querySelectorAll('[data-rx-modal-close]').forEach(function (el) {
+    el.addEventListener('click', closeModal);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeModal();
+  });
+})();
+</script>
+{% endblock %}

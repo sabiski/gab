@@ -1,0 +1,24 @@
+<header class="ins-header">
+  <div>
+    <h1>{{ page_title|default:"Tableau de bord" }}</h1>
+    {% if page_subtitle %}<p>{{ page_subtitle }}</p>{% endif %}
+  </div>
+  {% if show_header_actions|default:True %}
+  <div class="ins-header__actions">
+    {% if show_date_pill|default:True %}
+    <div class="ins-date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{% if display_date %}{{ display_date }}{% else %}{% now "j F Y" %}{% endif %}</span>
+    </div>
+    {% endif %}
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'bo_insurer_support' %}" class="ins-icon-btn" aria-label="Aide">
+      <span class="material-symbols-rounded">help</span>
+    </a>
+    {% include "backoffice/insurer/partials/user_chip.html" %}
+  </div>
+  {% endif %}
+</header>

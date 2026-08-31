@@ -1,0 +1,6 @@
+<nav class="ins-claims-tabs" aria-label="Filtres pharmacies">
+  <a href="{% url 'bo_insurer_pharmacies' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'all' or not tab %} is-active{% endif %}">Toutes les pharmacies <span class="ins-claims-tabs__count">({{ pharmacy_stats.total|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_pharmacies' %}?tab=active{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'active' %} is-active{% endif %}">Pharmacies actives <span class="ins-claims-tabs__count">({{ pharmacy_stats.active|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_pharmacies' %}?tab=pending{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'pending' %} is-active{% endif %}">En attente de validation <span class="ins-claims-tabs__count">({{ pharmacy_stats.pending|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_pharmacies' %}?tab=suspended{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'suspended' %} is-active{% endif %}">Suspensions <span class="ins-claims-tabs__count">({{ pharmacy_stats.suspended|default:0 }})</span></a>
+</nav>

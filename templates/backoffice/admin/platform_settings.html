@@ -1,0 +1,315 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Paramètres plateforme{% endblock %}
+{% block bo_label %}Configuration{% endblock %}
+{% block bo_title %}Paramètres de la plateforme{% endblock %}
+{% block bo_subtitle %}
+<p class="text-xs text-ink-muted mt-0.5">Configurez et gérez les paramètres généraux de la plateforme.</p>
+{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/admin-platform-settings.css?v=3">
+{% endblock %}
+{% block bo_content %}
+<div class="admin-settings">
+  <div class="admin-settings__toolbar">
+    <div class="admin-settings__date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{{ settings_period_start }} – {{ settings_period_end }}</span>
+    </div>
+    <a href="{% url 'bo_admin_platform_settings' %}?export=1" class="admin-settings__export-btn">
+      <span class="material-symbols-rounded text-sm">download</span>
+      Exporter les paramètres
+    </a>
+    <a href="{% url 'bo_admin_notifications' %}" class="admin-settings__notif-btn" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+    </a>
+  </div>
+
+  <div class="admin-settings__layout">
+    <nav class="admin-settings__nav" aria-label="Catégories de paramètres">
+      <p class="admin-settings__nav-title">Catégories de paramètres</p>
+      {% for cat in nav_categories %}
+      <a href="{{ cat.href }}" class="admin-settings__nav-link" data-settings-nav="{{ cat.id }}">
+        <span class="material-symbols-rounded sm">{{ cat.icon }}</span>
+        {{ cat.label }}
+      </a>
+      {% endfor %}
+    </nav>
+
+    <div class="admin-settings__content">
+      <div class="admin-settings__top-grid">
+        <section class="admin-settings__card" id="general">
+          <h2>Informations générales</h2>
+          <form method="post" class="admin-settings__form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="general">
+            <div class="admin-settings__grid">
+              <label class="admin-settings__field">
+                <span>Nom de la plateforme</span>
+                <input type="text" name="platform_name" value="{{ settings.platform_name }}" required>
+              </label>
+              <label class="admin-settings__field">
+                <span>Slogan</span>
+                <input type="text" name="slogan" value="{{ settings.slogan }}">
+              </label>
+              <label class="admin-settings__field">
+                <span>Devise</span>
+                <select name="currency">
+                  {% for val, lbl in settings.Currency.choices %}
+                  <option value="{{ val }}" {% if settings.currency == val %}selected{% endif %}>{{ lbl }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="admin-settings__field">
+                <span>Pays</span>
+                <select name="country">
+                  <option value="Gabon" {% if settings.country == "Gabon" %}selected{% endif %}>🇬🇦 Gabon</option>
+                </select>
+              </label>
+              <label class="admin-settings__field">
+                <span>Langue par défaut</span>
+                <select name="default_language">
+                  {% for val, lbl in settings.Language.choices %}
+                  <option value="{{ val }}" {% if settings.default_language == val %}selected{% endif %}>{{ lbl }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="admin-settings__field">
+                <span>Format de date</span>
+                <select name="date_format">
+                  {% for val, lbl in settings.DateFormat.choices %}
+                  <option value="{{ val }}" {% if settings.date_format == val %}selected{% endif %}>{{ lbl }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="admin-settings__field">
+                <span>Fuseau horaire</span>
+                <select name="timezone">
+                  {% for val, lbl in timezone_choices %}
+                  <option value="{{ val }}" {% if settings.timezone == val %}selected{% endif %}>{{ lbl }}</option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label class="admin-settings__field">
+                <span>Format d'heure</span>
+                <select name="time_format">
+                  {% for val, lbl in settings.TimeFormat.choices %}
+                  <option value="{{ val }}" {% if settings.time_format == val %}selected{% endif %}>{% if val == "24" %}24 heures{% else %}12 heures{% endif %}</option>
+                  {% endfor %}
+                </select>
+              </label>
+            </div>
+            <button type="submit" class="admin-settings__btn admin-settings__btn--block">Enregistrer les modifications</button>
+          </form>
+        </section>
+
+        <section class="admin-settings__card" id="security">
+          <h2>Sécurité &amp; authentification</h2>
+          {% if is_superadmin %}
+          <form method="post" class="admin-settings__form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="security">
+            <label class="admin-settings__toggle">
+              <span>Authentification à deux facteurs (2FA)</span>
+              <input type="checkbox" class="admin-settings__switch" name="two_factor_required" {% if settings.two_factor_required %}checked{% endif %}>
+            </label>
+            <label class="admin-settings__field">
+              <span>Expiration des sessions</span>
+              <select name="session_expiry_minutes">
+                <option value="15" {% if settings.session_expiry_minutes == 15 %}selected{% endif %}>15 minutes</option>
+                <option value="30" {% if settings.session_expiry_minutes == 30 %}selected{% endif %}>30 minutes</option>
+                <option value="60" {% if settings.session_expiry_minutes == 60 %}selected{% endif %}>1 heure</option>
+              </select>
+            </label>
+            <label class="admin-settings__toggle">
+              <span>Complexité des mots de passe</span>
+              <input type="checkbox" class="admin-settings__switch" name="password_complexity" {% if settings.password_complexity %}checked{% endif %}>
+            </label>
+            <label class="admin-settings__field">
+              <span>Limite de tentatives de connexion</span>
+              <select name="login_attempt_limit">
+                <option value="3" {% if settings.login_attempt_limit == 3 %}selected{% endif %}>3 tentatives</option>
+                <option value="5" {% if settings.login_attempt_limit == 5 %}selected{% endif %}>5 tentatives</option>
+                <option value="10" {% if settings.login_attempt_limit == 10 %}selected{% endif %}>10 tentatives</option>
+              </select>
+            </label>
+            <label class="admin-settings__toggle">
+              <span>Journalisation des activités</span>
+              <input type="checkbox" class="admin-settings__switch" name="activity_logging" {% if settings.activity_logging %}checked{% endif %}>
+            </label>
+            <button type="submit" class="admin-settings__btn">Enregistrer</button>
+          </form>
+          <a href="{% url 'bo_admin_audit' %}" class="admin-settings__link">Voir plus de paramètres de sécurité →</a>
+          {% else %}
+          <p class="text-sm text-ink-muted">Réservé au super administrateur.</p>
+          {% endif %}
+        </section>
+      </div>
+
+      <div class="admin-settings__shortcuts-grid">
+        {% for item in settings_shortcuts %}
+        <section class="admin-settings__card admin-settings__card--shortcut" id="{{ item.id }}">
+          <div class="admin-settings__shortcut-head">
+            <span class="material-symbols-rounded">{{ item.icon }}</span>
+            <h2>{{ item.title }}</h2>
+          </div>
+          <p class="admin-settings__shortcut-desc">{{ item.description }}</p>
+          <div class="admin-settings__shortcut-actions">
+            <a href="{{ item.manage_url }}" class="admin-settings__btn admin-settings__btn--sm">{{ item.manage_label }} →</a>
+            {% if item.secondary_url %}
+            <a href="{{ item.secondary_url }}" class="admin-settings__link">{{ item.secondary_label }} →</a>
+            {% endif %}
+          </div>
+        </section>
+        {% endfor %}
+      </div>
+
+      <div class="admin-settings__mid-grid">
+        <section class="admin-settings__card" id="notifications">
+          <h2>Notifications système</h2>
+          <form method="post" class="admin-settings__form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="notifications">
+            <label class="admin-settings__toggle">
+              <span>E-mail</span>
+              <input type="checkbox" class="admin-settings__switch" name="channel_email" {% if notif_settings.channel_email_enabled %}checked{% endif %}>
+            </label>
+            <label class="admin-settings__toggle">
+              <span>Push</span>
+              <input type="checkbox" class="admin-settings__switch" name="channel_push" {% if notif_settings.channel_push_enabled %}checked{% endif %}>
+            </label>
+            <label class="admin-settings__toggle">
+              <span>SMS</span>
+              <input type="checkbox" class="admin-settings__switch" name="channel_sms" {% if notif_settings.channel_sms_enabled %}checked{% endif %}>
+            </label>
+            <label class="admin-settings__toggle">
+              <span>Rappels automatiques</span>
+              <input type="checkbox" class="admin-settings__switch" name="auto_reminders" {% if auto_reminders %}checked{% endif %}>
+            </label>
+            <button type="submit" class="admin-settings__btn">Enregistrer</button>
+          </form>
+          <a href="{% url 'bo_admin_notifications' %}" class="admin-settings__link">Gérer les modèles de notifications →</a>
+        </section>
+
+        <section class="admin-settings__card" id="integrations">
+          <h2>Intégrations &amp; services</h2>
+          <ul class="admin-settings__integrations">
+            {% for item in integration_items %}
+            <li>
+              <div>
+                <p class="font-bold">{{ item.label }}</p>
+                <p class="text-xs {% if item.connected %}text-emerald-600{% else %}text-ink-muted{% endif %}">{{ item.status_label }}</p>
+              </div>
+              <a href="{{ item.manage_url }}" class="admin-settings__btn admin-settings__btn--sm">Gérer</a>
+            </li>
+            {% endfor %}
+          </ul>
+          <a href="{% url 'bo_admin_payments' %}" class="admin-settings__link">Gérer toutes les intégrations →</a>
+        </section>
+
+        <section class="admin-settings__card" id="backup">
+          <h2>Sauvegarde &amp; maintenance</h2>
+          {% if is_superadmin %}
+          <form method="post" class="admin-settings__form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="backup">
+            <label class="admin-settings__toggle">
+              <span>Sauvegarde automatique</span>
+              <input type="checkbox" class="admin-settings__switch" name="auto_backup" {% if settings.auto_backup %}checked{% endif %}>
+            </label>
+            <label class="admin-settings__field">
+              <span>Fréquence</span>
+              <select name="backup_frequency">
+                {% for val, lbl in settings.BackupFrequency.choices %}
+                <option value="{{ val }}" {% if settings.backup_frequency == val %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="admin-settings__field">
+              <span>Conserver les sauvegardes pendant</span>
+              <select name="backup_retention_days">
+                <option value="7" {% if settings.backup_retention_days == 7 %}selected{% endif %}>7 jours</option>
+                <option value="30" {% if settings.backup_retention_days == 30 %}selected{% endif %}>30 jours</option>
+                <option value="90" {% if settings.backup_retention_days == 90 %}selected{% endif %}>90 jours</option>
+              </select>
+            </label>
+            <label class="admin-settings__toggle">
+              <span>Maintenance programmée</span>
+              <input type="checkbox" class="admin-settings__switch" name="scheduled_maintenance" {% if settings.scheduled_maintenance %}checked{% endif %}>
+            </label>
+            <button type="submit" class="admin-settings__btn">Enregistrer</button>
+          </form>
+          <a href="#backup" class="admin-settings__link">Gérer les sauvegardes →</a>
+          {% else %}
+          <p class="text-sm text-ink-muted">Réservé au super administrateur.</p>
+          {% endif %}
+        </section>
+      </div>
+
+      <section class="admin-settings__card admin-settings__card--system" id="about">
+        <h2>À propos de la plateforme</h2>
+        <dl class="admin-settings__meta">
+          <div><dt>Version</dt><dd>1.0.0</dd></div>
+          <div><dt>Dernière mise à jour</dt><dd>{{ settings.updated_at|date:"d/m/Y H:i" }}</dd></div>
+          <div><dt>Environnement</dt><dd>Gabon — production nationale</dd></div>
+        </dl>
+      </section>
+    </div>
+  </div>
+
+  <section class="admin-settings__quick">
+    <h2>Actions rapides</h2>
+    <div class="admin-settings__quick-grid">
+      {% for action in quick_actions %}
+      {% if action.type == "post" and is_superadmin %}
+      <form method="post" class="admin-settings__quick-card admin-settings__quick-card--form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="{{ action.action }}">
+        <button type="submit">
+          <span class="material-symbols-rounded">{{ action.icon }}</span>
+          <span>{{ action.label }}</span>
+        </button>
+      </form>
+      {% elif action.type == "export" %}
+      <a href="{{ action.url }}" class="admin-settings__quick-card">
+        <span class="material-symbols-rounded">{{ action.icon }}</span>
+        <span>{{ action.label }}</span>
+      </a>
+      {% elif action.type == "anchor" %}
+      <a href="{{ action.url }}" class="admin-settings__quick-card">
+        <span class="material-symbols-rounded">{{ action.icon }}</span>
+        <span>{{ action.label }}</span>
+      </a>
+      {% else %}
+      <a href="{{ action.url }}" class="admin-settings__quick-card">
+        <span class="material-symbols-rounded">{{ action.icon }}</span>
+        <span>{{ action.label }}</span>
+      </a>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <footer class="admin-settings__footer">
+    <p>© 2025 Gab'Pharma — Tous droits réservés.</p>
+    <p>Version 1.0.0</p>
+  </footer>
+</div>
+<script>
+(function () {
+  var navLinks = document.querySelectorAll("[data-settings-nav]");
+  function setActive(id) {
+    navLinks.forEach(function (link) {
+      link.classList.toggle("is-active", link.getAttribute("data-settings-nav") === id);
+    });
+  }
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function () {
+      setActive(link.getAttribute("data-settings-nav"));
+    });
+  });
+  var hash = window.location.hash.replace("#", "");
+  if (hash) setActive(hash);
+  else setActive("general");
+})();
+</script>
+{% endblock %}

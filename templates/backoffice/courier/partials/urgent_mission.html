@@ -1,0 +1,70 @@
+{% load humanize %}
+{# Mission urgente — bannière tableau de bord livreur #}
+{% if urgent_mission %}
+{% with m=urgent_mission d=m.delivery o=m.order %}
+<section class="cp-urgent-banner max-w-5xl mb-6" id="urgent-mission">
+  <div class="min-w-0 flex-1">
+    <p class="text-xs font-extrabold uppercase tracking-wide opacity-90 flex items-center gap-1">
+      <span class="material-symbols-rounded text-sm">emergency</span> Mission d'urgence
+    </p>
+    <p class="text-lg font-extrabold mt-1">#{{ o.code }} — livraison prioritaire</p>
+    <p class="text-xs opacity-90 mt-1">{{ o.pharmacy.name }} → {{ o.client.get_full_name|default:o.client.username }}</p>
+  </div>
+  <div class="cp-urgent-timer">
+    <span class="text-[10px] uppercase font-bold opacity-80">Temps restant</span>
+    <strong data-urgent-timer data-deadline="{{ m.deadline_iso }}">{{ m.timer_label }}</strong>
+    <span class="text-[10px] opacity-80">Livraison dans le temps</span>
+  </div>
+</section>
+
+<div class="courier-portal max-w-5xl mb-8">
+  <div class="cp-card">
+    <div class="flex flex-wrap gap-3 justify-between items-start">
+      <div class="min-w-[140px] flex-1">
+        <p class="text-[10px] font-bold text-ink-muted uppercase">Pharmacie</p>
+        <p class="font-extrabold">{{ o.pharmacy.name }}</p>
+        <p class="text-xs text-ink-muted">{{ o.pharmacy.address|default:o.pharmacy.city }}</p>
+        {% if o.pharmacy.phone %}<a href="tel:{{ o.pharmacy.phone }}" class="text-xs font-bold text-primary">{{ o.pharmacy.phone }}</a>{% endif %}
+      </div>
+      <span class="material-symbols-rounded text-ink-muted">arrow_forward</span>
+      <div class="min-w-[140px] flex-1">
+        <p class="text-[10px] font-bold text-ink-muted uppercase">Client</p>
+        <p class="font-extrabold">{{ o.client.get_full_name|default:o.client.username }}</p>
+        {% if o.client.phone %}<a href="tel:{{ o.client.phone }}" class="text-xs font-bold text-primary">{{ o.client.phone }}</a>{% endif %}
+      </div>
+      <span class="cp-badge cp-badge--wait">Critique</span>
+    </div>
+    <div class="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
+      <strong>Motif :</strong> {{ m.urgency_reason }}
+    </div>
+    <div class="flex flex-wrap gap-4 mt-3 text-xs text-ink-muted">
+      <span><strong class="text-ink">Distance :</strong> {{ m.distance_label }}</span>
+      <span><strong class="text-ink">ETA :</strong> {% if m.eta_minutes %}≈ {{ m.eta_minutes }} min{% else %}—{% endif %}</span>
+      <span><strong class="text-ink">Montant :</strong> <span class="text-emerald-600 font-extrabold">FCFA {{ o.total|intcomma }}</span></span>
+    </div>
+  </div>
+
+  <div class="cp-stepper">
+    <div class="cp-stepper__item {% if m.step == 1 %}is-active{% elif m.step > 1 %}is-done{% endif %}"><div class="cp-stepper__dot">1</div>Je pars</div>
+    <div class="cp-stepper__item {% if m.step == 2 %}is-active{% elif m.step > 2 %}is-done{% endif %}"><div class="cp-stepper__dot">2</div>Récupération</div>
+    <div class="cp-stepper__item {% if m.step == 3 %}is-active{% elif m.step > 3 %}is-done{% endif %}"><div class="cp-stepper__dot">3</div>En route</div>
+    <div class="cp-stepper__item {% if m.step == 4 %}is-active{% endif %}"><div class="cp-stepper__dot">4</div>Livraison</div>
+  </div>
+
+  <div class="cp-action-row">
+    {% if o.client.phone %}<a href="tel:{{ o.client.phone }}" class="cp-action-chip"><span class="material-symbols-rounded">call</span> Client</a>{% endif %}
+    {% if o.pharmacy.phone %}<a href="tel:{{ o.pharmacy.phone }}" class="cp-action-chip"><span class="material-symbols-rounded">call</span> Pharmacie</a>{% endif %}
+    <a href="{% url 'bo_courier_deliveries' %}#delivery-{{ d.id }}" class="cp-action-chip"><span class="material-symbols-rounded">navigation</span> Itinéraire</a>
+    <a href="{% url 'bo_courier_incident' d.id %}" class="cp-action-chip"><span class="material-symbols-rounded">report</span> Problème</a>
+  </div>
+
+  <div class="grid gap-2 sm:grid-cols-2">
+    <a href="{% url 'bo_courier_deliveries' %}#delivery-{{ d.id }}" class="cp-btn-primary" style="background:#16a34a">
+      <span class="material-symbols-rounded">two_wheeler</span>
+      {% if d.status == 'assigned' %}Je pars — démarrer{% else %}Continuer la mission{% endif %}
+    </a>
+    <a href="{% url 'bo_courier_incident' d.id %}" class="cp-btn-outline">Signaler un problème</a>
+  </div>
+</div>
+{% endwith %}
+{% endif %}

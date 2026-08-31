@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Compte Autorités Sanitaires{% endblock %}
+{% block content %}
+<div class="max-w-site mx-auto px-4 py-12">
+  <div class="max-w-lg mx-auto bg-white border border-slate-100 rounded-3xl p-8 shadow-card">
+    <div class="text-center mb-6">
+      <img src="/static/images/logo-gabpharma.png" alt="Gab'Pharma" class="h-14 mx-auto mb-3">
+      <h1 class="text-2xl font-extrabold text-ink tracking-tight">Compte institutionnel</h1>
+      <p class="text-sm text-ink-muted font-medium mt-1">Autorités Sanitaires — Ministère / Direction de la Pharmacie</p>
+    </div>
+    <div class="mb-4 text-xs text-ink-muted bg-canvas rounded-xl px-3 py-2.5 font-medium leading-relaxed">
+      Votre demande reste <strong>en attente de validation</strong> jusqu'à confirmation de votre rattachement institutionnel par Gab'Pharma.
+      L'authentification à deux facteurs (2FA) sera activée à l'ouverture du compte.
+    </div>
+    {% if error %}
+    <div class="mb-4 text-sm bg-rose-50 text-rose-700 border border-rose-100 rounded-xl px-3 py-2.5 font-medium">{{ error }}</div>
+    {% endif %}
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-ink-muted mb-1">Prénom *</label>
+          <input name="first_name" required class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-ink-muted mb-1">Nom *</label>
+          <input name="last_name" required class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1">E-mail professionnel *</label>
+        <input type="email" name="email" required class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1">Téléphone (2FA SMS)</label>
+        <input name="phone" placeholder="+241..." class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1">Institution *</label>
+        <input name="institution" required placeholder="Ministère de la Santé…" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-ink-muted mb-1">Département / direction</label>
+          <input name="department" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-ink-muted mb-1">Fonction</label>
+          <input name="job_title" placeholder="Inspecteur…" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1">Région de compétence</label>
+        <input name="region" placeholder="Estuaire, National…" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1">2FA préférée</label>
+        <select name="two_factor_method" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+          <option value="email">E-mail</option>
+          <option value="sms">SMS</option>
+        </select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs font-bold text-ink-muted mb-1">Mot de passe *</label>
+          <input type="password" name="password" required minlength="8" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-ink-muted mb-1">Confirmation *</label>
+          <input type="password" name="password2" required class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm">
+        </div>
+      </div>
+      <label class="flex items-start gap-2 text-xs font-medium">
+        <input type="checkbox" name="accept_terms" value="1" required class="mt-0.5">
+        J'accepte les conditions d'utilisation et la charte de confidentialité des données de santé publique.
+      </label>
+      <button class="w-full bg-primary text-white font-bold rounded-xl py-3">Soumettre la demande</button>
+    </form>
+    <p class="text-center text-xs text-ink-muted mt-4">
+      Déjà un compte ? <a href="{% url 'login' %}" class="text-primary font-bold">Connexion</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

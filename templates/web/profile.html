@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Mon compte{% endblock %}
+{% block content %}
+<div class="max-w-site mx-auto px-4 py-10">
+  <div class="max-w-md mx-auto">
+    {% if user.is_authenticated %}
+    <div class="bg-white border border-slate-100 rounded-3xl p-6 shadow-card">
+      <div class="flex items-center gap-4 mb-6">
+        <div class="h-16 w-16 rounded-full bg-primary text-white text-xl font-bold flex items-center justify-center overflow-hidden">
+          {% if user.avatar %}
+          <img src="{{ user.avatar.url }}" alt="" class="h-full w-full object-cover">
+          {% else %}
+          {{ user.first_name|default:user.username|slice:":1"|upper }}
+          {% endif %}
+        </div>
+        <div>
+          <p class="font-extrabold text-ink tracking-tight">{{ user.get_full_name|default:user.username }}</p>
+          <p class="text-sm text-ink-muted font-medium">{{ user.get_role_display }}</p>
+        </div>
+      </div>
+      <div class="space-y-2 text-sm font-semibold">
+        <a href="{% url 'bo_my_profile' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-canvas hover:bg-primary-50">
+          <span class="material-symbols-rounded sm">account_circle</span> Modifier mon profil / photo
+        </a>
+        <a href="{% url user.backoffice_home %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-primary text-white hover:bg-primary-600">
+          <span class="material-symbols-rounded sm">dashboard</span> Mon espace / tableau de bord
+        </a>
+        <a href="{% url 'logout' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-canvas hover:bg-rose-50 text-rose-600">
+          <span class="material-symbols-rounded sm">logout</span> Déconnexion
+        </a>
+      </div>
+    </div>
+    {% else %}
+    <div class="bg-white border border-slate-100 rounded-3xl p-8 shadow-card text-center">
+      <img src="/static/images/logo-gabpharma.png" alt="" class="h-14 mx-auto mb-4">
+      <h1 class="text-xl font-extrabold text-ink tracking-tight mb-2">Connectez-vous</h1>
+      <p class="text-sm text-ink-muted font-medium mb-6">Accédez à vos commandes, favoris et à votre espace patient.</p>
+      <div class="space-y-3">
+        <a href="{% url 'login' %}" class="block w-full bg-primary hover:bg-primary-600 text-white font-bold text-sm py-3 rounded-full transition">Se connecter</a>
+        <a href="{% url 'register' %}" class="block w-full border-2 border-primary text-primary hover:bg-primary-50 font-bold text-sm py-3 rounded-full transition">Créer un compte patient</a>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

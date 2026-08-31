@@ -1,0 +1,35 @@
+<nav class="pharmacy-mobile-nav lg:hidden" aria-label="Navigation pharmacie">
+  <a href="{% url 'bo_pharmacy_dashboard' %}" class="{% if bo_section == 'dashboard' %}is-active{% endif %}">
+    <span class="material-symbols-rounded">dashboard</span>
+    <span>Accueil</span>
+  </a>
+  {% if pharmacy_permissions.stocks %}
+  <a href="{% url 'bo_pharmacy_stocks' %}" class="{% if bo_section == 'stocks' %}is-active{% endif %}">
+    <span class="material-symbols-rounded">inventory_2</span>
+    <span>Stock</span>
+  </a>
+  {% endif %}
+  {% if pharmacy_permissions.orders %}
+  <a href="{% url 'bo_pharmacy_orders' %}" class="{% if bo_section == 'orders' or bo_section == 'prescription_detail' %}is-active{% endif %}">
+    <span class="material-symbols-rounded">shopping_cart</span>
+    <span>Commandes</span>
+  </a>
+  {% endif %}
+  {% if pharmacy_permissions.stats %}
+  <a href="{% url 'bo_pharmacy_stats' %}" class="{% if bo_section == 'stats' %}is-active{% endif %}">
+    <span class="material-symbols-rounded">bar_chart</span>
+    <span>Stats</span>
+  </a>
+  {% endif %}
+  <button type="button" id="bo-menu-btn-mobile" class="{% if bo_section == 'personnel' or bo_section == 'settings' %}is-active{% endif %}" style="background:none;border:0;cursor:pointer;">
+    <span class="material-symbols-rounded">menu</span>
+    <span>Menu</span>
+  </button>
+</nav>
+<script>
+  (function () {
+    var m = document.getElementById('bo-menu-btn-mobile');
+    var d = document.getElementById('bo-menu-btn');
+    if (m && d) m.addEventListener('click', function () { d.click(); });
+  })();
+</script>

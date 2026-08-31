@@ -1,0 +1,16 @@
+{% if bo_role == "courier" %}
+<nav class="courier-mobile-nav lg:hidden" aria-label="Navigation livreur">
+  <a href="{% url 'bo_courier_dashboard' %}" class="{% if bo_section == 'dashboard' %}is-active{% endif %}">
+    <span class="material-symbols-rounded">home</span> Accueil
+  </a>
+  <a href="{% url 'bo_courier_deliveries' %}" class="{% if bo_section == 'deliveries' or bo_section == 'courier_incident' %}is-active{% endif %}">
+    <span class="material-symbols-rounded">local_shipping</span> Livraisons
+  </a>
+  <a href="{% url 'bo_courier_dashboard' %}#gains" class="{% if bo_section == 'earnings' %}is-active{% endif %}">
+    <span class="material-symbols-rounded">payments</span> Gains
+  </a>
+  <a href="{% url 'bo_courier_vehicles' %}" class="{% if bo_section == 'courier_vehicles' or bo_section == 'courier_settings' %}is-active{% endif %}">
+    <span class="material-symbols-rounded">person</span> Profil
+  </a>
+</nav>
+{% endif %}

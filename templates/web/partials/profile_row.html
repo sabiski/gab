@@ -1,0 +1,13 @@
+<a href="{{ url }}" class="flex items-center gap-3 px-4 py-3.5 hover:bg-[#F9FAFB] transition group">
+  <span class="h-9 w-9 rounded-xl bg-[#F3F4F6] text-[#6C3AED] flex items-center justify-center shrink-0 group-hover:bg-[#EDE9FE]">
+    <span class="material-symbols-rounded sm">{{ icon }}</span>
+  </span>
+  <span class="flex-1 min-w-0">
+    <span class="block text-sm font-semibold text-[#374151]">{{ label }}</span>
+    {% if sublabel %}<span class="block text-xs text-[#6B7280] truncate">{{ sublabel }}</span>{% endif %}
+  </span>
+  {% if badge %}
+  <span class="text-xs font-bold text-[#6B7280] shrink-0">{{ badge }}</span>
+  {% endif %}
+  <span class="material-symbols-rounded sm text-[#9CA3AF] shrink-0">chevron_right</span>
+</a>

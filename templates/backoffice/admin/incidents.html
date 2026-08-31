@@ -1,0 +1,126 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Incidents{% endblock %}
+{% block bo_label %}{% if bo_role == "admin" %}Administration{% else %}Support{% endif %}{% endblock %}
+{% block bo_title %}Centre de gestion des incidents{% endblock %}
+{% block bo_content %}
+
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Incidents (30 j)</p><p class="text-2xl font-extrabold">{{ resolution_stats.total }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Taux de résolution</p><p class="text-2xl font-extrabold text-primary">{{ resolution_stats.resolution_rate }}%</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">En cours</p><p class="text-2xl font-extrabold text-amber-600">{{ resolution_stats.open }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Escaladés</p><p class="text-2xl font-extrabold text-rose-600">{{ resolution_stats.escalated }}</p></div>
+</div>
+
+<form method="get" class="bg-white rounded-2xl border p-3 mb-4 flex flex-wrap gap-2 items-center">
+  <select name="status" class="border rounded-xl px-3 py-2 text-sm">
+    <option value="">Tous les statuts</option>
+    {% for val, label in statuses %}<option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="priority" class="border rounded-xl px-3 py-2 text-sm">
+    <option value="">Toutes priorités</option>
+    {% for val, label in priorities %}<option value="{{ val }}" {% if filter_priority == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl">Filtrer</button>
+</form>
+<p class="text-xs text-ink-muted font-medium mb-4">{{ total_count }} incident{{ total_count|pluralize }} · La réaffectation libère le livreur initial et notifie le client.</p>
+
+<div class="space-y-4">
+  {% for i in page_obj %}
+  <article class="bg-white rounded-2xl border p-4 text-sm {% if i.priority == 'urgent' %}border-rose-300 ring-2 ring-rose-100{% elif i.priority == 'high' %}border-amber-200{% endif %}">
+    <div class="flex flex-wrap justify-between gap-3 mb-3">
+      <div>
+        <div class="flex flex-wrap items-center gap-2 mb-1">
+          <span class="font-extrabold text-base">{{ i.get_incident_type_display }}</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full
+            {% if i.priority == 'urgent' %}bg-rose-100 text-rose-800
+            {% elif i.priority == 'high' %}bg-amber-100 text-amber-900
+            {% else %}bg-canvas text-ink-muted{% endif %}">{{ i.get_priority_display }}</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100">{{ i.get_status_display }}</span>
+        </div>
+        <p class="text-xs text-ink-muted">{{ i.created_at|date:"d/m/Y H:i" }} · signalé par {{ i.reported_by }}</p>
+        {% if i.description %}<p class="text-sm mt-2">{{ i.description }}</p>{% endif %}
+      </div>
+      {% if i.photo %}
+      <a href="{{ i.photo.url }}" target="_blank" class="shrink-0">
+        <img src="{{ i.photo.url }}" alt="" class="h-16 w-16 rounded-xl object-cover border">
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-3 bg-canvas/60 rounded-xl p-3 mb-3 text-xs">
+      <div>
+        <p class="font-bold text-ink-muted uppercase text-[10px]">Commande</p>
+        <p class="font-extrabold">{{ i.delivery.order.code }}</p>
+        <p class="text-ink-muted">{{ i.delivery.order.total }} F · {{ i.delivery.order.get_status_display }}</p>
+      </div>
+      <div>
+        <p class="font-bold text-ink-muted uppercase text-[10px]">Client</p>
+        <p class="font-bold">{{ i.delivery.order.client.get_full_name|default:i.delivery.order.client.username }}</p>
+        {% if i.delivery.order.client.phone %}
+        <a href="tel:{{ i.delivery.order.client.phone }}" class="text-primary font-bold">Appeler</a>
+        {% endif %}
+      </div>
+      <div>
+        <p class="font-bold text-ink-muted uppercase text-[10px]">Livreur</p>
+        <p class="font-bold">{% if i.delivery.courier %}{{ i.delivery.courier.get_full_name|default:i.delivery.courier.username }}{% else %}—{% endif %}</p>
+        {% if i.delivery.courier.phone %}
+        <a href="tel:{{ i.delivery.courier.phone }}" class="text-primary font-bold">Contacter</a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if i.status != "resolved" %}
+    <div class="border-t border-slate-100 pt-3 space-y-3">
+      <form method="post" class="flex flex-wrap gap-2 items-center">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update">
+        <input type="hidden" name="incident_id" value="{{ i.id }}">
+        <select name="priority" class="border rounded-lg text-xs px-2 py-1.5">{% for val, label in priorities %}<option value="{{ val }}" {% if i.priority == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+        <select name="status" class="border rounded-lg text-xs px-2 py-1.5">{% for val, label in statuses %}<option value="{{ val }}" {% if i.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+        <button class="text-xs font-bold text-primary px-3 py-1.5 border rounded-lg">Mettre à jour</button>
+      </form>
+
+      {% if i.nearby_couriers %}
+      <div>
+        <p class="text-xs font-extrabold text-ink-muted uppercase mb-2">Livreurs disponibles à proximité</p>
+        <form method="post" class="space-y-2">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="reassign">
+          <input type="hidden" name="incident_id" value="{{ i.id }}">
+          {% for row in i.nearby_couriers %}
+          <label class="flex items-center justify-between gap-2 border rounded-xl px-3 py-2 cursor-pointer hover:bg-canvas/80">
+            <span class="flex items-center gap-2">
+              <input type="radio" name="courier_id" value="{{ row.courier.id }}" required {% if forloop.first %}checked{% endif %}>
+              <span class="font-bold">{{ row.courier.get_full_name|default:row.courier.username }}</span>
+            </span>
+            <span class="text-xs text-ink-muted">~{{ row.distance_km }} km · {{ row.deliveries_today }} course(s) jour</span>
+          </label>
+          {% endfor %}
+          <button class="w-full sm:w-auto text-xs font-bold bg-amber-500 text-white px-4 py-2 rounded-xl">Réaffecter la livraison</button>
+        </form>
+      </div>
+      {% endif %}
+
+      <div class="flex flex-wrap gap-2">
+        <form method="post" onsubmit="return confirm('Marquer comme résolu ?')">
+          {% csrf_token %}<input type="hidden" name="action" value="resolve"><input type="hidden" name="incident_id" value="{{ i.id }}">
+          <button class="text-xs font-bold border border-primary text-primary px-3 py-1.5 rounded-lg">Résolu</button>
+        </form>
+        <form method="post" onsubmit="return confirm('Annuler la commande ?')" class="flex flex-wrap gap-1 items-center">
+          {% csrf_token %}<input type="hidden" name="action" value="cancel_order"><input type="hidden" name="incident_id" value="{{ i.id }}">
+          <input name="reason" placeholder="Motif annulation" class="border rounded-lg text-xs px-2 py-1.5 min-w-[160px]">
+          <button class="text-xs font-bold border border-rose-200 text-rose-700 px-3 py-1.5 rounded-lg">Annuler commande</button>
+        </form>
+      </div>
+      {% if i.delivery.transfer_code %}
+      <p class="text-[10px] text-amber-700">Transfert en cours — code {{ i.delivery.transfer_code }}{% if i.delivery.handoff_courier %} · {{ i.delivery.handoff_courier }}{% endif %}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </article>
+  {% empty %}
+  <div class="bg-white border rounded-2xl p-10 text-center text-ink-muted">Aucun incident</div>
+  {% endfor %}
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endblock %}

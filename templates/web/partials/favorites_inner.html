@@ -1,0 +1,37 @@
+{% load portal_urls %}
+{% if client_portal %}<div class="space-y-5">{% else %}<div class="max-w-site mx-auto px-4 py-8">{% endif %}
+  <h1 class="portal-hide-in-espace text-2xl font-bold text-ink mb-6">Mes favoris</h1>
+  {% if favorites %}
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    {% for fav in favorites %}
+    <div class="bg-white border border-[#E5E7EB] rounded-2xl p-4 hover:shadow-card transition relative">
+      <form method="post" action="{% portal_url 'favorites' %}" class="absolute top-2 right-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="remove">
+        <input type="hidden" name="fav_id" value="{{ fav.id }}">
+        <button type="submit" class="h-8 w-8 rounded-full bg-canvas text-rose-500 flex items-center justify-center" title="Retirer">
+          <span class="material-symbols-rounded sm filled">favorite</span>
+        </button>
+      </form>
+      <a href="{% portal_url 'product_detail' fav.stock.id %}">
+        <div class="h-20 rounded-xl bg-canvas border border-slate-100 flex items-center justify-center mb-3 overflow-hidden p-2">
+          {% if fav.stock.medicine.image %}
+          <img src="{{ fav.stock.medicine.image.url }}" alt="{{ fav.stock.medicine.name }}" class="max-h-full max-w-full object-contain">
+          {% else %}
+          <span class="material-symbols-rounded text-primary text-2xl opacity-70">medication</span>
+          {% endif %}
+        </div>
+        <h3 class="text-sm font-semibold text-ink pr-8">{{ fav.stock.medicine.name }}</h3>
+        <p class="text-xs text-ink-muted mt-1">{{ fav.stock.medicine.form_label }}{% if fav.stock.medicine.dosage %} · {{ fav.stock.medicine.dosage }}{% endif %}</p>
+        <p class="text-xs text-ink-muted mt-1">{{ fav.stock.pharmacy.name }} · {{ fav.stock.formatted_price }}</p>
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white border border-slate-100 rounded-xl p-10 text-center max-w-md">
+    <p class="text-ink-muted text-sm mb-3">Aucun favori pour le moment.</p>
+    <a href="{% portal_url 'search' %}" class="inline-flex bg-primary text-white font-bold text-sm px-4 py-2 rounded-full">Parcourir le catalogue</a>
+  </div>
+  {% endif %}
+</div>

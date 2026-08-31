@@ -1,0 +1,26 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Paramètres{% endblock %}
+{% block portal_heading %}Paramètres{% endblock %}
+{% block portal_body %}
+<a href="{% url 'bo_client_settings' %}" class="c-chat-back">
+  <span class="material-symbols-rounded sm">arrow_back</span> Retour au profil
+</a>
+{% include "partials/client_settings_hub.html" %}
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  document.querySelectorAll('[data-toggle-form]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var form = document.getElementById(btn.getAttribute('data-toggle-form'));
+      var input = document.getElementById(btn.getAttribute('data-input'));
+      if (!form || !input) return;
+      var on = input.value !== '1';
+      input.value = on ? '1' : '0';
+      btn.classList.toggle('is-on', on);
+      form.submit();
+    });
+  });
+})();
+</script>
+{% endblock %}

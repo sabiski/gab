@@ -1,0 +1,142 @@
+{# Navigation latérale patient — alignée sur Paramètres + Mon profil #}
+<p class="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-white/40">Parcours</p>
+<a href="{% url 'bo_client_dashboard' %}" class="bo-client-nav {% if bo_section == 'dashboard' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">person</span>
+  <span class="bo-client-nav__label">Mon espace</span>
+</a>
+<a href="{% url 'bo_client_catalog' %}" class="bo-client-nav {% if bo_section == 'catalog' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">search</span>
+  <span class="bo-client-nav__label">Catalogue</span>
+</a>
+<a href="{% url 'bo_client_cart' %}" class="bo-client-nav {% if bo_section == 'cart' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">shopping_cart</span>
+  <span class="bo-client-nav__label">Panier</span>
+  <span id="bo-cart-badge" class="ml-auto min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center shrink-0 {% if bo_section == 'cart' %}bg-white text-[#6C3AED]{% else %}bg-[#6C3AED] text-white{% endif %} {% if not cart_count %}hidden{% endif %}">{{ cart_count }}</span>
+</a>
+<a href="{% url 'bo_client_messages' %}" class="bo-client-nav {% if bo_section == 'messages' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">chat</span>
+  <span class="bo-client-nav__label">Messagerie</span>
+</a>
+<a href="{% url 'bo_client_subscriptions' %}" class="bo-client-nav {% if bo_section == 'subscriptions' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">card_membership</span>
+  <span class="bo-client-nav__label">Forfaits</span>
+</a>
+<a href="{% url 'bo_client_emergency' %}" class="bo-client-nav {% if bo_section == 'emergency' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm text-[#F87171]" aria-hidden="true">e911_emergency</span>
+  <span class="bo-client-nav__label">Urgence SOS</span>
+</a>
+
+<p class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/40">Mon compte</p>
+<a href="{% url 'bo_client_settings' %}" class="bo-client-nav {% if bo_section == 'client_settings' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">manage_accounts</span>
+  <span class="bo-client-nav__label">Mon profil</span>
+</a>
+<a href="{% url 'bo_client_profile_personal' %}" class="bo-client-nav {% if bo_section == 'profile_personal' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">badge</span>
+  <span class="bo-client-nav__label">Informations personnelles</span>
+</a>
+<a href="{% url 'bo_client_profile_address' %}" class="bo-client-nav {% if bo_section == 'profile_address' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">location_on</span>
+  <span class="bo-client-nav__label">Adresse de livraison</span>
+</a>
+<a href="{% url 'bo_client_profile_payment' %}" class="bo-client-nav {% if bo_section == 'profile_payment' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">payments</span>
+  <span class="bo-client-nav__label">Moyens de paiement</span>
+</a>
+<a href="{% url 'bo_client_orders' %}" class="bo-client-nav {% if bo_section == 'orders' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">history</span>
+  <span class="bo-client-nav__label">Historique des commandes</span>
+</a>
+<a href="{% url 'bo_client_favorites' %}" class="bo-client-nav {% if bo_section == 'favorites' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">favorite</span>
+  <span class="bo-client-nav__label">Favoris{% if favorites_count %} ({{ favorites_count }}){% endif %}</span>
+</a>
+<a href="{% url 'bo_client_prescriptions' %}" class="bo-client-nav {% if bo_section == 'prescriptions' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">prescriptions</span>
+  <span class="bo-client-nav__label">Ordonnances</span>
+</a>
+<a href="{% url 'bo_client_loyalty' %}" class="bo-client-nav {% if bo_section == 'loyalty' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">loyalty</span>
+  <span class="bo-client-nav__label">Fidélité</span>
+</a>
+<a href="{% url 'bo_client_support' %}" class="bo-client-nav {% if bo_section == 'support' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">support</span>
+  <span class="bo-client-nav__label">Réclamations</span>
+</a>
+
+<p class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/40">Général</p>
+<a href="{% url 'bo_client_parametres' %}" class="bo-client-nav {% if bo_section == 'parametres' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">settings</span>
+  <span class="bo-client-nav__label">Centre de paramètres</span>
+</a>
+<a href="{% url 'bo_client_notifications' %}" class="bo-client-nav {% if bo_section == 'notifications' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">notifications</span>
+  <span class="bo-client-nav__label">Notifications</span>
+</a>
+<a href="{% url 'bo_client_profile_preferences' %}" class="bo-client-nav {% if bo_section == 'profile_preferences' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">language</span>
+  <span class="bo-client-nav__label">Langue de l'application</span>
+</a>
+<a href="{% url 'bo_client_profile_preferences' %}#theme" class="bo-client-nav {% if bo_section == 'profile_preferences' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">dark_mode</span>
+  <span class="bo-client-nav__label">Thème de l'application</span>
+</a>
+
+<p class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/40">Sécurité et confidentialité</p>
+<a href="{% url 'bo_client_profile_security' %}" class="bo-client-nav {% if bo_section == 'profile_security' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">lock</span>
+  <span class="bo-client-nav__label">Sécurité du compte</span>
+</a>
+<a href="{% url 'bo_client_profile_privacy' %}" class="bo-client-nav {% if bo_section == 'profile_privacy' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">shield</span>
+  <span class="bo-client-nav__label">Confidentialité</span>
+</a>
+<a href="{% url 'bo_client_sessions' %}" class="bo-client-nav {% if bo_section == 'profile_sessions' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">devices</span>
+  <span class="bo-client-nav__label">Sessions actives</span>
+</a>
+
+<p class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/40">Préférences</p>
+<a href="{% url 'bo_client_profile_address' %}" class="bo-client-nav {% if bo_section == 'profile_address' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">home_pin</span>
+  <span class="bo-client-nav__label">Adresse par défaut</span>
+</a>
+<a href="{% url 'bo_client_profile_payment' %}" class="bo-client-nav {% if bo_section == 'profile_payment' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">account_balance_wallet</span>
+  <span class="bo-client-nav__label">Paiement par défaut</span>
+</a>
+<a href="{% url 'bo_client_subscriptions' %}" class="bo-client-nav {% if bo_section == 'subscriptions' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">schedule</span>
+  <span class="bo-client-nav__label">Durée du pass par défaut</span>
+</a>
+<a href="{% url 'bo_client_parametres' %}#save-searches" class="bo-client-nav">
+  <span class="material-symbols-rounded sm" aria-hidden="true">history</span>
+  <span class="bo-client-nav__label">Enregistrer mes recherches</span>
+</a>
+<a href="{% url 'bo_client_parametres' %}#data-saver" class="bo-client-nav">
+  <span class="material-symbols-rounded sm" aria-hidden="true">data_saver_on</span>
+  <span class="bo-client-nav__label">Mode économie de données</span>
+</a>
+
+<p class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/40">À propos</p>
+<a href="{% url 'bo_client_about' %}" class="bo-client-nav {% if bo_section == 'about' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">medication</span>
+  <span class="bo-client-nav__label">À propos de Gab'Pharma</span>
+</a>
+<a href="{% url 'bo_client_support' %}" class="bo-client-nav {% if bo_section == 'support' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">help</span>
+  <span class="bo-client-nav__label">Aide et support</span>
+</a>
+<a href="{% url 'bo_client_terms' %}" class="bo-client-nav {% if bo_section == 'terms' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">description</span>
+  <span class="bo-client-nav__label">Conditions d'utilisation</span>
+</a>
+<a href="{% url 'bo_client_profile_privacy' %}" class="bo-client-nav {% if bo_section == 'profile_privacy' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">policy</span>
+  <span class="bo-client-nav__label">Politique de confidentialité</span>
+</a>
+
+<a href="{% url 'logout' %}" class="bo-client-nav bo-client-nav--logout mt-3">
+  <span class="material-symbols-rounded sm" aria-hidden="true">logout</span>
+  <span class="bo-client-nav__label">Se déconnecter</span>
+</a>

@@ -1,0 +1,19 @@
+{% extends "patient/base_patient.html" %}
+{% block title %}Favoris{% endblock %}
+{% block content %}
+<h1 class="text-xl md:text-2xl font-semibold text-ink mb-4">Mes favoris</h1>
+{% if favorites %}
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+  {% for fav in favorites %}
+  <a href="{% url 'search' %}?q={{ fav.stock.medicine.name|urlencode }}" class="bg-white rounded-2xl p-3 shadow-card">
+    <h3 class="text-sm font-semibold text-ink">{{ fav.stock.medicine.name }}</h3>
+    <p class="text-xs text-ink-muted">{{ fav.stock.medicine.form_label }} · {{ fav.stock.pharmacy.name }}</p>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-2xl p-8 text-center shadow-card max-w-md">
+  <p class="text-ink-muted text-sm">Aucun favori pour le moment.</p>
+</div>
+{% endif %}
+{% endblock %}

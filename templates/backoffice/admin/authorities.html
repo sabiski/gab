@@ -1,0 +1,312 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Autorités sanitaires{% endblock %}
+{% block bo_label %}Administration{% endblock %}
+{% block bo_title %}Gestion des autorités sanitaires{% endblock %}
+{% block bo_subtitle %}
+<p class="text-xs text-ink-muted mt-0.5">Gérez les autorités sanitaires et leurs accès à la plateforme.</p>
+{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/admin-authorities.css?v=1">
+{% endblock %}
+{% block bo_content %}
+<div class="auth-admin">
+  <div class="auth-admin__toolbar">
+    <form method="get" class="auth-admin__date-form">
+      <input type="hidden" name="q" value="{{ q }}">
+      <input type="hidden" name="status" value="{{ filter_status }}">
+      <input type="hidden" name="region" value="{{ filter_region }}">
+      <input type="hidden" name="access_level" value="{{ filter_access_level }}">
+      <div class="auth-admin__date-pill">
+        <span class="material-symbols-rounded text-sm">calendar_today</span>
+        <input type="text" name="from" value="{{ period_start }}" placeholder="JJ/MM/AAAA" class="auth-admin__date-input" aria-label="Date début">
+        <span>–</span>
+        <input type="text" name="to" value="{{ period_end }}" placeholder="JJ/MM/AAAA" class="auth-admin__date-input" aria-label="Date fin">
+      </div>
+      <button type="submit" class="auth-admin__date-apply">Appliquer</button>
+    </form>
+    <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if filter_status %}status={{ filter_status }}&{% endif %}{% if filter_region %}region={{ filter_region }}&{% endif %}{% if filter_access_level %}access_level={{ filter_access_level }}&{% endif %}from={{ period_start|urlencode }}&to={{ period_end|urlencode }}&export=csv" class="auth-admin__export-btn">
+      <span class="material-symbols-rounded text-sm">download</span> Exporter
+    </a>
+    <a href="?new=1" class="auth-admin__add-btn">
+      <span class="material-symbols-rounded text-sm">add</span> Ajouter une autorité
+    </a>
+    <a href="{% url 'bo_admin_notifications' %}" class="auth-admin__notif-btn" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+    </a>
+  </div>
+
+  <div class="auth-admin__kpis">
+    <div class="auth-admin__kpi">
+      <p class="auth-admin__kpi-label">Autorités sanitaires</p>
+      <p class="auth-admin__kpi-value">{{ kpis.total }}</p>
+      <p class="auth-admin__kpi-trend auth-admin__kpi-trend--{{ kpis.trends.total.1 }}">{{ kpis.trends.total.0 }} vs période préc.</p>
+    </div>
+    <div class="auth-admin__kpi">
+      <p class="auth-admin__kpi-label">Actives</p>
+      <p class="auth-admin__kpi-value auth-admin__kpi-value--ok">{{ kpis.active }}</p>
+      <p class="auth-admin__kpi-trend auth-admin__kpi-trend--{{ kpis.trends.active.1 }}">{{ kpis.trends.active.0 }} vs période préc.</p>
+    </div>
+    <div class="auth-admin__kpi">
+      <p class="auth-admin__kpi-label">En attente de validation</p>
+      <p class="auth-admin__kpi-value auth-admin__kpi-value--wait">{{ kpis.pending }}</p>
+      <p class="auth-admin__kpi-trend auth-admin__kpi-trend--{{ kpis.trends.pending.1 }}">{{ kpis.trends.pending.0 }} vs période préc.</p>
+    </div>
+    <div class="auth-admin__kpi">
+      <p class="auth-admin__kpi-label">Suspendues</p>
+      <p class="auth-admin__kpi-value">{{ kpis.suspended }}</p>
+      <p class="auth-admin__kpi-trend auth-admin__kpi-trend--{{ kpis.trends.suspended.1 }}">{{ kpis.trends.suspended.0 }} vs période préc.</p>
+    </div>
+    <div class="auth-admin__kpi">
+      <p class="auth-admin__kpi-label">Utilisateurs autorisés</p>
+      <p class="auth-admin__kpi-value">{{ kpis.authorized_users }}</p>
+      <p class="auth-admin__kpi-trend auth-admin__kpi-trend--{{ kpis.trends.authorized_users.1 }}">{{ kpis.trends.authorized_users.0 }} vs période préc.</p>
+    </div>
+  </div>
+
+  <form method="get" class="auth-admin__filters">
+    <input type="hidden" name="from" value="{{ period_start }}">
+    <input type="hidden" name="to" value="{{ period_end }}">
+    <div class="auth-admin__search">
+      <span class="material-symbols-rounded sm">search</span>
+      <input name="q" value="{{ q }}" placeholder="Rechercher une autorité…">
+    </div>
+    <select name="status">
+      <option value="">Tous les statuts</option>
+      {% for val, label in statuses %}<option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <select name="region">
+      <option value="">Toutes les régions</option>
+      {% for val, label in region_choices %}<option value="{{ val }}" {% if filter_region == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <select name="access_level">
+      <option value="">Niveau d'accès</option>
+      {% for val, label in access_levels %}<option value="{{ val }}" {% if filter_access_level == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="auth-admin__filter-btn">Filtres</button>
+  </form>
+
+  {% if show_create %}
+  <section class="auth-admin__panel">
+    <div class="auth-admin__panel-head">
+      <h2>Nouvelle autorité sanitaire</h2>
+      <a href="{% url 'bo_admin_authorities' %}">Fermer</a>
+    </div>
+    <form method="post" class="auth-admin__form-grid">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <input name="institution" required placeholder="Institution *" class="auth-admin__input">
+      <input name="job_title" placeholder="Fonction / titre" class="auth-admin__input">
+      <input name="first_name" placeholder="Prénom responsable" class="auth-admin__input">
+      <input name="last_name" placeholder="Nom responsable" class="auth-admin__input">
+      <input name="email" type="email" required placeholder="E-mail *" class="auth-admin__input">
+      <input name="phone" placeholder="Téléphone" class="auth-admin__input">
+      <select name="region" class="auth-admin__input">
+        <option value="">Région (National si vide)</option>
+        {% for val, label in region_choices %}{% if val != "national" %}<option value="{{ val }}">{{ label }}</option>{% endif %}{% endfor %}
+      </select>
+      <select name="access_level" class="auth-admin__input">
+        {% for val, label in access_levels %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+      </select>
+      <select name="two_factor_method" class="auth-admin__input">
+        {% for val, label in two_factor_methods %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+      </select>
+      <select name="status" class="auth-admin__input">
+        <option value="pending">En attente de validation</option>
+        <option value="active">Actif (validé immédiatement)</option>
+      </select>
+      <button type="submit" class="auth-admin__submit sm:col-span-2">Créer l'autorité</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if edit_obj %}
+  <section class="auth-admin__panel auth-admin__panel--edit">
+    <div class="auth-admin__panel-head">
+      <h2>Modifier — {% if edit_obj.authority_profile %}{{ edit_obj.authority_profile.institution }}{% else %}{{ edit_obj.username }}{% endif %}</h2>
+      <a href="{% url 'bo_admin_authorities' %}">Fermer</a>
+    </div>
+    <form method="post" class="auth-admin__form-grid">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="update">
+      <input type="hidden" name="user_id" value="{{ edit_obj.id }}">
+      <input name="institution" value="{{ edit_obj.authority_profile.institution|default:'' }}" required class="auth-admin__input">
+      <input name="job_title" value="{{ edit_obj.authority_profile.job_title|default:'' }}" class="auth-admin__input">
+      <input name="first_name" value="{{ edit_obj.first_name }}" class="auth-admin__input">
+      <input name="last_name" value="{{ edit_obj.last_name }}" class="auth-admin__input">
+      <input name="email" value="{{ edit_obj.email }}" class="auth-admin__input">
+      <input name="phone" value="{{ edit_obj.phone }}" class="auth-admin__input">
+      <select name="region" class="auth-admin__input">
+        <option value="">National</option>
+        {% for val, label in region_choices %}{% if val != "national" %}
+        <option value="{{ val }}" {% if edit_obj.authority_profile.region == val %}selected{% endif %}>{{ label }}</option>
+        {% endif %}{% endfor %}
+      </select>
+      <select name="access_level" class="auth-admin__input">
+        {% for val, label in access_levels %}
+        <option value="{{ val }}" {% if edit_obj.authority_profile.access_level == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="two_factor_method" class="auth-admin__input">
+        {% for val, label in two_factor_methods %}
+        <option value="{{ val }}" {% if edit_obj.authority_profile.two_factor_method == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="status" class="auth-admin__input">
+        {% for val, label in statuses %}
+        <option value="{{ val }}" {% if edit_obj.status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="auth-admin__submit sm:col-span-2">Enregistrer</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if view_obj %}
+  <section class="auth-admin__panel">
+    <div class="auth-admin__panel-head">
+      <h2>{% if view_obj.authority_profile %}{{ view_obj.authority_profile.institution }}{% else %}{{ view_obj.username }}{% endif %}</h2>
+      <a href="{% url 'bo_admin_authorities' %}">Fermer</a>
+    </div>
+    <dl class="auth-admin__detail-grid">
+      <div><dt>Code</dt><dd>{% if view_obj.authority_profile %}{{ view_obj.authority_profile.display_code }}{% else %}—{% endif %}</dd></div>
+      <div><dt>Responsable</dt><dd>{{ view_obj.get_full_name|default:view_obj.username }}</dd></div>
+      <div><dt>Contact</dt><dd>{{ view_obj.email }} · {{ view_obj.phone|default:"—" }}</dd></div>
+      <div><dt>Région</dt><dd>{% if view_obj.authority_profile %}{{ view_obj.authority_profile.region_display }}{% else %}—{% endif %}</dd></div>
+      <div><dt>Niveau d'accès</dt><dd>{% if view_obj.authority_profile %}{{ view_obj.authority_profile.get_access_level_display }}{% else %}—{% endif %}</dd></div>
+      <div><dt>Statut</dt><dd>{{ view_obj.get_status_display }}</dd></div>
+      <div><dt>Inscription</dt><dd>{{ view_obj.date_joined|date:"d/m/Y" }}</dd></div>
+      {% if view_obj.authority_profile.validated_at %}
+      <div><dt>Validée le</dt><dd>{{ view_obj.authority_profile.validated_at|date:"d/m/Y H:i" }}{% if view_obj.authority_profile.validated_by %} par {{ view_obj.authority_profile.validated_by.get_full_name }}{% endif %}</dd></div>
+      {% endif %}
+    </dl>
+    <div class="auth-admin__detail-actions">
+      <a href="?edit={{ view_obj.id }}" class="auth-admin__link-btn">Modifier</a>
+      {% if view_obj.status == "pending" %}
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="validate"><input type="hidden" name="user_id" value="{{ view_obj.id }}"><button type="submit" class="auth-admin__primary-btn">Valider</button></form>
+      {% endif %}
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="auth-admin__table-wrap">
+    <table class="auth-admin__table">
+      <thead>
+        <tr>
+          <th>Autorité sanitaire</th>
+          <th>Responsable</th>
+          <th>Contact</th>
+          <th>Région(s) couverte(s)</th>
+          <th>Niveau d'accès</th>
+          <th>Statut</th>
+          <th>Date d'inscription</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in page_obj %}
+        {% with p=u.authority_profile %}
+        <tr>
+          <td>
+            <p class="auth-admin__institution">{{ p.institution|default:"Institution non renseignée" }}</p>
+            <p class="auth-admin__code">{% if p %}{{ p.display_code }}{% else %}—{% endif %}</p>
+          </td>
+          <td>{{ u.get_full_name|default:u.username }}</td>
+          <td class="auth-admin__contact">{{ u.email }}<br>{{ u.phone|default:"—" }}</td>
+          <td>{% if p %}{{ p.region_display }}{% else %}—{% endif %}</td>
+          <td>
+            {% if p %}
+            <span class="auth-admin-badge {{ p.access_level_badge_class }}">{{ p.get_access_level_display }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <span class="auth-admin-status auth-admin-status--{{ u.status }}">
+              <span class="auth-admin-status__dot"></span>
+              {% if u.status == "active" %}Actif{% elif u.status == "pending" %}En attente{% elif u.status == "suspended" %}Suspendu{% else %}{{ u.get_status_display }}{% endif %}
+            </span>
+          </td>
+          <td class="whitespace-nowrap">{{ u.date_joined|date:"d/m/Y" }}</td>
+          <td class="text-right">
+            <a href="?view={{ u.id }}" class="auth-admin__icon-btn" title="Consulter"><span class="material-symbols-rounded sm">visibility</span></a>
+            <a href="?edit={{ u.id }}" class="auth-admin__icon-btn auth-admin__icon-btn--edit" title="Modifier"><span class="material-symbols-rounded sm">edit</span></a>
+            {% if u.status == "pending" %}
+            <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="action" value="validate"><input type="hidden" name="user_id" value="{{ u.id }}"><button type="submit" class="auth-admin__icon-btn auth-admin__icon-btn--ok" title="Valider"><span class="material-symbols-rounded sm">check_circle</span></button></form>
+            {% elif u.status == "active" and u.id != user.id %}
+            <form method="post" class="inline" onsubmit="return confirm('Suspendre cette autorité ?')">{% csrf_token %}<input type="hidden" name="action" value="suspend"><input type="hidden" name="user_id" value="{{ u.id }}"><button type="submit" class="auth-admin__icon-btn auth-admin__icon-btn--danger" title="Suspendre"><span class="material-symbols-rounded sm">block</span></button></form>
+            {% elif u.status == "suspended" %}
+            <form method="post" class="inline">{% csrf_token %}<input type="hidden" name="action" value="reactivate"><input type="hidden" name="user_id" value="{{ u.id }}"><button type="submit" class="auth-admin__icon-btn auth-admin__icon-btn--ok" title="Réactiver"><span class="material-symbols-rounded sm">restart_alt</span></button></form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr><td colspan="8" class="auth-admin__empty">Aucune autorité sanitaire trouvée</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include "backoffice/partials/pagination.html" %}
+
+  <div class="auth-admin__charts">
+    <section class="auth-admin__chart-card">
+      <h3>Répartition par niveau d'accès</h3>
+      <div class="auth-admin__chart-canvas"><canvas id="chartAccessLevels"></canvas></div>
+    </section>
+    <section class="auth-admin__chart-card">
+      <h3>Répartition par région</h3>
+      <div class="auth-admin__chart-canvas"><canvas id="chartRegions"></canvas></div>
+    </section>
+    <section class="auth-admin__chart-card auth-admin__chart-card--activity">
+      <h3>Activités récentes</h3>
+      <ul class="auth-admin__activity">
+        {% for item in recent_activities %}
+        <li>
+          <span class="material-symbols-rounded sm">{{ item.icon }}</span>
+          <div>
+            <p>{{ item.text }}</p>
+            <p class="auth-admin__activity-meta">{{ item.meta }}</p>
+          </div>
+        </li>
+        {% empty %}
+        <li class="auth-admin__activity-empty">Aucune activité récente.</li>
+        {% endfor %}
+      </ul>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const charts = {{ charts_json|safe }};
+  if (typeof Chart === "undefined") return;
+  const access = charts.access_levels;
+  new Chart(document.getElementById("chartAccessLevels"), {
+    type: "doughnut",
+    data: {
+      labels: access.labels,
+      datasets: [{ data: access.data, backgroundColor: access.colors, borderWidth: 0 }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "62%",
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } } },
+    },
+  });
+  const regions = charts.regions;
+  new Chart(document.getElementById("chartRegions"), {
+    type: "bar",
+    data: {
+      labels: regions.labels,
+      datasets: [{ data: regions.data, backgroundColor: "#7c3aed", borderRadius: 6 }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+    },
+  });
+})();
+</script>
+{% endblock %}

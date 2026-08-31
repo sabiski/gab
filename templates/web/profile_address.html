@@ -1,0 +1,60 @@
+{% extends "web/profile_subpage.html" %}
+{% load l10n %}
+{% block profile_extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block profile_form %}
+<form method="post" class="profile-card p-5 space-y-4 text-sm">
+  {% csrf_token %}
+  <div class="grid sm:grid-cols-2 gap-3">
+    <div>
+      <label class="text-xs font-bold text-[#6B7280]">Ville</label>
+      <input name="city" value="{{ user.city }}" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+    </div>
+    <div>
+      <label class="text-xs font-bold text-[#6B7280]">Quartier</label>
+      <input name="district" value="{{ user.district }}" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+    </div>
+    <div class="sm:col-span-2">
+      <label class="text-xs font-bold text-[#6B7280]">Adresse complète</label>
+      <textarea name="address" rows="3" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5" placeholder="Rue, immeuble, repères…">{{ profile.address }}</textarea>
+    </div>
+  </div>
+  <div>
+    <p class="text-xs font-bold text-[#6B7280] mb-2">Position GPS (livraison)</p>
+    <div id="profile-map" class="h-52 w-full rounded-xl border border-[#E5E7EB] mb-2 z-0"></div>
+    <div class="grid grid-cols-2 gap-2">
+      <input id="id_latitude" name="latitude" value="{% localize off %}{{ user.latitude|default:'' }}{% endlocalize %}" placeholder="Latitude" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs">
+      <input id="id_longitude" name="longitude" value="{% localize off %}{{ user.longitude|default:'' }}{% endlocalize %}" placeholder="Longitude" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-xs">
+    </div>
+    <button type="button" id="btn-geolocate" class="mt-2 w-full border border-[#6C3AED] text-[#6C3AED] font-bold rounded-xl py-2.5 text-sm">Utiliser ma position actuelle</button>
+  </div>
+  <button class="w-full bg-[#6C3AED] hover:bg-[#5B21B6] text-white font-bold py-3 rounded-xl transition">Enregistrer l'adresse</button>
+</form>
+{% endblock %}
+{% block profile_scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(function () {
+  if (typeof L === 'undefined') return;
+  var latInput = document.getElementById('id_latitude');
+  var lngInput = document.getElementById('id_longitude');
+  var lat = parseFloat(latInput.value) || 0.4162;
+  var lng = parseFloat(lngInput.value) || 9.4673;
+  var map = L.map('profile-map').setView([lat, lng], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  var marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+  function sync(ll) { latInput.value = ll.lat.toFixed(6); lngInput.value = ll.lng.toFixed(6); }
+  marker.on('dragend', function () { sync(marker.getLatLng()); });
+  map.on('click', function (e) { marker.setLatLng(e.latlng); sync(e.latlng); });
+  document.getElementById('btn-geolocate').addEventListener('click', function () {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var ll = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      marker.setLatLng(ll); map.setView(ll, 16); sync(ll);
+    });
+  });
+  setTimeout(function () { map.invalidateSize(); }, 300);
+})();
+</script>
+{% endblock %}

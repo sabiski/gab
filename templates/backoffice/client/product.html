@@ -1,0 +1,6 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Produit{% endblock %}
+{% block portal_heading %}{{ medicine.name }}{% endblock %}
+{% block portal_body %}
+{% include "web/partials/product_inner.html" %}
+{% endblock %}

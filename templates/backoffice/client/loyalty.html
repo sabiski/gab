@@ -1,0 +1,140 @@
+{% extends "backoffice/base_bo.html" %}
+
+{% block title %}Fidélité{% endblock %}
+
+{% block bo_label %}Espace patient{% endblock %}
+
+{% block bo_title %}Programme fidélité{% endblock %}
+
+{% block bo_content %}
+
+<div class="grid lg:grid-cols-3 gap-5 max-w-5xl">
+
+  <section class="c-card lg:col-span-2 p-5">
+
+    <p class="text-xs font-bold text-ink-muted uppercase">Niveau actuel</p>
+
+    <p class="text-3xl font-extrabold text-primary mt-1">{{ level }}</p>
+
+    <p class="text-sm text-ink-muted mt-1">{{ user.loyalty_points }} points · prochain palier à {{ next_threshold }} pts</p>
+
+    {% if tier_discount_percent %}
+
+    <p class="text-xs font-bold text-emerald-700 mt-2">Remise automatique au checkout : {{ tier_discount_percent }} % (palier {{ level }})</p>
+
+    {% endif %}
+
+    {% if expiring_pts %}
+
+    <p class="text-xs font-bold text-amber-700 mt-2">{{ expiring_pts }} point(s) expirent dans les {{ loyalty_settings.expiry_warning_days }} prochains jours.</p>
+
+    {% endif %}
+
+    <div class="mt-4 h-2 rounded-full bg-canvas overflow-hidden">
+
+      <div class="h-full bg-primary rounded-full" style="width: {{ progress }}%"></div>
+
+    </div>
+
+    <h2 class="font-extrabold mt-8 mb-3">Historique</h2>
+
+    {% for t in transactions %}
+
+    <div class="flex justify-between text-sm py-2.5 border-b border-slate-50">
+
+      <div>
+
+        <p class="font-bold">{{ t.get_kind_display }}</p>
+
+        <p class="text-xs text-ink-muted">{{ t.reason|default:"—" }} · {{ t.created_at|date:"d/m/Y" }}{% if t.order %} · {{ t.order.code }}{% endif %}{% if t.expires_at and t.kind == "earn" %} · expire {{ t.expires_at|date:"d/m/Y" }}{% endif %}</p>
+
+      </div>
+
+      <p class="font-extrabold {% if t.points > 0 %}text-emerald-600{% else %}text-rose-600{% endif %}">{% if t.points > 0 %}+{% endif %}{{ t.points }}</p>
+
+    </div>
+
+    {% empty %}
+
+    <p class="text-sm text-ink-muted">Aucun mouvement pour l'instant. Les points sont crédités à la livraison.</p>
+
+    {% endfor %}
+
+  </section>
+
+  <div class="space-y-5">
+
+    <section class="c-card p-5">
+
+      <h2 class="font-extrabold mb-3">Récompenses</h2>
+
+      <ul class="space-y-2 text-sm">
+
+        {% for r in rewards %}
+
+        <li class="border rounded-xl px-3 py-2.5">
+
+          <div class="flex justify-between gap-2 mb-2">
+
+            <span class="font-semibold">{{ r.label }}</span>
+
+            <span class="text-primary font-bold shrink-0">{{ r.points_cost }} pts</span>
+
+          </div>
+
+          {% if r.description %}<p class="text-xs text-ink-muted mb-2">{{ r.description }}</p>{% endif %}
+
+          <form method="post" onsubmit="return confirm('Échanger {{ r.points_cost }} points ?')">
+
+            {% csrf_token %}
+
+            <input type="hidden" name="action" value="redeem">
+
+            <input type="hidden" name="reward_id" value="{{ r.id }}">
+
+            <button class="w-full bg-primary text-white font-bold text-xs py-2 rounded-lg {% if user.loyalty_points < r.points_cost %}opacity-50 cursor-not-allowed{% endif %}" {% if user.loyalty_points < r.points_cost %}disabled{% endif %}>Échanger</button>
+
+          </form>
+
+        </li>
+
+        {% empty %}
+
+        <li class="text-ink-muted text-sm">Catalogue en cours de configuration.</li>
+
+        {% endfor %}
+
+      </ul>
+
+    </section>
+
+    <section class="c-card p-5">
+
+      <h2 class="font-extrabold mb-3">Mes bons actifs</h2>
+
+      {% for v in vouchers %}
+
+      <div class="border rounded-xl px-3 py-2.5 mb-2 text-sm">
+
+        <p class="font-extrabold text-primary tracking-wide">{{ v.code }}</p>
+
+        <p class="text-xs text-ink-muted mt-1">{{ v.reward.label }} · valable jusqu'au {{ v.expires_at|date:"d/m/Y" }}</p>
+
+        <p class="text-xs font-bold mt-1">À saisir au checkout</p>
+
+      </div>
+
+      {% empty %}
+
+      <p class="text-sm text-ink-muted">Aucun bon — échangez vos points ci-dessus.</p>
+
+      {% endfor %}
+
+    </section>
+
+  </div>
+
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,33 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% block ins_page_title %}Abonnement plateforme requis{% endblock %}
+{% block ins_content %}
+<div class="max-w-xl mx-auto mt-8">
+  <div class="bg-white rounded-2xl border shadow-sm p-8 text-center">
+    <div class="h-16 w-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4">
+      <span class="material-symbols-rounded text-3xl">lock</span>
+    </div>
+    <h1 class="text-xl font-extrabold mb-2">Accès portail en attente d'activation</h1>
+    <p class="text-sm text-ink-muted mb-6">
+      Votre compte <strong>{{ partner_profile.organization_name }}</strong> a été validé, mais l'abonnement
+      plateforme Gab'Pharma n'est pas encore actif. Contactez l'administration ou réglez votre cotisation
+      pour débloquer l'accès.
+    </p>
+
+    {% if platform_subscription.subscription %}
+    <div class="bg-violet-50 border border-violet-100 rounded-xl p-4 text-left text-sm mb-6">
+      <p class="font-extrabold text-violet-900">Forfait en cours</p>
+      <p class="mt-1">{{ platform_subscription.plan_label }} — <strong>{{ platform_subscription.amount|floatformat:0 }} FCFA</strong></p>
+      <p class="text-xs text-ink-muted mt-1">Statut : {{ platform_subscription.status_label }}</p>
+      {% if platform_subscription.ends_at %}
+      <p class="text-xs text-ink-muted">Période : {{ platform_subscription.starts_at|date:"d/m/Y" }} → {{ platform_subscription.ends_at|date:"d/m/Y" }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <p class="text-xs text-ink-muted">
+      Une fois le paiement confirmé par Gab'Pharma, vous recevrez une notification et pourrez accéder
+      à toutes les fonctionnalités du portail assurance.
+    </p>
+  </div>
+</div>
+{% endblock %}

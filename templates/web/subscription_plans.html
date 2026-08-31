@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Souscription &amp; Forfaits{% endblock %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  .forfait-page { font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif; }
+  .card-violet { border-color: #6C3AED; background: linear-gradient(180deg, #F5F3FF 0%, #fff 40%); }
+  .card-green { border-color: #16A34A; background: linear-gradient(180deg, #F0FDF4 0%, #fff 40%); }
+  .card-amber { border-color: #F59E0B; background: linear-gradient(180deg, #FFFBEB 0%, #fff 40%); }
+  .btn-violet { background: #6C3AED; }
+  .btn-green { background: #16A34A; }
+  .btn-amber { background: #F59E0B; }
+</style>
+{% endblock %}
+{% block content %}
+{% include "web/partials/subscriptions_inner.html" %}
+{% endblock %}

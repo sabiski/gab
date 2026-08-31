@@ -1,0 +1,11 @@
+{% if url %}
+<a href="{{ url }}" class="c-settings-row">
+  <span class="c-settings-row__icon"><span class="material-symbols-rounded sm">{{ icon }}</span></span>
+  <span class="c-settings-row__body">
+    <span class="c-settings-row__label">{{ label }}</span>
+    {% if sublabel %}<span class="c-settings-row__sub">{{ sublabel }}</span>{% endif %}
+  </span>
+  {% if value %}<span class="c-settings-row__value">{{ value }}</span>{% endif %}
+  <span class="material-symbols-rounded sm c-settings-row__chev">chevron_right</span>
+</a>
+{% endif %}

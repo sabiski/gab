@@ -1,0 +1,473 @@
+{% extends "backoffice/base_bo.html" %}
+
+{% block title %}Pharmacie{% endblock %}
+
+{% block bo_title %}Tableau de bord{% endblock %}
+
+{% block bo_content %}
+
+
+
+{% if pharmacy_permissions.settings and sub_summary.is_active %}
+
+<a href="{% url 'bo_pharmacy_subscription' %}" class="block bg-gradient-to-r from-primary-700 to-primary rounded-2xl p-4 mb-6 text-white max-w-3xl hover:opacity-95 transition">
+
+  <div class="flex flex-wrap justify-between gap-2 items-center">
+
+    <div class="flex items-center gap-3">
+
+      <span class="material-symbols-rounded text-3xl">card_membership</span>
+
+      <div>
+
+        <p class="text-[10px] font-bold uppercase text-white/70">Votre forfait</p>
+
+        <p class="font-extrabold text-lg">{{ sub_summary.plan_label }}</p>
+
+        <p class="text-xs text-white/80">Actif jusqu'au {{ sub_summary.ends_at|date:"d/m/Y" }} · {{ sub_summary.days_left }} j. restants</p>
+
+      </div>
+
+    </div>
+
+    <span class="text-xs font-bold bg-white/20 px-3 py-1 rounded-full">Voir le détail →</span>
+
+  </div>
+
+</a>
+
+{% endif %}
+
+
+
+{% if pharmacy_permissions.orders %}
+
+<div class="flex flex-wrap gap-2 mb-6">
+
+  <a href="#urgences-en-attente" class="inline-flex items-center gap-1 bg-rose-600 text-white font-bold text-xs px-4 py-2 rounded-full">
+
+    <span class="material-symbols-rounded sm">e911_emergency</span> Urgences SOS ({{ stats.emergencies }})
+
+  </a>
+
+  <a href="{% url 'bo_pharmacy_notifications' %}" class="inline-flex items-center gap-1 bg-amber-500 text-white font-bold text-xs px-4 py-2 rounded-full relative">
+
+    <span class="material-symbols-rounded sm">notifications</span> Alertes ({{ stats.unread_alerts }})
+
+  </a>
+
+  <a href="{% url 'bo_pharmacy_orders' %}?filter=prep" class="inline-flex items-center gap-1 bg-primary text-white font-bold text-xs px-4 py-2 rounded-full">
+
+    <span class="material-symbols-rounded sm">shopping_bag</span> Nouvelles commandes ({{ stats.new_orders }})
+
+    {% if stats.unread_order_alerts %}<span class="ml-1 bg-white/25 px-1.5 rounded-full text-[10px]">{{ stats.unread_order_alerts }} non lue{{ stats.unread_order_alerts|pluralize }}</span>{% endif %}
+
+  </a>
+
+  {% if pharmacy_permissions.stocks %}
+
+  <a href="{% url 'bo_pharmacy_stocks' %}?tab=low" class="inline-flex items-center gap-1 border border-primary text-primary font-bold text-xs px-4 py-2 rounded-full">
+
+    <span class="material-symbols-rounded sm">inventory</span> Stock faible ({{ stats.low_stock }})
+
+  </a>
+
+  {% endif %}
+
+  <a href="{% url 'bo_pharmacy_messages' %}" class="inline-flex items-center gap-1 border font-bold text-xs px-4 py-2 rounded-full">
+
+    <span class="material-symbols-rounded sm">chat</span> Messages{% if messages_unread %} ({{ messages_unread }}){% endif %}
+
+  </a>
+
+</div>
+
+{% endif %}
+
+
+
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+
+  {% if pharmacy_permissions.orders %}
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Reçues aujourd'hui</p><p class="text-2xl font-extrabold mt-1">{{ stats.received_today }}</p></div>
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">À préparer</p><p class="text-2xl font-extrabold text-amber-600 mt-1">{{ stats.to_prepare }}</p></div>
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">En préparation</p><p class="text-2xl font-extrabold text-amber-700 mt-1">{{ stats.preparing }}</p></div>
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">En livraison</p><p class="text-2xl font-extrabold text-primary mt-1">{{ stats.delivering }}</p></div>
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Urgences SOS</p><p class="text-2xl font-extrabold text-rose-600 mt-1">{{ stats.emergencies }}</p></div>
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Alertes non lues</p><p class="text-2xl font-extrabold text-amber-600 mt-1">{{ stats.unread_alerts }}</p></div>
+
+  {% endif %}
+
+  {% if pharmacy_permissions.stats %}
+
+  <div class="bg-white rounded-2xl border p-4 min-w-0"><p class="text-xs font-bold text-ink-muted uppercase">CA du jour</p><p class="text-xl font-extrabold text-primary mt-1 break-anywhere">{{ stats.ca_today }} F</p></div>
+
+  <div class="bg-white rounded-2xl border p-4 min-w-0"><p class="text-xs font-bold text-ink-muted uppercase">CA du mois</p><p class="text-xl font-extrabold mt-1">{{ stats.ca_month }} F</p></div>
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Clients servis</p><p class="text-2xl font-extrabold mt-1">{{ stats.clients_served }}</p></div>
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Livraisons OK</p><p class="text-2xl font-extrabold mt-1">{{ stats.deliveries_done }}</p></div>
+
+  {% endif %}
+
+  {% if pharmacy_permissions.stocks %}
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Stock faible</p><p class="text-2xl font-extrabold text-amber-600 mt-1">{{ stats.low_stock }}</p></div>
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Ruptures</p><p class="text-2xl font-extrabold text-rose-600 mt-1">{{ stats.out_stock }}</p></div>
+
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Péremption &lt; 60 j</p><p class="text-2xl font-extrabold text-orange-600 mt-1">{{ stats.expiring }}</p></div>
+
+  {% endif %}
+
+</div>
+
+
+
+{% if pharmacy_permissions.orders or pharmacy_permissions.stats %}
+
+<div class="grid lg:grid-cols-3 gap-6 mb-8">
+
+  {% if pharmacy_permissions.orders %}
+
+  <section class="bg-white rounded-2xl border p-5 {% if pharmacy_permissions.stats %}lg:col-span-2{% else %}lg:col-span-3{% endif %}">
+
+    <h2 class="font-extrabold mb-3">Commandes{% if pharmacy_permissions.stats %} &amp; CA{% endif %} (14 j)</h2>
+
+    <div class="h-48"><canvas id="chartOrders"></canvas></div>
+
+  </section>
+
+  {% endif %}
+
+  {% if pharmacy_permissions.stats %}
+
+  <section class="bg-white rounded-2xl border p-5 {% if not pharmacy_permissions.orders %}lg:col-span-3{% endif %}">
+
+    <h2 class="font-extrabold mb-3">CA par paiement (30 j)</h2>
+
+    {% for p in payment_breakdown %}
+
+    <div class="flex justify-between text-sm py-2 border-b border-slate-50">
+
+      <span class="font-semibold">{{ p.label }}</span>
+
+      <span class="font-bold text-primary">{{ p.total }} F</span>
+
+    </div>
+
+    {% empty %}<p class="text-sm text-ink-muted">Aucune vente.</p>{% endfor %}
+
+  </section>
+
+  {% endif %}
+
+</div>
+
+{% endif %}
+
+
+
+{% if pharmacy_permissions.orders %}
+
+<div class="grid lg:grid-cols-2 gap-6 mb-8">
+
+  <section id="urgences-en-attente" class="bg-white rounded-2xl border p-5 scroll-mt-24">
+
+    <div class="flex justify-between items-center mb-4">
+
+      <h2 class="font-extrabold">Urgences SOS actives</h2>
+
+      <span class="text-[10px] text-ink-muted">Prise en charge automatique · escalade support après {{ escalation_minutes }} min</span>
+
+    </div>
+
+    {% for a in pending_emergencies %}
+
+    <a href="{{ a.chat_url }}" class="flex justify-between gap-2 text-sm py-3 border-b border-slate-50 items-center hover:bg-canvas/60 -mx-2 px-2 rounded-xl transition group">
+
+      <div class="min-w-0">
+
+        <div class="flex flex-wrap items-center gap-2">
+
+          <p class="font-bold">{{ a.code }} · {{ a.get_category_display }}</p>
+
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Prise en charge auto</span>
+
+          {% if a.escalated_to_support %}<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">Escaladée support</span>{% endif %}
+
+        </div>
+
+        <p class="text-xs text-ink-muted mt-0.5">{{ a.client }} · {{ a.created_at|timesince }}</p>
+
+        {% if a.address %}<p class="text-xs text-ink-muted truncate">{{ a.address }}</p>{% endif %}
+
+      </div>
+
+      <span class="inline-flex items-center gap-1 text-xs font-bold text-primary shrink-0 group-hover:underline">
+
+        <span class="material-symbols-rounded sm">chat</span> Répondre
+
+      </span>
+
+    </a>
+
+    {% empty %}<p class="text-sm text-ink-muted">Aucune urgence SOS active.</p>{% endfor %}
+
+  </section>
+
+
+
+  <section class="bg-white rounded-2xl border p-5">
+
+    <h2 class="font-extrabold mb-4">Demandes de livreur à proximité</h2>
+
+    {% for d in courier_requests %}
+
+    <div class="text-sm py-2 border-b border-slate-50">
+
+      <p class="font-bold">{{ d.order.code }} — {{ d.order.client }}</p>
+
+      <p class="text-xs text-ink-muted">{{ d.order.get_delivery_mode_display }} · en attente livreur</p>
+
+    </div>
+
+    {% empty %}<p class="text-sm text-ink-muted">Aucune demande en cours.</p>{% endfor %}
+
+    {% if couriers_nearby %}
+
+    <p class="text-xs font-bold text-ink-muted uppercase mt-4 mb-2">Livreurs en ligne proches</p>
+
+    {% for c in couriers_nearby %}
+
+    <p class="text-xs py-1">{{ c.courier.get_full_name|default:c.courier.username }} · ~{{ c.distance_km }} km</p>
+
+    {% endfor %}
+
+    {% endif %}
+
+  </section>
+
+</div>
+
+
+
+<div class="grid lg:grid-cols-2 gap-6 mb-8">
+
+  <section class="bg-white rounded-2xl border p-5">
+
+    <div class="flex justify-between items-center mb-4">
+
+      <h2 class="font-extrabold">Commandes récentes</h2>
+
+      <a href="{% url 'bo_pharmacy_orders' %}" class="text-xs font-bold text-primary">Tout voir</a>
+
+    </div>
+
+    {% for o in recent %}
+
+    <div class="flex justify-between gap-2 text-sm py-2 border-b border-slate-50 min-w-0">
+
+      <div class="min-w-0">
+
+        <p class="font-bold truncate">{{ o.code }}{% if o.is_urgent %} <span class="text-rose-600 text-[10px]">URGENT</span>{% endif %}</p>
+
+        <p class="text-xs text-ink-muted truncate">{{ o.client }} · {{ o.get_status_display }}</p>
+
+      </div>
+
+      <p class="font-bold text-primary shrink-0">{{ o.total }} F</p>
+
+    </div>
+
+    {% empty %}<p class="text-sm text-ink-muted">Aucune commande.</p>{% endfor %}
+
+  </section>
+
+  {% if pharmacy_permissions.stocks %}
+
+  <section class="bg-white rounded-2xl border p-5">
+
+    <div class="flex justify-between items-center mb-4">
+
+      <h2 class="font-extrabold">Alertes stock faible</h2>
+
+      <a href="{% url 'bo_pharmacy_stocks' %}?tab=low" class="text-xs font-bold text-primary">Gérer</a>
+
+    </div>
+
+    {% for s in low_stocks %}
+
+    <div class="flex justify-between text-sm py-2 border-b border-slate-50">
+
+      <p class="font-bold truncate min-w-0 pr-2">{{ s.medicine }}</p>
+
+      <p class="text-amber-600 font-bold">{{ s.quantity }} u.</p>
+
+    </div>
+
+    {% empty %}<p class="text-sm text-ink-muted">Stock OK.</p>{% endfor %}
+
+  </section>
+
+  {% endif %}
+
+</div>
+
+
+
+{% if recent_notifs %}
+
+<section class="bg-white rounded-2xl border p-5 mb-8 max-w-3xl">
+
+  <div class="flex justify-between items-center mb-4">
+
+    <h2 class="font-extrabold">Notifications récentes</h2>
+
+    <a href="{% url 'bo_pharmacy_notifications' %}" class="text-xs font-bold text-primary">Centre de notifications</a>
+
+  </div>
+
+  {% for n in recent_notifs %}
+
+  <a href="{{ n.open_url }}" class="flex gap-3 py-2.5 border-b border-slate-50 last:border-0 hover:bg-canvas/60 -mx-2 px-2 rounded-lg transition items-start">
+
+    <span class="material-symbols-rounded sm shrink-0 mt-0.5
+
+      {% if n.alert_severity == 'critical' %}text-rose-600
+
+      {% elif n.alert_severity == 'warning' %}text-amber-600
+
+      {% elif n.alert_severity == 'order' %}text-primary
+
+      {% else %}text-ink-muted{% endif %}">{{ n.alert_icon }}</span>
+
+    <span class="min-w-0 flex-1">
+
+      <span class="inline-flex items-center gap-1.5 flex-wrap mb-0.5">
+
+        <span class="text-[10px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-full
+
+          {% if n.alert_severity == 'critical' %}bg-rose-100 text-rose-800
+
+          {% elif n.alert_severity == 'warning' %}bg-amber-100 text-amber-900
+
+          {% elif n.alert_severity == 'order' %}bg-primary-50 text-primary
+
+          {% else %}bg-slate-100 text-ink-muted{% endif %}">{{ n.alert_label }}</span>
+
+        {% if not n.is_read %}<span class="h-2 w-2 rounded-full bg-rose-500"></span>{% endif %}
+
+      </span>
+
+      <span class="block text-sm font-bold truncate">{{ n.title }}</span>
+
+      <span class="block text-xs text-ink-muted truncate">{{ n.message }}</span>
+
+    </span>
+
+  </a>
+
+  {% endfor %}
+
+</section>
+
+{% endif %}
+
+{% endif %}
+
+
+
+{% if pharmacy_permissions.settings %}
+
+<section class="bg-gradient-to-r from-primary-700 to-primary rounded-2xl p-6 text-white max-w-3xl">
+
+  <p class="text-xs font-bold uppercase tracking-wide text-white/70">Offres Gab'Pharma</p>
+
+  <h2 class="text-lg font-extrabold mt-1">Boostez votre visibilité</h2>
+
+  <p class="text-sm text-white/85 mt-2">Abonnement Professionnel, publicité ciblée et application mobile pour vos patients.</p>
+
+  <div class="flex flex-wrap gap-2 mt-4">
+
+    <a href="{% url 'bo_pharmacy_tips' %}" class="bg-white text-primary font-bold text-xs px-4 py-2 rounded-full">Publier un conseil</a>
+
+    {% if pharmacy_permissions.stats %}
+
+    <a href="{% url 'bo_pharmacy_stats' %}" class="border border-white/40 font-bold text-xs px-4 py-2 rounded-full">Voir mes stats</a>
+
+    {% endif %}
+
+  </div>
+
+</section>
+
+{% endif %}
+
+
+
+{% if pharmacy_permissions.orders %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+
+  const charts = {{ charts_json|safe }};
+
+  const green = '#228545';
+
+  const chartEl = document.getElementById('chartOrders');
+
+  if (chartEl) {
+
+    const datasets = [
+
+      { label: 'Commandes', data: charts.orders.data, borderColor: green, tension: 0.35, yAxisID: 'y' },
+
+    ];
+
+    {% if pharmacy_permissions.stats %}
+
+    datasets.push({ label: 'CA', data: charts.ca.data, borderColor: '#8DC63F', tension: 0.35, yAxisID: 'y1' });
+
+    {% endif %}
+
+    new Chart(chartEl, {
+
+      type: 'line',
+
+      data: { labels: charts.orders.labels, datasets: datasets },
+
+      options: {
+
+        responsive: true, maintainAspectRatio: false,
+
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+
+        scales: {
+
+          y: { beginAtZero: true, position: 'left' },
+
+          {% if pharmacy_permissions.stats %}y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } }{% endif %}
+
+        }
+
+      }
+
+    });
+
+  }
+
+</script>
+
+{% endif %}
+
+{% endblock %}
+
+

@@ -1,0 +1,243 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}{{ page_title|default:"Abonnements assurance" }}{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claims-page-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-claims-back" aria-label="Retour">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </a>
+    <div>
+      <h1>{{ page_title|default:"Abonnements assurance" }}</h1>
+      <p>Catalogue de formules et souscriptions — tout bénéficiaire peut souscrire à votre organisme.</p>
+    </div>
+  </div>
+  <div class="ins-header__actions">
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--sm">Déconnexion</a>
+  </div>
+</header>
+
+<section class="ins-claims-kpi">
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--purple">
+    <span class="material-symbols-rounded">card_membership</span>
+    <div>
+      <p class="ins-claims-kpi__label">Souscriptions</p>
+      <p class="ins-claims-kpi__value">{{ sub_stats.total|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ sub_stats.pct_total }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--green">
+    <span class="material-symbols-rounded">check_circle</span>
+    <div>
+      <p class="ins-claims-kpi__label">Actifs</p>
+      <p class="ins-claims-kpi__value">{{ sub_stats.active|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ sub_stats.pct_active }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--amber">
+    <span class="material-symbols-rounded">inventory_2</span>
+    <div>
+      <p class="ins-claims-kpi__label">Formules proposées</p>
+      <p class="ins-claims-kpi__value">{{ sub_stats.plans_count|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ sub_stats.pending|intcomma }} en attente</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--blue">
+    <span class="material-symbols-rounded">payments</span>
+    <div>
+      <p class="ins-claims-kpi__label">Cotisations actives</p>
+      <p class="ins-claims-kpi__value">{{ sub_stats.monthly_revenue|intcomma }} <span class="text-xs font-semibold">FCFA</span></p>
+      <p class="ins-claims-kpi__pct">{{ sub_stats.expired|intcomma }} expiré{{ sub_stats.expired|pluralize }}</p>
+    </div>
+  </article>
+</section>
+
+<section class="ins-panel ins-sub-catalog">
+  <h3 class="ins-claim-section-title">Catalogue des formules ({{ partner_profile.display_name }})</h3>
+  <div class="ins-sub-plans">
+    {% for p in provider_plans %}
+    <article class="ins-sub-plan {% if not p.is_active %}is-disabled{% endif %}">
+      <div class="ins-sub-plan__head">
+        <h4>{{ p.name }}</h4>
+        {% if not p.is_active %}<span class="ins-sub-plan__off">Désactivée</span>{% endif %}
+      </div>
+      <p class="ins-sub-plan__price">{{ p.premium_amount|intcomma }} <small>FCFA / {{ p.get_billing_period_display|lower }}</small></p>
+      <p class="text-xs text-ink-muted">Couverture {{ p.coverage_rate }} %</p>
+      {% if p.description %}<p class="text-xs mt-1">{{ p.description }}</p>{% endif %}
+      <form method="post" class="mt-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="toggle_plan">
+        <input type="hidden" name="plan_id" value="{{ p.pk }}">
+        <button type="submit" class="ins-btn-outline ins-btn-outline--sm" {% if partner_profile.preview %}disabled{% endif %}>
+          {% if p.is_active %}Désactiver{% else %}Activer{% endif %}
+        </button>
+      </form>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<article class="ins-panel ins-sub-create">
+  <h3 class="ins-claim-section-title">Nouvelle souscription</h3>
+  <form method="post" class="ins-sub-create-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="create_subscription">
+    <label>
+      <span>Bénéficiaire (e-mail, identifiant ou n° assuré)</span>
+      <input name="member_identifier" class="ins-filters__input" placeholder="patient@gabpharma.ga" required>
+    </label>
+    <label>
+      <span>Formule</span>
+      <select name="plan_id" class="ins-filters__input" required>
+        {% for p in provider_plans %}
+        {% if p.is_active %}
+        <option value="{{ p.pk }}">{{ p.name }} — {{ p.premium_amount|intcomma }} FCFA</option>
+        {% endif %}
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Employeur / organisme (optionnel)</span>
+      <input name="employer_name" class="ins-filters__input" placeholder="Entreprise, mutuelle…">
+    </label>
+    <button type="submit" class="ins-btn-primary" {% if partner_profile.preview %}disabled{% endif %}>Créer l'abonnement</button>
+  </form>
+</article>
+
+<nav class="ins-claims-tabs">
+  <a href="?tab=all{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="{% if tab == 'all' %}is-active{% endif %}">Tous</a>
+  <a href="?tab=active" class="{% if tab == 'active' %}is-active{% endif %}">Actifs</a>
+  <a href="?tab=pending" class="{% if tab == 'pending' %}is-active{% endif %}">En attente</a>
+  <a href="?tab=expired" class="{% if tab == 'expired' %}is-active{% endif %}">Expirés / résiliés</a>
+</nav>
+
+<form method="get" class="ins-claims-toolbar">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <div class="ins-claims-search">
+    <span class="material-symbols-rounded">search</span>
+    <input name="q" value="{{ q }}" placeholder="Référence, bénéficiaire, e-mail, formule…">
+  </div>
+  <select name="plan" class="ins-filters__input ins-payments-select">
+    <option value="">Toutes les formules</option>
+    {% for p in provider_plans %}
+    <option value="{{ p.code }}" {% if plan == p.code %}selected{% endif %}>{{ p.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="status" class="ins-filters__input ins-payments-select">
+    <option value="">Tous les statuts</option>
+    <option value="active" {% if sub_status == 'active' %}selected{% endif %}>Actif</option>
+    <option value="pending" {% if sub_status == 'pending' %}selected{% endif %}>En attente</option>
+    <option value="suspended" {% if sub_status == 'suspended' %}selected{% endif %}>Suspendu</option>
+    <option value="expired" {% if sub_status == 'expired' %}selected{% endif %}>Expiré</option>
+    <option value="cancelled" {% if sub_status == 'cancelled' %}selected{% endif %}>Résilié</option>
+  </select>
+  {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+  <button type="submit" class="ins-btn-outline">Filtrer</button>
+  <a href="?export=csv&amp;tab={{ tab }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if plan %}&amp;plan={{ plan }}{% endif %}{% if sub_status %}&amp;status={{ sub_status }}{% endif %}" class="ins-btn-outline ins-members-export">
+    <span class="material-symbols-rounded sm">download</span> Exporter
+  </a>
+</form>
+
+<p class="ins-pharmacies-list-title">Souscriptions enregistrées</p>
+
+<div class="ins-claims-table-wrap">
+  <table class="ins-claims-table ins-sub-table">
+    <thead>
+      <tr>
+        <th>Référence</th>
+        <th>Bénéficiaire</th>
+        <th>Formule</th>
+        <th>Cotisation</th>
+        <th>Couverture</th>
+        <th>Période</th>
+        <th>Statut</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sub in page_obj %}
+      <tr>
+        <td class="font-mono text-xs font-bold">{{ sub.reference }}</td>
+        <td>
+          <p class="font-bold text-sm">{{ sub.member_name }}</p>
+          <p class="text-xs text-ink-muted">N° {{ sub.member_number }} · {{ sub.member_city }}</p>
+        </td>
+        <td><span class="ins-contract-plan">{{ sub.plan_label }}</span></td>
+        <td class="font-bold">{{ sub.premium_amount|intcomma }} F</td>
+        <td>{{ sub.coverage_rate }} %</td>
+        <td class="text-xs">{{ sub.starts_at|date:"d/m/Y" }} → {{ sub.ends_at|date:"d/m/Y" }}</td>
+        <td><span class="ins-sub-status ins-sub-status--{{ sub.status }}">{{ sub.get_status_display }}</span></td>
+        <td>
+          {% if sub.status != 'cancelled' and sub.status != 'expired' %}
+          <form method="post" class="ins-fraud-status-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_status">
+            <input type="hidden" name="subscription_id" value="{{ sub.pk }}">
+            <select name="status" onchange="this.form.submit()" title="Changer le statut">
+              <option value="">⋯</option>
+              <option value="active">Activer</option>
+              <option value="suspended">Suspendre</option>
+              <option value="cancelled">Résilier</option>
+            </select>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="ins-claims-empty">
+          <span class="material-symbols-rounded">card_membership</span>
+          Aucune souscription — créez un abonnement pour un bénéficiaire via le formulaire ci-dessus.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "backoffice/insurer/partials/subscriptions_pagination.html" %}
+
+<section class="ins-sub-charts">
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Répartition par formule</h3>
+    <div class="ins-doughnut-wrap">
+      <div class="ins-chart-wrap ins-chart-wrap--short"><canvas id="chartSubPlans"></canvas></div>
+      <div class="ins-doughnut-center">
+        <span id="chartSubTotal">{{ sub_stats.total }}</span>
+        <small>souscriptions</small>
+      </div>
+    </div>
+  </article>
+  <article class="ins-panel ins-panel--wide">
+    <div class="ins-claims-info-banner">
+      <span class="material-symbols-rounded">info</span>
+      <div class="text-sm">
+        <p class="font-bold">Fonctionnement généralisé</p>
+        <p>Tout utilisateur Gab'Pharma peut souscrire à une formule de votre organisme. L'abonnement actif débloque la prise en charge lors des commandes, quel que soit le statut d'affiliation initial.</p>
+      </div>
+    </div>
+  </article>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const charts = {{ charts_json|safe }};
+  if (typeof Chart === "undefined" || !charts || !charts.plan_split) return;
+  new Chart(document.getElementById("chartSubPlans"), {
+    type: "doughnut",
+    data: {
+      labels: charts.plan_split.labels,
+      datasets: [{ data: charts.plan_split.data, backgroundColor: charts.plan_split.colors, borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: { legend: { position: "bottom" } } }
+  });
+})();
+</script>
+{% endblock %}

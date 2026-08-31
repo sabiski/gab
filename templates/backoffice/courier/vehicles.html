@@ -1,0 +1,127 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Véhicules & documents{% endblock %}
+{% block bo_label %}Espace Livreur{% endblock %}
+{% block bo_title %}Véhicules et documents{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/courier-portal.css?v=2">
+{% endblock %}
+{% block bo_content %}
+<div class="courier-portal">
+  <div class="cp-page-head">
+    <h1><span class="material-symbols-rounded text-primary">two_wheeler</span> Véhicules et documents</h1>
+    <p>Gérez vos véhicules et maintenez vos documents à jour.</p>
+  </div>
+
+  <div data-cp-tabs data-cp-initial="{{ active_tab }}">
+    <div class="cp-tabs">
+      <a href="#" data-cp-tab="vehicle" class="{% if active_tab == 'vehicle' %}is-active{% endif %}"><span class="material-symbols-rounded text-sm">directions_bike</span> Véhicule</a>
+      <a href="#" data-cp-tab="documents" class="{% if active_tab == 'documents' %}is-active{% endif %}"><span class="material-symbols-rounded text-sm">folder</span> Documents</a>
+    </div>
+
+    <div data-cp-panel="vehicle" class="cp-tab-panel {% if active_tab != 'vehicle' %}hidden{% endif %}">
+      <form method="post" class="cp-card">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="vehicle">
+        <div class="flex flex-wrap justify-between gap-2 items-start mb-3">
+          <p class="font-extrabold">Mon véhicule principal</p>
+          {% if vehicle.active %}<span class="cp-badge cp-badge--ok">Véhicule actif</span>{% endif %}
+        </div>
+        <div class="cp-vehicle-hero">
+          <div class="cp-vehicle-hero__icon"><span class="material-symbols-rounded">two_wheeler</span></div>
+          <div class="flex-1 min-w-0 grid sm:grid-cols-2 gap-2">
+            <div class="sm:col-span-2">
+              <label class="text-[10px] font-bold text-ink-muted uppercase">Marque / modèle</label>
+              <input name="vehicle_label" value="{{ profile.vehicle_label }}" placeholder="Yamaha XTZ 125" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-ink-muted uppercase">Type</label>
+              <input name="vehicle_type" value="{{ profile.vehicle_type }}" placeholder="Moto" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-ink-muted uppercase">Immatriculation</label>
+              <input name="vehicle_plate" value="{{ profile.vehicle_plate }}" placeholder="GA-123-AA" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 font-mono">
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-ink-muted uppercase">Année</label>
+              <input name="vehicle_year" value="{{ profile.vehicle_year|default:'' }}" inputmode="numeric" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-ink-muted uppercase">Carburant</label>
+              <input name="vehicle_fuel" value="{{ profile.vehicle_fuel }}" placeholder="Essence" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-ink-muted uppercase">Cylindrée (cc)</label>
+              <input name="vehicle_cc" value="{{ profile.vehicle_cc|default:'' }}" inputmode="numeric" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-ink-muted uppercase">Couleur</label>
+              <input name="vehicle_color" value="{{ profile.vehicle_color }}" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+            </div>
+            <div class="sm:col-span-2">
+              <label class="text-[10px] font-bold text-ink-muted uppercase">N° châssis</label>
+              <input name="vehicle_chassis" value="{{ profile.vehicle_chassis }}" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 font-mono">
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="cp-btn-primary mt-4">Enregistrer le véhicule</button>
+      </form>
+    </div>
+
+    <div data-cp-panel="documents" class="cp-tab-panel {% if active_tab != 'documents' %}hidden{% endif %}">
+      <form method="post" enctype="multipart/form-data" class="cp-card">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="documents">
+        <div class="flex flex-wrap justify-between gap-2 items-start mb-3">
+          <div>
+            <p class="font-extrabold">Mes documents réglementaires</p>
+            <p class="text-xs text-ink-muted mt-0.5">7 pièces obligatoires, dont votre pièce d'identité</p>
+          </div>
+          <span class="cp-badge {% if eligibility.is_eligible %}cp-badge--ok{% else %}cp-badge--wait{% endif %}">{{ eligibility.progress_label }}</span>
+        </div>
+        {% if not eligibility.is_eligible %}
+        <div class="cp-info-banner mb-4 {% if eligibility.status == 'pending_admin' %}!bg-sky-50 !border-sky-200 !text-sky-900{% endif %}">
+          <span class="material-symbols-rounded shrink-0">{% if eligibility.status == 'pending_admin' %}hourglass_top{% else %}info{% endif %}</span>
+          <p>
+            {% if eligibility.status == 'pending_admin' %}
+            Dossier complet — en attente de validation par l'administration.
+            {% else %}
+            Complétez les 7 documents ci-dessous pour soumettre votre dossier (pièce d'identité incluse).
+            {% endif %}
+          </p>
+        </div>
+        {% endif %}
+        <div class="cp-doc-grid mb-4">
+          {% for doc in documents %}
+          <div class="cp-doc-card {% if doc.valid %}is-valid{% endif %}">
+            <div class="cp-doc-card__icon"><span class="material-symbols-rounded">{{ doc.icon }}</span></div>
+            <div class="min-w-0 flex-1">
+              <p class="font-extrabold text-sm">{{ doc.label }}</p>
+              <p class="text-[10px] text-ink-muted font-mono">{{ doc.ref }}</p>
+              <span class="cp-badge {% if doc.valid %}cp-badge--ok{% else %}cp-badge--wait{% endif %} mt-1 inline-block">{{ doc.status }}</span>
+              {% if doc.valid %}<a href="{{ doc.url }}" target="_blank" class="text-[10px] font-bold text-primary block mt-1">Voir le fichier</a>{% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <p class="text-xs font-bold text-ink-muted mb-3">Mettre à jour un document</p>
+        <div class="cp-upload-grid">
+          {% for doc in documents %}
+          {% include "backoffice/courier/partials/file_upload_field.html" with field_name=doc.field label=doc.label icon=doc.icon has_file=doc.valid file_url=doc.url %}
+          {% endfor %}
+        </div>
+        <button type="submit" class="cp-btn-primary mt-4">Enregistrer les documents</button>
+      </form>
+      <div class="cp-info-banner">
+        <span class="material-symbols-rounded shrink-0">shield</span>
+        <p>Gardez vos documents à jour. Des documents expirés peuvent entraîner la suspension de votre compte.</p>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-center mt-4"><a href="{% url 'bo_courier_settings' %}" class="text-xs font-bold text-primary">← Retour au profil personnel</a></p>
+</div>
+{% include "backoffice/courier/partials/mobile_nav.html" %}
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/courier-portal.js?v=2"></script>
+{% endblock %}

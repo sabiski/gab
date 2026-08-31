@@ -1,0 +1,263 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}Statistiques et rapports{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claims-page-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-claims-back" aria-label="Retour">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </a>
+    <div>
+      <h1>Statistiques et rapports</h1>
+      <p>Analysez les performances et suivez les indicateurs clés.</p>
+    </div>
+  </div>
+  <div class="ins-header__actions">
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--sm">Déconnexion</a>
+  </div>
+</header>
+
+{% if is_demo %}
+<div class="ins-claims-info-banner ins-reports-demo-banner">
+  <span class="material-symbols-rounded">info</span>
+  <p>Données de démonstration — les statistiques réelles apparaîtront lorsque des demandes seront enregistrées.</p>
+</div>
+{% endif %}
+
+<section class="ins-claims-kpi">
+  {% for k in reports.kpis %}
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--{{ k.tone }}">
+    <span class="material-symbols-rounded">{{ k.icon }}</span>
+    <div>
+      <p class="ins-claims-kpi__label">{{ k.label }}</p>
+      <p class="ins-claims-kpi__value">
+        {{ k.value|intcomma }}
+        {% if k.suffix %}<span class="text-xs font-semibold">{{ k.suffix }}</span>{% endif %}
+      </p>
+      {% if k.trend %}
+      <p class="ins-claims-kpi__pct">{% if k.trend > 0 %}↑{% else %}↓{% endif %} {{ k.trend|floatformat:1 }} % vs période précédente</p>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</section>
+
+<form method="get" class="ins-reports-toolbar">
+  <label class="ins-payments-date">
+    <span class="sr-only">Du</span>
+    <input type="date" name="date_from" value="{{ date_from }}">
+  </label>
+  <label class="ins-payments-date">
+    <span class="sr-only">Au</span>
+    <input type="date" name="date_to" value="{{ date_to }}">
+  </label>
+  <select name="zone" class="ins-filters__input ins-payments-select">
+    <option value="">Toutes les zones</option>
+    {% for c in reports.filter_cities %}
+    <option value="{{ c }}" {% if zone == c %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+  <select name="indicator" class="ins-filters__input ins-payments-select">
+    <option value="">Tous les indicateurs</option>
+    <option value="claims" {% if indicator == 'claims' %}selected{% endif %}>Demandes</option>
+    <option value="payments" {% if indicator == 'payments' %}selected{% endif %}>Paiements</option>
+    <option value="reimb" {% if indicator == 'reimb' %}selected{% endif %}>Remboursements</option>
+  </select>
+  <button type="submit" class="ins-btn-outline ins-payments-filter-btn">Appliquer</button>
+  <a href="?export=csv{% if date_from %}&amp;date_from={{ date_from }}{% endif %}{% if date_to %}&amp;date_to={{ date_to }}{% endif %}{% if zone %}&amp;zone={{ zone|urlencode }}{% endif %}" class="ins-btn-primary ins-reports-export">
+    <span class="material-symbols-rounded sm">download</span> Exporter le rapport
+  </a>
+</form>
+
+<section class="ins-reports-charts-row">
+  <article class="ins-panel ins-panel--wide">
+    <div class="ins-reports-chart-head">
+      <h3 class="ins-claim-section-title">Évolution des demandes et paiements</h3>
+      <span class="ins-reports-granularity">Mensuel</span>
+    </div>
+    <div class="ins-chart-wrap ins-chart-wrap--tall"><canvas id="chartEvoDual"></canvas></div>
+  </article>
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Répartition par zone</h3>
+    <div class="ins-doughnut-wrap">
+      <div class="ins-chart-wrap ins-chart-wrap--short"><canvas id="chartZones"></canvas></div>
+      <div class="ins-doughnut-center">
+        <span id="chartZonesTotal">—</span>
+        <small>demandes</small>
+      </div>
+    </div>
+    <a href="{% url 'bo_insurer_pharmacies' %}" class="ins-claim-link mt-2 inline-block">Voir le détail par zone →</a>
+  </article>
+</section>
+
+<section class="ins-reports-charts-row">
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Répartition par type de prestation</h3>
+    <div class="ins-chart-wrap ins-chart-wrap--short"><canvas id="chartPrestations"></canvas></div>
+  </article>
+  <article class="ins-panel ins-panel--wide">
+    <div class="ins-reports-chart-head">
+      <h3 class="ins-claim-section-title">Évolution des remboursements</h3>
+      <span class="ins-reports-granularity">Mensuel</span>
+    </div>
+    <div class="ins-chart-wrap ins-chart-wrap--short"><canvas id="chartReimb"></canvas></div>
+  </article>
+</section>
+
+<section class="ins-reports-bottom">
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Top 5 pharmacies partenaires (par montant payé)</h3>
+    <div class="ins-claims-table-wrap">
+      <table class="ins-claims-table ins-reports-table">
+        <thead>
+          <tr>
+            <th>Pharmacie</th>
+            <th>Zone</th>
+            <th>Demandes</th>
+            <th>Montant payé (FCFA)</th>
+            <th>Part</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ph in reports.top_pharmacies %}
+          <tr>
+            <td class="font-semibold">{{ ph.name }}</td>
+            <td>{{ ph.zone }}</td>
+            <td>{{ ph.claims|intcomma }}</td>
+            <td class="font-bold">{{ ph.amount|intcomma }}</td>
+            <td>{{ ph.share }} %</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="text-center text-ink-muted py-4">Aucune donnée</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <a href="{% url 'bo_insurer_pharmacies' %}" class="ins-claim-link mt-2 inline-block">Voir toutes les pharmacies →</a>
+  </article>
+
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Indicateurs clés</h3>
+    <ul class="ins-reports-indicators">
+      {% for ind in reports.indicators %}
+      <li>
+        <div>
+          <p class="font-semibold text-sm">{{ ind.label }}</p>
+          <p class="ins-reports-indicators__value">{{ ind.value }}</p>
+        </div>
+        <span class="ins-reports-trend {% if ind.up %}is-up{% else %}is-down{% endif %}">{{ ind.trend }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    <a href="{% url 'bo_insurer_payments' %}" class="ins-claim-link mt-2 inline-block">Voir plus d'indicateurs →</a>
+  </article>
+
+  <article class="ins-panel ins-panel--wide">
+    <h3 class="ins-claim-section-title">Rapports récents</h3>
+    <div class="ins-claims-table-wrap">
+      <table class="ins-claims-table ins-reports-table">
+        <thead>
+          <tr>
+            <th>Nom du rapport</th>
+            <th>Période</th>
+            <th>Généré le</th>
+            <th>Type</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reports.recent_reports %}
+          <tr>
+            <td class="font-semibold">{{ r.name }}</td>
+            <td class="text-sm">{{ r.period }}</td>
+            <td class="text-xs">{{ r.generated_at }}</td>
+            <td><span class="ins-report-badge ins-report-badge--{{ r.tone }}">{{ r.type }}</span></td>
+            <td class="ins-reports-actions">
+              <a href="?export=csv{% if date_from %}&amp;date_from={{ date_from }}{% endif %}{% if date_to %}&amp;date_to={{ date_to }}{% endif %}" title="Télécharger" aria-label="Télécharger">
+                <span class="material-symbols-rounded sm">download</span>
+              </a>
+              <span title="Consulter" class="text-ink-muted"><span class="material-symbols-rounded sm">visibility</span></span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <a href="?export=csv{% if date_from %}&amp;date_from={{ date_from }}{% endif %}{% if date_to %}&amp;date_to={{ date_to }}{% endif %}" class="ins-claim-link mt-2 inline-block">Voir tous les rapports →</a>
+  </article>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const c = {{ charts_json|safe }};
+  if (typeof Chart === "undefined" || !c) return;
+
+  const fmt = (n) => new Intl.NumberFormat("fr-FR").format(n);
+
+  if (c.evolution) {
+    new Chart(document.getElementById("chartEvoDual"), {
+      type: "line",
+      data: {
+        labels: c.evolution.labels,
+        datasets: [
+          { label: "Demandes prises en charge", data: c.evolution.claims, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,.1)", fill: true, tension: 0.35, yAxisID: "y" },
+          { label: "Montant payé (FCFA)", data: c.evolution.amounts, borderColor: "#10b981", backgroundColor: "rgba(16,185,129,.08)", fill: true, tension: 0.35, yAxisID: "y1" }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: { legend: { position: "bottom" } },
+        scales: {
+          y: { type: "linear", position: "left", beginAtZero: true, title: { display: true, text: "Demandes" } },
+          y1: { type: "linear", position: "right", beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { callback: (v) => fmt(v) } }
+        }
+      }
+    });
+  }
+
+  if (c.zones) {
+    const total = c.zones.data.reduce((a, b) => a + b, 0);
+    const el = document.getElementById("chartZonesTotal");
+    if (el) el.textContent = fmt(total);
+    new Chart(document.getElementById("chartZones"), {
+      type: "doughnut",
+      data: {
+        labels: c.zones.labels,
+        datasets: [{ data: c.zones.data, backgroundColor: ["#5B47FB", "#10b981", "#3b82f6", "#f59e0b", "#9ca3af"], borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: { legend: { position: "bottom" } } }
+    });
+  }
+
+  if (c.prestations) {
+    new Chart(document.getElementById("chartPrestations"), {
+      type: "bar",
+      data: {
+        labels: c.prestations.labels,
+        datasets: [{ data: c.prestations.data, backgroundColor: "#5B47FB", borderRadius: 4, maxBarThickness: 14 }]
+      },
+      options: { indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
+    });
+  }
+
+  if (c.reimbursements) {
+    new Chart(document.getElementById("chartReimb"), {
+      type: "bar",
+      data: {
+        labels: c.reimbursements.labels,
+        datasets: [{ label: "Remboursements", data: c.reimbursements.data, backgroundColor: "#10b981", borderRadius: 4, maxBarThickness: 28 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: (v) => fmt(v) } } } }
+    });
+  }
+})();
+</script>
+{% endblock %}

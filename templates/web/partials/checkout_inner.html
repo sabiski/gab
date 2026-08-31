@@ -1,0 +1,481 @@
+{% load portal_urls %}
+{% if client_portal %}<div class="space-y-5">{% else %}<div class="max-w-site mx-auto px-4 py-8 max-w-3xl">{% endif %}
+  <h1 class="portal-hide-in-espace text-2xl font-extrabold mb-2">Finaliser la commande</h1>
+  <p class="text-sm text-ink-muted font-medium mb-4">Pharmacie : <strong class="text-ink">{{ pharmacy.name }}</strong></p>
+
+  <div class="bg-white rounded-2xl border p-4 mb-5 text-sm">
+    <p class="text-xs font-bold text-ink-muted uppercase mb-2">Votre panier</p>
+    <ul class="space-y-1.5">
+      {% for line in lines %}
+      <li class="flex justify-between gap-2">
+        <span class="font-medium">
+          {{ line.qty }}× {{ line.stock.medicine }}
+          {% if line.stock.medicine.requires_prescription %}
+          <span class="text-amber-700 font-bold text-xs">(ordonnance)</span>
+          {% endif %}
+        </span>
+        <span class="font-bold text-primary shrink-0">{{ line.line_total }} F</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  {% if needs_rx %}
+  <div class="mb-5 text-sm bg-amber-50 border-2 border-amber-300 rounded-2xl p-4">
+    <p class="font-extrabold text-amber-900 text-base">Ordonnance obligatoire pour cette commande</p>
+    <p class="text-amber-900/90 font-medium mt-1">
+      Produit{{ rx_meds|length|pluralize }} concerné{{ rx_meds|length|pluralize }} :
+      <strong>{% for n in rx_meds %}{{ n }}{% if not forloop.last %}, {% endif %}{% endfor %}</strong>.
+    </p>
+    <p class="text-amber-900/80 font-medium mt-2">
+      {% if prescriptions %}
+      Vous avez <strong>{{ prescriptions|length }}</strong> ordonnance{{ prescriptions|length|pluralize }} dans votre dossier —
+      <strong class="text-ink">choisissez-en une ci-dessous</strong> (ou déposez-en une nouvelle). Sans choix, la commande est bloquée.
+      {% else %}
+      Aucune ordonnance dans votre dossier : <strong class="text-ink">déposez un fichier</strong> pour continuer.
+      {% endif %}
+    </p>
+  </div>
+  {% else %}
+  <div class="mb-5 text-sm bg-canvas border border-slate-100 rounded-2xl p-4">
+    <p class="font-extrabold text-ink">Pas d’ordonnance demandée</p>
+    <p class="text-ink-muted font-medium mt-1">
+      Aucun médicament <strong class="text-ink">sur ordonnance</strong> dans ce panier (ex. Doliprane, vitamines…).
+      Le bloc « choisir / déposer une ordonnance » n’apparaît que pour un produit comme l’<strong class="text-ink">Amoxicilline</strong> (badge orange Ordonnance).
+    </p>
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" id="checkout-form" class="bg-white rounded-2xl border p-5 space-y-4 text-sm mb-6">
+    {% csrf_token %}
+    <div>
+      <label class="text-xs font-bold text-ink-muted">Mode</label>
+      <select name="delivery_mode" id="delivery-mode" class="mt-1 w-full border rounded-xl px-3 py-2">
+        <option value="home">Livraison à domicile {% if premium_delivery %}(offerte Premium){% else %}(+1500 F){% endif %}</option>
+        <option value="express">Livraison express {% if premium_delivery %}(offerte Premium){% else %}(+1500 F){% endif %}</option>
+        <option value="pickup">Retrait en pharmacie</option>
+      </select>
+    </div>
+
+    <div id="delivery-geo-block" class="space-y-3">
+      <div>
+        <p class="text-xs font-bold text-ink-muted">Adresse de livraison</p>
+        <p class="text-xs text-ink-muted mt-1 font-medium">
+          Votre position actuelle est utilisée — rien à saisir à la main.
+        </p>
+      </div>
+      <button type="button" id="btn-geolocate"
+        class="w-full inline-flex items-center justify-center gap-2 border-2 border-primary text-primary font-bold rounded-xl py-2.5 hover:bg-primary-50 transition">
+        <span class="material-symbols-rounded sm">my_location</span>
+        Utiliser ma position actuelle
+      </button>
+      <div id="geo-status" class="text-xs font-medium text-ink-muted"></div>
+      <div id="checkout-map" class="h-56 w-full rounded-xl border z-0 hidden bg-canvas"></div>
+      <p id="geo-address-display" class="hidden text-sm font-bold text-ink bg-primary-50 border border-primary/20 rounded-xl px-3 py-2.5"></p>
+      <input type="hidden" name="delivery_latitude" id="delivery-latitude" value="">
+      <input type="hidden" name="delivery_longitude" id="delivery-longitude" value="">
+      <input type="hidden" name="delivery_address" id="delivery-address" value="">
+    </div>
+
+    <div>
+      <label class="text-xs font-bold text-ink-muted">Note</label>
+      <input name="notes" class="mt-1 w-full border rounded-xl px-3 py-2" placeholder="Optionnel (ex. digicode, étage…)">
+    </div>
+
+    {% if needs_rx %}
+    <div class="border-t border-amber-200 pt-4 space-y-3" id="rx-section">
+      <p class="font-extrabold text-amber-900">Quelle ordonnance utiliser ? <span class="text-rose-600">*</span></p>
+      <p id="rx-choice-error" class="hidden text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2 py-1.5">
+        Sélectionnez une ordonnance de votre dossier, ou déposez un nouveau fichier.
+      </p>
+
+      {% if prescriptions %}
+      <div class="space-y-2" id="rx-cards">
+        {% for rx in prescriptions %}
+        <label class="flex gap-3 items-start border-2 border-slate-100 rounded-xl p-3 cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary-50">
+          <input type="radio" name="prescription_id" value="{{ rx.id }}" class="mt-1 rx-radio"
+            data-url="{% url 'bo_prescription_file' rx.id %}" data-image="{{ rx.is_image|yesno:'1,0' }}">
+          <div class="flex-1 min-w-0">
+            <p class="font-bold">Ordonnance #{{ rx.id }}</p>
+            <p class="text-xs text-ink-muted">{{ rx.created_at|date:"d/m/Y" }}{% if rx.doctor_name %} · {{ rx.doctor_name }}{% endif %} · {{ rx.get_status_display }}</p>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+      <div id="rx-preview-existing" class="border rounded-xl p-2 bg-canvas overflow-hidden hidden"></div>
+      <p class="text-xs text-ink-muted">Pas la bonne ? <a href="{% url 'bo_client_prescriptions' %}" class="text-primary font-bold">Gérer mon dossier</a> ou déposez un fichier ci-dessous.</p>
+      <details class="text-sm" id="rx-new-details">
+        <summary class="cursor-pointer font-bold text-primary">Déposer une nouvelle ordonnance pour cette commande</summary>
+        <div class="mt-3 space-y-2">
+          <input type="file" name="prescription_file" id="rx-file" accept=".pdf,.jpg,.jpeg,.png" class="w-full border rounded-xl px-3 py-2">
+          <div id="rx-preview-new" class="hidden border rounded-xl overflow-hidden bg-canvas"></div>
+          <input name="doctor_name" placeholder="Nom du médecin (optionnel)" class="w-full border rounded-xl px-3 py-2">
+        </div>
+      </details>
+      {% else %}
+      <p class="text-xs text-ink-muted mb-2">Aucune ordonnance dans votre dossier. Déposez-en une pour continuer (elle sera aussi sauvegardée).</p>
+      <input type="file" name="prescription_file" id="rx-file" required accept=".pdf,.jpg,.jpeg,.png" class="w-full border rounded-xl px-3 py-2">
+      <div id="rx-preview-new" class="hidden border rounded-xl overflow-hidden bg-canvas"></div>
+      <input name="doctor_name" placeholder="Nom du médecin (optionnel)" class="w-full border rounded-xl px-3 py-2">
+      <p class="text-xs"><a href="{% url 'bo_client_prescriptions' %}" class="text-primary font-bold">Ou ouvrir mon dossier d’ordonnances</a></p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if insurance_providers %}
+    <div class="border-t pt-4 space-y-3" id="insurance-block">
+      <p class="text-xs font-bold text-ink-muted uppercase">Assurance maladie</p>
+      <label class="flex items-start gap-3 border rounded-xl p-3 cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary-50">
+        <input type="checkbox" name="use_insurance" value="1" id="use-insurance" class="mt-1"
+          {% if use_insurance_default %}checked{% endif %}>
+        <span class="text-sm">
+          <span class="font-bold block">Utiliser mon assurance</span>
+          {% if client_profile.insurance_number %}
+          <span class="text-xs text-ink-muted">N° assuré : {{ client_profile.insurance_number }}</span>
+          {% else %}
+          <span class="text-xs text-amber-700 font-medium">Complétez votre n° d'assuré dans <a href="{% portal_url 'profile_personal' %}" class="underline">votre profil</a>.</span>
+          {% endif %}
+        </span>
+      </label>
+      <div id="insurance-provider-wrap" class="{% if not use_insurance_default %}hidden{% endif %}">
+        <label class="text-xs font-bold text-ink-muted">Organisme</label>
+        <select name="insurance_provider" id="insurance-provider" class="mt-1 w-full border rounded-xl px-3 py-2">
+          {% for p in insurance_providers %}
+          <option value="{{ p.id }}" {% if client_profile.insurance_provider_id == p.id %}selected{% endif %}>{{ p.name }} ({{ p.coverage_rate }} %)</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div id="insurance-quote" class="text-sm rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 hidden"></div>
+      <div id="insurance-error" class="text-sm rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2.5 hidden"></div>
+    </div>
+    {% endif %}
+
+    <div class="border-t pt-4 space-y-3" id="loyalty-block">
+      <p class="text-xs font-bold text-ink-muted uppercase">Fidélité</p>
+      {% if loyalty_tier_percent %}
+      <p class="text-xs text-emerald-700 font-medium rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2">
+        Palier <strong>{{ loyalty_level_name }}</strong> : remise automatique de {{ loyalty_tier_percent }} % sur le panier
+        {% if loyalty_vouchers %} (sauf si vous utilisez un bon ci-dessous){% endif %}.
+      </p>
+      {% endif %}
+      <div>
+        <label class="text-xs font-bold text-ink-muted">Bon de réduction (optionnel)</label>
+        <input type="text" name="loyalty_voucher" id="loyalty-voucher" placeholder="Ex. GP-A1B2C3"
+          class="mt-1 w-full border rounded-xl px-3 py-2 uppercase tracking-wide" autocomplete="off">
+        {% if loyalty_vouchers %}
+        <p class="text-[11px] text-ink-muted mt-1">Vos bons :
+          {% for v in loyalty_vouchers %}
+          <button type="button" class="loyalty-voucher-pick text-primary font-bold underline" data-code="{{ v.code }}">{{ v.code }}</button>{% if not forloop.last %}, {% endif %}
+          {% endfor %}
+        </p>
+        {% endif %}
+      </div>
+      <div class="flex justify-between text-emerald-700 {% if not loyalty_preview.loyalty_discount %}hidden{% endif %} text-sm" id="sum-loyalty-row">
+        <span id="sum-loyalty-label">{{ loyalty_preview.label|default:"Réduction fidélité" }}</span>
+        <span class="font-bold" id="sum-loyalty">{% if loyalty_preview.loyalty_discount %}- {{ loyalty_preview.loyalty_discount }} F{% else %}0 F{% endif %}</span>
+      </div>
+    </div>
+
+    <div class="border-t pt-4 space-y-3" id="payment-methods-block">
+      <p class="text-xs font-bold text-ink-muted uppercase">Mode de paiement <span class="normal-case font-medium">(reste à charge)</span></p>
+      <p class="text-[11px] text-ink-muted rounded-lg bg-canvas px-3 py-2">Plafond journalier : {{ payment_cap|default:"500 000" }} F — reste disponible aujourd'hui : <strong>{{ payment_cap_remaining|default:payment_cap }} F</strong>.</p>
+      {% for code, label, kind in payment_methods %}
+      <label class="flex items-center gap-3 border rounded-xl p-3 cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary-50">
+        <input type="radio" name="payment_method" value="{{ code }}" {% if payment_method == code %}checked{% endif %}>
+        <span class="font-bold text-sm">{{ label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+
+    <div class="border-t pt-3 space-y-1 text-sm" id="checkout-totals">
+      <div class="flex justify-between"><span class="text-ink-muted">Sous-total</span><span class="font-bold" id="sum-subtotal">{{ subtotal }} F</span></div>
+      <div class="flex justify-between"><span class="text-ink-muted">Livraison</span><span class="font-bold" id="sum-delivery">{% if premium_delivery and delivery_fee == 0 %}<span class="text-emerald-600">Offerte</span>{% else %}{{ delivery_fee }} F{% endif %}</span></div>
+      <div class="flex justify-between text-emerald-700 hidden" id="sum-insurance-row"><span>Prise en charge assurance</span><span class="font-bold" id="sum-insurance">0 F</span></div>
+      <div class="flex justify-between font-extrabold text-base pt-2 border-t">
+        <span>Reste à payer</span>
+        <span class="text-primary" id="sum-total">{{ total }} F</span>
+      </div>
+    </div>
+    <button type="submit" id="checkout-submit" class="w-full bg-primary text-white font-bold py-3 rounded-full">Confirmer la commande</button>
+  </form>
+  <a href="{% portal_url 'cart' %}" class="text-sm font-bold text-ink-muted">← Retour panier</a>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(function () {
+  var modeEl = document.getElementById('delivery-mode');
+  var geoBlock = document.getElementById('delivery-geo-block');
+  var statusEl = document.getElementById('geo-status');
+  var mapEl = document.getElementById('checkout-map');
+  var addrDisplay = document.getElementById('geo-address-display');
+  var latInput = document.getElementById('delivery-latitude');
+  var lngInput = document.getElementById('delivery-longitude');
+  var addrInput = document.getElementById('delivery-address');
+  var btn = document.getElementById('btn-geolocate');
+  var form = document.getElementById('checkout-form');
+  var map = null;
+  var marker = null;
+
+  function isPickup() { return modeEl && modeEl.value === 'pickup'; }
+
+  function setStatus(msg, ok) {
+    if (!statusEl) return;
+    statusEl.textContent = msg || '';
+    statusEl.className = 'text-xs font-medium ' + (ok ? 'text-primary' : 'text-ink-muted');
+  }
+
+  function showMap(lat, lng) {
+    if (typeof L === 'undefined' || !mapEl) return;
+    mapEl.classList.remove('hidden');
+    if (!map) {
+      map = L.map(mapEl).setView([lat, lng], 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OSM'
+      }).addTo(map);
+      marker = L.marker([lat, lng]).addTo(map);
+    } else {
+      marker.setLatLng([lat, lng]);
+      map.setView([lat, lng], 16);
+    }
+    setTimeout(function () { map.invalidateSize(); }, 150);
+  }
+
+  function applyPosition(lat, lng, label) {
+    latInput.value = Number(lat).toFixed(6);
+    lngInput.value = Number(lng).toFixed(6);
+    addrInput.value = label || ('Position GPS (' + latInput.value + ', ' + lngInput.value + ')');
+    addrDisplay.textContent = addrInput.value;
+    addrDisplay.classList.remove('hidden');
+    showMap(lat, lng);
+    setStatus('Position enregistrée pour la livraison.', true);
+  }
+
+  function reverseGeocode(lat, lng) {
+    var url = 'https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' +
+      encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng) + '&accept-language=fr';
+    return fetch(url, { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (data && data.display_name) return data.display_name;
+        return null;
+      })
+      .catch(function () { return null; });
+  }
+
+  function locate() {
+    if (!navigator.geolocation) {
+      setStatus('Géolocalisation indisponible sur cet appareil.', false);
+      return;
+    }
+    setStatus('Localisation en cours…', false);
+    btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var lat = pos.coords.latitude;
+      var lng = pos.coords.longitude;
+      reverseGeocode(lat, lng).then(function (label) {
+        applyPosition(lat, lng, label);
+        btn.disabled = false;
+      });
+    }, function () {
+      setStatus('Impossible d’obtenir votre position. Autorisez la localisation dans le navigateur, puis réessayez.', false);
+      btn.disabled = false;
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  }
+
+  function syncMode() {
+    if (!geoBlock) return;
+    if (isPickup()) {
+      geoBlock.classList.add('hidden');
+      latInput.value = '';
+      lngInput.value = '';
+      addrInput.value = '';
+    } else {
+      geoBlock.classList.remove('hidden');
+      if (map) setTimeout(function () { map.invalidateSize(); }, 150);
+      if (!latInput.value) locate();
+    }
+  }
+
+  if (btn) btn.addEventListener('click', locate);
+  if (modeEl) modeEl.addEventListener('change', syncMode);
+
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      if (!isPickup() && (!latInput.value || !lngInput.value)) {
+        e.preventDefault();
+        setStatus('Cliquez sur « Utiliser ma position actuelle » avant de confirmer.', false);
+        locate();
+        return;
+      }
+      var rxSection = document.getElementById('rx-section');
+      if (rxSection) {
+        var hasRadio = !!document.querySelector('.rx-radio:checked');
+        var fileInput = document.getElementById('rx-file');
+        var hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
+        if (!hasRadio && !hasFile) {
+          e.preventDefault();
+          var err = document.getElementById('rx-choice-error');
+          if (err) err.classList.remove('hidden');
+          rxSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    });
+  }
+
+  syncMode();
+
+  // Assurance — devis dynamique
+  var useIns = document.getElementById('use-insurance');
+  var insWrap = document.getElementById('insurance-provider-wrap');
+  var insSelect = document.getElementById('insurance-provider');
+  var insQuote = document.getElementById('insurance-quote');
+  var insError = document.getElementById('insurance-error');
+  var sumInsRow = document.getElementById('sum-insurance-row');
+  var sumIns = document.getElementById('sum-insurance');
+  var sumLoyaltyRow = document.getElementById('sum-loyalty-row');
+  var sumLoyalty = document.getElementById('sum-loyalty');
+  var sumLoyaltyLabel = document.getElementById('sum-loyalty-label');
+  var loyaltyInput = document.getElementById('loyalty-voucher');
+  var sumTotal = document.getElementById('sum-total');
+  var payBlock = document.getElementById('payment-methods-block');
+  var grossDefault = {{ gross_total }};
+
+  document.querySelectorAll('.loyalty-voucher-pick').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (loyaltyInput) loyaltyInput.value = btn.getAttribute('data-code') || '';
+      refreshInsuranceQuote();
+    });
+  });
+
+  function refreshInsuranceQuote() {
+    if (!useIns && !loyaltyInput) return;
+    var params = new URLSearchParams();
+    params.set('use_insurance', useIns && useIns.checked ? '1' : '0');
+    if (modeEl) params.set('delivery_mode', modeEl.value);
+    if (insSelect && insSelect.value) params.set('insurance_provider', insSelect.value);
+    if (loyaltyInput && loyaltyInput.value) params.set('loyalty_voucher', loyaltyInput.value.trim());
+    fetch('{% portal_url "checkout_insurance_quote" %}?' + params.toString(), { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (insError) insError.classList.add('hidden');
+        if (!data.ok && data.reason && data.loyalty_discount === undefined) {
+          if (insError) {
+            insError.textContent = data.reason || 'Erreur devis.';
+            insError.classList.remove('hidden');
+          }
+          return;
+        }
+        if (sumLoyaltyRow && sumLoyalty) {
+          if (data.loyalty_discount > 0) {
+            sumLoyalty.textContent = '- ' + data.loyalty_discount + ' F';
+            if (sumLoyaltyLabel) sumLoyaltyLabel.textContent = data.loyalty_label || 'Réduction fidélité';
+            sumLoyaltyRow.classList.remove('hidden');
+          } else {
+            sumLoyaltyRow.classList.add('hidden');
+          }
+        }
+        if (!useIns || !useIns.checked) {
+          if (insQuote) insQuote.classList.add('hidden');
+          if (sumInsRow) sumInsRow.classList.add('hidden');
+          if (sumTotal) sumTotal.textContent = (data.client_share != null ? data.client_share : grossDefault) + ' F';
+          if (payBlock) payBlock.classList.remove('hidden');
+          if (!data.ok && data.reason && loyaltyInput && loyaltyInput.value) {
+            if (insError) {
+              insError.textContent = data.reason;
+              insError.classList.remove('hidden');
+            }
+          }
+          return;
+        }
+        if (!data.ok) {
+          if (insQuote) insQuote.classList.add('hidden');
+          if (sumInsRow) sumInsRow.classList.add('hidden');
+          if (insError) {
+            insError.textContent = data.reason || 'Assurance refusée.';
+            insError.classList.remove('hidden');
+          }
+          if (sumTotal) sumTotal.textContent = (data.client_share || grossDefault) + ' F';
+          if (payBlock) payBlock.classList.remove('hidden');
+          return;
+        }
+        if (insQuote) {
+          insQuote.innerHTML = '<strong>' + (data.provider_name || 'Assurance') + '</strong> couvre <strong>' + data.coverage_amount + ' F</strong> (' + data.coverage_rate + ' %).';
+          insQuote.classList.remove('hidden');
+        }
+        if (sumInsRow && sumIns) {
+          sumIns.textContent = '- ' + data.coverage_amount + ' F';
+          sumInsRow.classList.remove('hidden');
+        }
+        if (sumTotal) sumTotal.textContent = data.client_share + ' F';
+        if (payBlock) {
+          if (data.client_share <= 0) payBlock.classList.add('hidden');
+          else payBlock.classList.remove('hidden');
+        }
+      })
+      .catch(function () {});
+  }
+
+  if (loyaltyInput) {
+    loyaltyInput.addEventListener('change', refreshInsuranceQuote);
+    loyaltyInput.addEventListener('blur', refreshInsuranceQuote);
+  }
+
+  if (useIns) {
+    useIns.addEventListener('change', function () {
+      if (insWrap) insWrap.classList.toggle('hidden', !useIns.checked);
+      refreshInsuranceQuote();
+    });
+  }
+  if (insSelect) insSelect.addEventListener('change', refreshInsuranceQuote);
+  if (modeEl) modeEl.addEventListener('change', function () { syncMode(); refreshInsuranceQuote(); });
+  refreshInsuranceQuote();
+
+  // Ordonnance previews
+  function restoreRxRadios() {
+    document.querySelectorAll('.rx-radio').forEach(function (r) {
+      r.required = false;
+    });
+  }
+  function previewFile(input, box) {
+    if (!input || !box) return;
+    input.addEventListener('change', function () {
+      box.innerHTML = '';
+      box.classList.add('hidden');
+      var f = input.files && input.files[0];
+      if (!f) {
+        restoreRxRadios();
+        return;
+      }
+      var url = URL.createObjectURL(f);
+      if (f.type === 'application/pdf') box.innerHTML = '<iframe src="' + url + '" class="w-full h-64"></iframe>';
+      else if ((f.type || '').indexOf('image/') === 0) box.innerHTML = '<img src="' + url + '" class="max-h-64 mx-auto object-contain" alt="Aperçu">';
+      else box.innerHTML = '<p class="p-3 text-xs">' + f.name + '</p>';
+      box.classList.remove('hidden');
+      document.querySelectorAll('.rx-radio').forEach(function (r) { r.checked = false; });
+      var err = document.getElementById('rx-choice-error');
+      if (err) err.classList.add('hidden');
+    });
+  }
+  previewFile(document.getElementById('rx-file'), document.getElementById('rx-preview-new'));
+
+  var ex = document.getElementById('rx-preview-existing');
+  function showSelected() {
+    if (!ex) return;
+    var sel = document.querySelector('.rx-radio:checked');
+    ex.innerHTML = '';
+    ex.classList.add('hidden');
+    if (!sel) return;
+    var url = sel.getAttribute('data-url');
+    if (sel.getAttribute('data-image') === '1') ex.innerHTML = '<img src="' + url + '" class="max-h-56 mx-auto object-contain" alt="Aperçu">';
+    else ex.innerHTML = '<iframe src="' + url + '" class="w-full h-56"></iframe>';
+    ex.classList.remove('hidden');
+    var fileInput = document.getElementById('rx-file');
+    if (fileInput) fileInput.value = '';
+    var err = document.getElementById('rx-choice-error');
+    if (err) err.classList.add('hidden');
+  }
+  document.querySelectorAll('.rx-radio').forEach(function (r) {
+    r.addEventListener('change', showSelected);
+  });
+})();
+</script>

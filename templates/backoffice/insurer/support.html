@@ -1,0 +1,15 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% block ins_page_title %}Support et assistance{% endblock %}
+{% block ins_content %}
+{% include "backoffice/insurer/partials/page_header.html" with page_title="Support et assistance" page_subtitle="Notre équipe vous accompagne" show_date_pill=False %}
+<div class="ins-panel ins-support-card">
+  <span class="material-symbols-rounded ins-support-card__icon">headset_mic</span>
+  <h2>Besoin d'assistance ?</h2>
+  <p>Contactez le support Gab'Pharma Assurance : <a href="mailto:support@gabpharma.ga" class="text-primary font-bold">support@gabpharma.ga</a></p>
+  <p class="text-sm text-ink-muted mt-2">Tél. +241 01 00 00 00 · Lun–Ven 8h–18h</p>
+</div>
+<div class="ins-panel ins-coming-soon mt-4">
+  <span class="material-symbols-rounded ins-coming-soon__icon">forum</span>
+  <p>Centre de tickets et FAQ — envoyez la maquette pour finaliser cette page.</p>
+</div>
+{% endblock %}

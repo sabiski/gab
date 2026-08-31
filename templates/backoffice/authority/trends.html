@@ -1,0 +1,258 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Analyse des maladies et tendances{% endblock %}
+{% block auth_extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Analyse des maladies et tendances <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Suivi des maladies à l'échelle nationale et régionale pour une meilleure prise de décision.</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <div class="auth-date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{{ trends.period_start|date:"d/m/Y" }} – {{ trends.period_end|date:"d/m/Y" }}</span>
+    </div>
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline" id="auth-trends-filter-toggle">
+      <span class="material-symbols-rounded text-sm">tune</span> Filtres
+    </button>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-icon-btn relative" aria-label="Alertes sanitaires">
+      <span class="material-symbols-rounded">notifications</span>
+    </a>
+    {% if bo_role != "admin" %}{% include "backoffice/authority/partials/user_chip.html" %}{% endif %}
+  </div>
+</header>
+
+<form method="get" id="auth-trends-filters" class="auth-stocks-filters {% if filter_region or filter_disease %}{% else %}hidden{% endif %}">
+  <div>
+    <label>Région</label>
+    <select name="region" class="auth-stocks-filters__input">
+      <option value="">Toutes les régions</option>
+      {% for r in regions %}
+      <option value="{{ r.slug }}" {% if filter_region == r.slug %}selected{% endif %}>{{ r.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Maladie</label>
+    <select name="disease" class="auth-stocks-filters__input">
+      <option value="">Toutes les maladies</option>
+      {% for d in trends.diseases %}
+      <option value="{{ d.key }}" {% if filter_disease == d.key %}selected{% endif %}>{{ d.label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="auth-filter-btn">Appliquer</button>
+  {% if filter_region or filter_disease %}
+  <a href="{% url 'bo_authority_trends' %}" class="auth-map-link text-xs">Réinitialiser</a>
+  {% endif %}
+</form>
+
+<section class="auth-kpi-grid auth-kpi-grid--5 auth-kpi-grid--national">
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-primary">bar_chart</span>
+    <p class="auth-kpi__label">Maladies surveillées</p>
+    <p class="auth-kpi__value">{{ trends.kpis.monitored }}</p>
+    <p class="auth-kpi__hint">{% if trends.kpis.monitored_delta >= 0 %}+{% endif %}{{ trends.kpis.monitored_delta }} vs période précédente</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-sky-500">groups</span>
+    <p class="auth-kpi__label">Cas totaux (30 jours)</p>
+    <p class="auth-kpi__value">{{ trends.kpis.total_cases|intcomma }}</p>
+    <p class="auth-kpi__trend {% if trends.kpis.total_cases_trend <= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      <span class="material-symbols-rounded text-xs">{% if trends.kpis.total_cases_trend <= 0 %}trending_down{% else %}trending_up{% endif %}</span>
+      {% if trends.kpis.total_cases_trend >= 0 %}+{% endif %}{{ trends.kpis.total_cases_trend }}% vs période précédente
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-rose-500">emergency</span>
+    <p class="auth-kpi__label">Alertes SOS (30 jours)</p>
+    <p class="auth-kpi__value text-rose-600">{{ trends.kpis.sos_alerts|intcomma }}</p>
+    <p class="auth-kpi__trend {% if trends.kpis.sos_alerts_trend <= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      <span class="material-symbols-rounded text-xs">{% if trends.kpis.sos_alerts_trend <= 0 %}trending_down{% else %}trending_up{% endif %}</span>
+      {% if trends.kpis.sos_alerts_trend >= 0 %}+{% endif %}{{ trends.kpis.sos_alerts_trend }}% vs période précédente
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-violet-500">monitoring</span>
+    <p class="auth-kpi__label">Taux d'incidence (/100k hab.)</p>
+    <p class="auth-kpi__value">{{ trends.kpis.incidence }}</p>
+    <p class="auth-kpi__trend {% if trends.kpis.incidence_trend <= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      <span class="material-symbols-rounded text-xs">{% if trends.kpis.incidence_trend <= 0 %}trending_down{% else %}trending_up{% endif %}</span>
+      {% if trends.kpis.incidence_trend >= 0 %}+{% endif %}{{ trends.kpis.incidence_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-orange-500">warning</span>
+    <p class="auth-kpi__label">Alertes actives réseau</p>
+    <p class="auth-kpi__value">{{ trends.kpis.active_alerts|intcomma }}</p>
+    <p class="auth-kpi__hint">Surveillance temps réel</p>
+  </article>
+</section>
+
+{% if not trends.has_data %}
+<div class="auth-portal__banner !bg-sky-50 !text-sky-900 border border-sky-200 mb-3">
+  Aucune demande médicamenteuse classée sur la période. Les indicateurs s'alimentent automatiquement dès l'activité du réseau.
+</div>
+{% endif %}
+
+<section class="auth-trends-mid">
+  <article class="auth-panel auth-trends-chart-panel">
+    <h3>Évolution des cas par maladie</h3>
+    <div class="auth-trends-evo" role="img" aria-label="Évolution des cas sur 30 jours">
+      <svg viewBox="0 0 280 80" preserveAspectRatio="none" class="auth-trends-evo__svg">
+        {% for d in trends.diseases %}
+        <polyline class="auth-trends-evo__line" style="stroke:{{ d.color }}" points="{{ d.evolution_line }}" />
+        {% endfor %}
+      </svg>
+      <div class="auth-trends-evo__labels">
+        <span>{{ trends.evolution.0.label }}</span>
+        <span>{{ trends.evolution.14.label }}</span>
+        <span>{{ trends.evolution.29.label }}</span>
+      </div>
+    </div>
+    <div class="auth-trends-legend">
+      {% for d in trends.diseases %}
+      <span><i class="auth-dot" style="background:{{ d.color }}"></i> {{ d.label }}</span>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Répartition des cas par maladie</h3>
+    <div class="auth-trends-donut">
+      <div class="auth-trends-donut__ring" style="background: {{ trends.donut_gradient }};">
+        <span class="auth-trends-donut__center">{{ trends.donut_total|intcomma }}<small>Cas totaux</small></span>
+      </div>
+      <ul class="auth-trends-donut__legend">
+        {% for t in trends.donut_types %}
+        <li>
+          <span class="inline-flex items-center gap-2 min-w-0">
+            <span class="auth-dot" style="background:{{ t.color }}"></span>
+            <span class="truncate">{{ t.label }}</span>
+          </span>
+          <strong>{{ t.pct }}%</strong>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    <a href="{% url 'bo_authority_reports' %}" class="auth-trends-detail-link">Voir le détail →</a>
+  </article>
+
+  <article class="auth-panel auth-trends-map-panel">
+    <h3>Tendances par région</h3>
+    <div class="auth-trends-map-wrap">
+      <div id="auth-map-trends" class="auth-map auth-map--trends" role="img" aria-label="Carte d'incidence au Gabon"></div>
+      <div class="auth-map-legend auth-map-legend--trends">
+        <p class="auth-map-legend__title">Incidence / 100k hab.</p>
+        <ul>
+          <li><span class="auth-map-legend__swatch" style="background:#fce7f3"></span> 0–10</li>
+          <li><span class="auth-map-legend__swatch" style="background:#f9a8d4"></span> 10–30</li>
+          <li><span class="auth-map-legend__swatch" style="background:#f472b6"></span> 30–60</li>
+          <li><span class="auth-map-legend__swatch" style="background:#db2777"></span> 60+</li>
+          <li><span class="auth-map-legend__swatch" style="background:#e5e7eb"></span> Aucune donnée</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="auth-trends-bottom">
+  <article class="auth-panel auth-trends-table-panel">
+    <h3>Maladies principales par région</h3>
+    <div class="auth-trends-table-wrap">
+      <table class="auth-trends-table">
+        <thead>
+          <tr>
+            <th>Région</th>
+            {% for d in trends.diseases %}
+            <th>{{ d.label }}</th>
+            {% endfor %}
+            <th>Incidence (/100k)</th>
+            <th>Évolution</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in trends.region_table %}
+          <tr>
+            <td class="font-bold whitespace-nowrap">{{ row.name }}</td>
+            {% for cell in row.diseases %}
+            <td>
+              <span class="auth-trends-cell-count">{{ cell.count|intcomma }}</span>
+              <span class="auth-trends-cell-pct">({{ cell.pct }}%)</span>
+            </td>
+            {% endfor %}
+            <td class="font-bold">{{ row.incidence }}</td>
+            <td>
+              <span class="auth-trends-trend {% if row.trend >= 0 %}is-up{% else %}is-down{% endif %}">
+                <span class="material-symbols-rounded text-xs">{% if row.trend >= 0 %}arrow_upward{% else %}arrow_downward{% endif %}</span>
+                {% if row.trend >= 0 %}+{% endif %}{{ row.trend }}%
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <a href="{% url 'bo_authority_reports' %}?type=trends" class="auth-trends-detail-link">Voir toutes les données →</a>
+  </article>
+
+  <div class="auth-trends-side">
+    <article class="auth-panel auth-trends-epi">
+      <h3>Alertes épidémiologiques</h3>
+      <ul class="auth-trends-epi-list">
+        {% for a in trends.epi_alerts %}
+        <li class="auth-trends-epi-item">
+          <span class="auth-trends-epi-badge auth-trends-epi-badge--{{ a.level }}">{{ a.badge }}</span>
+          <div class="min-w-0">
+            <p class="auth-trends-epi-item__title">{{ a.title }}</p>
+            <p class="auth-trends-epi-item__meta">{{ a.meta }}</p>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      <a href="{% url 'bo_authority_alerts' %}" class="auth-trends-detail-link">Voir toutes les alertes →</a>
+    </article>
+
+    <article class="auth-panel">
+      <h3>Indicateurs clés</h3>
+      <div class="auth-trends-key-grid">
+        {% for ind in trends.key_indicators %}
+        <div class="auth-trends-key-tile">
+          <span class="material-symbols-rounded auth-trends-key-tile__icon">{{ ind.icon }}</span>
+          <p class="auth-trends-key-tile__label">{{ ind.label }}</p>
+          <p class="auth-trends-key-tile__value">{{ ind.value }}{% if ind.unit %}<small>{{ ind.unit }}</small>{% endif %}</p>
+          <p class="auth-trends-key-tile__trend {% if ind.trend <= 0 %}is-good{% else %}is-bad{% endif %}">
+            {% if ind.trend >= 0 %}+{% endif %}{{ ind.trend }}%
+          </p>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+</section>
+
+<footer class="auth-national-footer auth-national-footer--info">
+  <p>
+    Données mises à jour le {{ trends.last_updated|date:"d/m/Y" }} à {{ trends.last_updated|date:"H:i" }}.
+    Toutes les données sont anonymisées conformément aux normes de protection des données.
+  </p>
+  <span class="flex items-center gap-1 text-[0.65rem]">
+    Source : Système national de surveillance sanitaire
+    <button type="button" class="auth-alerts-refresh" onclick="location.reload()" aria-label="Actualiser">
+      <span class="material-symbols-rounded text-sm">refresh</span>
+    </button>
+  </span>
+</footer>
+
+{{ trends.map_data|json_script:"authority-map-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=4"></script>
+<script>
+document.getElementById('auth-trends-filter-toggle')?.addEventListener('click', function () {
+  document.getElementById('auth-trends-filters')?.classList.toggle('hidden');
+});
+</script>
+{% endblock %}

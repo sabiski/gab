@@ -1,0 +1,272 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Suivi des pharmacies et établissements de santé{% endblock %}
+{% block auth_extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Suivi des pharmacies et établissements de santé <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Supervisez la conformité réglementaire et la couverture du réseau pharmaceutique national.</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <div class="auth-date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{{ pharma.period_start|date:"d/m/Y" }} – {{ pharma.period_end|date:"d/m/Y" }}</span>
+    </div>
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline" id="auth-pharma-filter-toggle">
+      <span class="material-symbols-rounded text-sm">tune</span> Filtres
+    </button>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-icon-btn relative" aria-label="Alertes sanitaires">
+      <span class="material-symbols-rounded">notifications</span>
+    </a>
+    {% if bo_role != "admin" %}{% include "backoffice/authority/partials/user_chip.html" %}{% endif %}
+  </div>
+</header>
+
+<form method="get" id="auth-pharma-filters" class="auth-stocks-filters auth-pharma-filters {% if filter_region or filter_status or filter_compliance or filter_type or filter_search %}{% else %}hidden{% endif %}">
+  <div>
+    <label>Région</label>
+    <select name="region" class="auth-stocks-filters__input">
+      <option value="">Toutes</option>
+      {% for r in regions %}
+      <option value="{{ r.slug }}" {% if filter_region == r.slug %}selected{% endif %}>{{ r.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Statut</label>
+    <select name="status" class="auth-stocks-filters__input">
+      <option value="">Tous</option>
+      {% for val, label in pharma.status_choices %}
+      <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Conformité</label>
+    <select name="compliance" class="auth-stocks-filters__input">
+      <option value="">Toutes</option>
+      {% for val, label in pharma.compliance_choices %}
+      <option value="{{ val }}" {% if filter_compliance == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Type</label>
+    <select name="type" class="auth-stocks-filters__input">
+      <option value="">Tous</option>
+      {% for val, label in pharma.type_choices %}
+      <option value="{{ val }}" {% if filter_type == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="flex-1 min-w-[10rem]">
+    <label>Recherche</label>
+    <input type="search" name="q" value="{{ filter_search }}" placeholder="Nom, région…" class="auth-stocks-filters__input w-full">
+  </div>
+  <button type="submit" class="auth-filter-btn">Appliquer</button>
+  <a href="{% url 'bo_authority_pharmacies' %}" class="auth-map-link text-xs">Réinitialiser</a>
+</form>
+
+<section class="auth-kpi-grid auth-kpi-grid--5 auth-kpi-grid--national">
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-primary">local_pharmacy</span>
+    <p class="auth-kpi__label">Pharmacies actives</p>
+    <p class="auth-kpi__value">{{ pharma.kpis.active_pharmacies|intcomma }}</p>
+    <p class="auth-kpi__trend {% if pharma.kpis.active_pharmacies_trend >= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      {% if pharma.kpis.active_pharmacies_trend >= 0 %}+{% endif %}{{ pharma.kpis.active_pharmacies_trend }}% vs période précédente
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-sky-500">pending_actions</span>
+    <p class="auth-kpi__label">En attente d'agrément</p>
+    <p class="auth-kpi__value">{{ pharma.kpis.pending_pharmacies|intcomma }}</p>
+    <p class="auth-kpi__trend {% if pharma.kpis.pending_pharmacies_trend >= 0 %}text-amber-600{% else %}is-up{% endif %}">
+      {% if pharma.kpis.pending_pharmacies_trend >= 0 %}+{% endif %}{{ pharma.kpis.pending_pharmacies_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-emerald-500">verified</span>
+    <p class="auth-kpi__label">Conformes</p>
+    <p class="auth-kpi__value">{{ pharma.kpis.conformes|intcomma }}</p>
+    <p class="auth-kpi__hint">{{ pharma.kpis.conformes_pct }}% du réseau</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-orange-500">gpp_bad</span>
+    <p class="auth-kpi__label">Non conformes</p>
+    <p class="auth-kpi__value text-orange-600">{{ pharma.kpis.non_conformes|intcomma }}</p>
+    <p class="auth-kpi__hint">{{ pharma.kpis.non_conformes_pct }}%</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-rose-500">block</span>
+    <p class="auth-kpi__label">Suspendues / en attente</p>
+    <p class="auth-kpi__value text-rose-600">{{ pharma.kpis.suspended|intcomma }}</p>
+    <p class="auth-kpi__hint">{{ pharma.kpis.suspended_pct }}%</p>
+  </article>
+</section>
+
+{% if not pharma.has_data %}
+<div class="auth-portal__banner !bg-sky-50 !text-sky-900 border border-sky-200 mb-3">
+  Aucune pharmacie enregistrée sur la plateforme pour le moment.
+</div>
+{% endif %}
+
+<section class="auth-pharma-mid">
+  <article class="auth-panel">
+    <h3>Répartition par statut de conformité</h3>
+    <div class="auth-trends-donut">
+      <div class="auth-trends-donut__ring" style="background: {{ pharma.donut_gradient }};">
+        <span class="auth-trends-donut__center">{{ pharma.donut_total|intcomma }}<small>Structures</small></span>
+      </div>
+      <ul class="auth-trends-donut__legend">
+        {% for s in pharma.donut_slices %}
+        <li>
+          <span class="inline-flex items-center gap-2"><span class="auth-dot" style="background:{{ s.color }}"></span>{{ s.label }}</span>
+          <strong>{{ s.pct }}%</strong>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Classification par type de structure</h3>
+    <div class="auth-pharma-type-bars">
+      {% for t in pharma.type_bars %}
+      <div class="auth-pharma-type-row">
+        <span class="auth-pharma-type-row__label">{{ t.label }}</span>
+        <span class="auth-pharma-type-row__bar"><span style="width:{{ t.bar_pct }}%"></span></span>
+        <span class="auth-pharma-type-row__meta">{{ t.count|intcomma }} ({{ t.pct }}%)</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ink-muted">Aucune structure classée.</p>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="auth-panel auth-pharma-map-panel">
+    <div class="flex items-center justify-between gap-2 mb-2">
+      <h3 class="!mb-0">Répartition géographique</h3>
+      <a href="{% url 'bo_authority_map' %}" class="auth-map-link text-xs">Voir la carte complète →</a>
+    </div>
+    <div class="auth-pharma-geo-grid">
+      <div id="auth-map-pharmacies" class="auth-map auth-map--trends" role="img" aria-label="Carte pharmacies"></div>
+      <ul class="auth-pharma-geo-list">
+        {% for r in pharma.geo_rows|slice:":8" %}
+        <li>
+          <span>{{ r.name }}</span>
+          <strong>{{ r.count|intcomma }}</strong>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section class="auth-pharma-bottom">
+  <article class="auth-panel auth-pharma-table-panel">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h3 class="!mb-0">Liste des établissements et pharmacies</h3>
+      <a href="{% url 'bo_authority_reports' %}?type=pharmacies&export=csv" class="auth-filter-btn auth-filter-btn--outline text-xs">Exporter</a>
+    </div>
+    <div class="auth-pharma-table-wrap">
+      <table class="auth-pharma-table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Type</th>
+            <th>Région</th>
+            <th>Statut</th>
+            <th>Conformité</th>
+            <th>Dernière inspection</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in pharma.table_rows %}
+          <tr>
+            <td class="font-bold">{{ row.name }}</td>
+            <td>{{ row.type_label }}</td>
+            <td>{{ row.region }}</td>
+            <td>
+              <span class="auth-pharma-status auth-pharma-status--{{ row.status }}">{{ row.status_label }}</span>
+            </td>
+            <td>
+              <span class="auth-pharma-compliance auth-pharma-compliance--{{ row.compliance_bucket }}">
+                {{ row.compliance_label }} ({{ row.compliance_score }}%)
+              </span>
+            </td>
+            <td>
+              {% if row.last_inspection %}
+              {{ row.last_inspection|date:"d/m/Y" }}
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-xs text-ink-muted max-w-[10rem]">{{ row.notes }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-sm text-ink-muted py-8">Aucun résultat pour ces filtres.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if pharma.table_total > pharma.table_rows|length %}
+    <p class="auth-trends-detail-link mt-2">Affichage de {{ pharma.table_rows|length }} sur {{ pharma.table_total }} — affinez avec les filtres.</p>
+    {% endif %}
+  </article>
+
+  <div class="auth-pharma-side">
+    <article class="auth-panel">
+      <h3>Indicateurs clés de performance</h3>
+      <div class="auth-pharma-key-list">
+        {% for ind in pharma.key_indicators %}
+        <div class="auth-pharma-key-item">
+          <span class="material-symbols-rounded">{{ ind.icon }}</span>
+          <div>
+            <p class="auth-pharma-key-item__label">{{ ind.label }}</p>
+            <p class="auth-pharma-key-item__value">{{ ind.value }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </article>
+
+    <article class="auth-panel">
+      <h3>Principales non-conformités détectées</h3>
+      <div class="auth-pharma-nc-bars">
+        {% for n in pharma.nonconformities %}
+        <div class="auth-pharma-nc-row">
+          <span class="auth-pharma-nc-row__label">{{ n.label }}</span>
+          <span class="auth-pharma-nc-row__bar"><span style="width:{{ n.bar_pct }}%"></span></span>
+          <span class="auth-pharma-nc-row__pct">{{ n.pct }}%</span>
+        </div>
+        {% empty %}
+        <p class="text-sm text-ink-muted py-4">Aucune non-conformité détectée sur le réseau actuel.</p>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+</section>
+
+<footer class="auth-national-footer auth-national-footer--info">
+  <p>
+    <span class="material-symbols-rounded text-sm align-middle">info</span>
+    Données issues des pharmacies inscrites, de leurs documents réglementaires et des stocks déclarés sur Gab'Pharma.
+  </p>
+  <span class="text-[0.65rem]">
+    Dernière mise à jour : {{ pharma.last_updated|date:"d/m/Y" }} à {{ pharma.last_updated|date:"H:i" }}
+  </span>
+</footer>
+
+{{ pharma.map_data|json_script:"authority-map-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=6"></script>
+<script>
+document.getElementById('auth-pharma-filter-toggle')?.addEventListener('click', function () {
+  document.getElementById('auth-pharma-filters')?.classList.toggle('hidden');
+});
+</script>
+{% endblock %}

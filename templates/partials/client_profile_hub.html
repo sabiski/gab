@@ -1,0 +1,147 @@
+{# Hub « Mon profil » — site public + espace patient #}
+<div class="c-profile-hub {% if not in_espace %}max-w-lg mx-auto px-4 py-6{% endif %}">
+  {% if not in_espace %}
+  <header class="flex items-center justify-between mb-5">
+    <h1 class="text-2xl font-bold text-[#374151]">Mon profil</h1>
+    <a href="{{ parametres_url }}" class="h-10 w-10 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#6C3AED] hover:border-[#6C3AED]/30 transition" title="Paramètres">
+      <span class="material-symbols-rounded">settings</span>
+    </a>
+  </header>
+  {% endif %}
+
+  <section class="c-card p-4 mb-4">
+    <div class="flex items-start gap-4">
+      <div class="h-16 w-16 rounded-full bg-gradient-to-br from-[#6C3AED] to-[#8B5CF6] text-white text-xl font-bold flex items-center justify-center overflow-hidden shrink-0">
+        {% if user.avatar %}
+        <img src="{{ user.avatar.url }}" alt="" class="h-full w-full object-cover">
+        {% else %}
+        {{ user.first_name|default:user.username|slice:":1"|upper }}
+        {% endif %}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex flex-wrap items-center gap-2">
+          <p class="font-bold text-lg text-[#374151] truncate">{{ user.get_full_name|default:user.username }}</p>
+          <span class="c-pill c-pill--muted">Patient</span>
+        </div>
+        <p class="text-sm text-[#6B7280] truncate mt-0.5">{{ user.email }}</p>
+        <div class="flex flex-wrap gap-2 mt-2 text-xs font-semibold text-[#6B7280]">
+          <span class="c-pill c-pill--muted">Membre depuis {{ member_since }}</span>
+          {% if user.loyalty_points %}<span class="c-pill">{{ user.loyalty_points }} pts fidélité</span>{% endif %}
+          {% if is_verified %}<span class="c-pill c-pill--success">Compte vérifié</span>{% endif %}
+        </div>
+      </div>
+      {% if in_espace %}
+      <a href="{{ parametres_url }}" class="c-btn c-btn--ghost shrink-0 hidden sm:inline-flex" title="Paramètres">
+        <span class="material-symbols-rounded sm">settings</span>
+      </a>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="c-card p-5 mb-4 bg-gradient-to-br from-[#F5F3FF] to-white border-[#6C3AED]/20">
+    <div class="flex gap-3 items-start">
+      <span class="material-symbols-rounded text-[#6C3AED] text-2xl shrink-0">workspace_premium</span>
+      <div class="flex-1 min-w-0">
+        <p class="font-bold text-base text-[#374151]">Avantages Premium</p>
+        <p class="text-sm text-[#6B7280] mt-1">Recherches illimitées et frais de livraison réduits.</p>
+        {% if has_active_plan %}
+        <p class="text-xs font-semibold text-emerald-700 mt-2">Forfait actif — {{ access_status }}</p>
+        {% endif %}
+        <a href="{{ subscriptions_url }}" class="c-btn c-btn--primary mt-3">Voir les forfaits</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="c-card overflow-hidden mb-4">
+    <p class="px-4 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">Mon compte</p>
+    <div class="divide-y divide-[#F3F4F6]">
+      {% include "web/partials/profile_row.html" with url=personal_url icon="person" label="Informations personnelles" sublabel="Nom, e-mail, téléphone, photo" %}
+      {% include "web/partials/profile_row.html" with url=address_url icon="location_on" label="Adresse de livraison" sublabel=address_preview %}
+      {% include "web/partials/profile_row.html" with url=payment_url icon="payments" label="Moyens de paiement" sublabel=payment_label %}
+      {% include "web/partials/profile_row.html" with url=orders_url icon="history" label="Historique des commandes" sublabel=orders_count %}
+      {% include "web/partials/profile_row.html" with url=favorites_url icon="favorite" label="Favoris" sublabel="Pharmacies et médicaments" %}
+      {% if in_espace %}
+      {% include "web/partials/profile_row.html" with url=prescriptions_url icon="prescriptions" label="Ordonnances" sublabel="Mon dossier médical" %}
+      {% include "web/partials/profile_row.html" with url=loyalty_url icon="loyalty" label="Fidélité" sublabel=loyalty_label %}
+      {% include "web/partials/profile_row.html" with url=support_url icon="support" label="Réclamations" sublabel="Aide et tickets" %}
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="c-card overflow-hidden mb-4">
+    <p class="px-4 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-[#6C3AED]">Général</p>
+    <div class="divide-y divide-[#F3F4F6]">
+      {% include "web/partials/profile_row.html" with url=parametres_url icon="settings" label="Centre de paramètres" sublabel="Vue complète des réglages" %}
+      {% include "web/partials/profile_row.html" with url=notifications_url icon="notifications" label="Notifications" sublabel="Gérer les alertes et rappels" badge=unread_badge %}
+      {% include "web/partials/profile_row.html" with url=preferences_url icon="language" label="Langue de l'application" badge=language_label %}
+      {% include "web/partials/profile_row.html" with url=preferences_theme_url icon="dark_mode" label="Thème de l'application" badge=theme_label %}
+    </div>
+  </section>
+
+  <section class="c-card overflow-hidden mb-4">
+    <p class="px-4 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-[#6C3AED]">Sécurité et confidentialité</p>
+    <div class="divide-y divide-[#F3F4F6]">
+      {% include "web/partials/profile_row.html" with url=security_url icon="lock" label="Sécurité du compte" sublabel="Mot de passe, empreinte, code PIN" %}
+      {% include "web/partials/profile_row.html" with url=privacy_url icon="shield" label="Confidentialité" sublabel="Gérer vos données personnelles" %}
+      {% if in_espace %}
+      {% include "web/partials/profile_row.html" with url=sessions_url icon="devices" label="Sessions actives" sublabel="Voir et gérer vos connexions" %}
+      {% endif %}
+    </div>
+  </section>
+
+  {% if in_espace %}
+  <section class="c-card overflow-hidden mb-4">
+    <p class="px-4 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-[#6C3AED]">Préférences</p>
+    <div class="divide-y divide-[#F3F4F6]">
+      {% include "web/partials/profile_row.html" with url=address_url icon="home_pin" label="Adresse de livraison par défaut" sublabel=address_preview %}
+      {% include "web/partials/profile_row.html" with url=payment_url icon="account_balance_wallet" label="Moyen de paiement par défaut" sublabel=payment_label %}
+      {% include "web/partials/profile_row.html" with url=subscriptions_url icon="schedule" label="Durée du pass par défaut" badge=default_pass_label %}
+      {% include "web/partials/profile_row.html" with url=parametres_save_searches_url icon="history" label="Enregistrer mes recherches" badge=save_searches_label %}
+      {% include "web/partials/profile_row.html" with url=parametres_data_saver_url icon="data_saver_on" label="Mode économie de données" badge=data_saver_label %}
+    </div>
+  </section>
+
+  <section class="c-card overflow-hidden mb-4">
+    <p class="px-4 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-[#6C3AED]">À propos</p>
+    <div class="divide-y divide-[#F3F4F6]">
+      {% include "web/partials/profile_row.html" with url=about_url icon="medication" label="À propos de Gab'Pharma" sublabel="Version 2.1.0" %}
+      {% include "web/partials/profile_row.html" with url=support_url icon="help" label="Aide et support" sublabel="FAQ et contact" %}
+      {% include "web/partials/profile_row.html" with url=terms_url icon="description" label="Conditions d'utilisation" %}
+      {% include "web/partials/profile_row.html" with url=privacy_url icon="policy" label="Politique de confidentialité" %}
+    </div>
+  </section>
+
+  <a href="{% url 'logout' %}" class="c-settings-logout mb-4">
+    <span class="material-symbols-rounded sm">logout</span> Se déconnecter
+  </a>
+
+  <div class="space-y-3 mb-4">
+    <div class="c-card p-4 flex gap-3 items-start bg-[#EFF6FF] border-[#2563EB]/20">
+      <span class="material-symbols-rounded text-[#2563EB]">support_agent</span>
+      <div>
+        <p class="font-bold text-sm text-[#374151]">Besoin d'aide ?</p>
+        <p class="text-xs text-[#6B7280] mt-1">Notre équipe est disponible 7j/7 de 7h à 22h.</p>
+        <a href="tel:+24111223344" class="text-sm font-bold text-[#2563EB] mt-1 inline-block">+241 11 22 33 44</a>
+      </div>
+    </div>
+    <div class="c-card p-4 flex gap-3 items-start">
+      <span class="material-symbols-rounded text-emerald-600">verified_user</span>
+      <div>
+        <p class="font-bold text-sm text-[#374151]">Vos données sont sécurisées</p>
+        <p class="text-xs text-[#6B7280] mt-1">Chiffrement de niveau bancaire pour vos informations de santé.</p>
+      </div>
+    </div>
+    <div class="c-card p-4 flex gap-3 items-start bg-[#F5F3FF] border-[#6C3AED]/15">
+      <span class="material-symbols-rounded text-[#6C3AED]">tips_and_updates</span>
+      <div>
+        <p class="font-bold text-sm text-[#374151]">Astuce</p>
+        <p class="text-xs text-[#6B7280] mt-1">Activez le mode économie de données pour une navigation plus rapide sur réseau mobile.</p>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <a href="{% url 'logout' %}" class="c-card flex items-center justify-center gap-2 py-3.5 text-rose-600 font-bold text-sm hover:bg-rose-50 transition mb-4">
+    <span class="material-symbols-rounded sm">logout</span> Se déconnecter
+  </a>
+  {% endif %}
+</div>

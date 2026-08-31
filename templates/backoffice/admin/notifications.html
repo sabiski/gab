@@ -1,0 +1,110 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Notifications{% endblock %}
+{% block bo_label %}Administration{% endblock %}
+{% block bo_title %}Centre de notifications{% endblock %}
+{% block bo_content %}
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 max-w-6xl">
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Total</p><p class="text-2xl font-extrabold mt-1">{{ stats.total }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Non lues</p><p class="text-2xl font-extrabold text-amber-600 mt-1">{{ stats.unread }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Aujourd'hui</p><p class="text-2xl font-extrabold text-primary mt-1">{{ stats.sent_today }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Plafond / jour</p><p class="text-2xl font-extrabold mt-1">{{ settings_obj.max_daily_per_user }}</p></div>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-6 max-w-6xl mb-8">
+  <section class="bg-white rounded-2xl border p-5">
+    <h2 class="font-extrabold mb-3">Nouvelle campagne</h2>
+    <form method="post" class="space-y-3 text-sm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_campaign">
+      <input name="title" required maxlength="200" placeholder="Titre" class="w-full border rounded-xl px-3 py-2">
+      <textarea name="message" required rows="3" placeholder="Message" class="w-full border rounded-xl px-3 py-2"></textarea>
+      <div class="flex flex-wrap gap-2">
+        <select name="notification_type" class="border rounded-xl px-3 py-2 text-xs">
+          {% for val, label in notif_types %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+        <select name="audience" class="border rounded-xl px-3 py-2 text-xs">
+          {% for val, label in audiences %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <input type="hidden" name="channels" value="in_app">
+      <div class="flex flex-wrap gap-3 text-xs">
+        <span class="text-ink-muted">In-app (toujours)</span>
+        <label class="flex items-center gap-1"><input type="checkbox" name="channels" value="push" checked> Push</label>
+        <label class="flex items-center gap-1"><input type="checkbox" name="channels" value="sms"> SMS</label>
+        <label class="flex items-center gap-1"><input type="checkbox" name="channels" value="email"> Email</label>
+        <label class="flex items-center gap-1"><input type="checkbox" name="channels" value="whatsapp"> WhatsApp</label>
+      </div>
+      <input type="datetime-local" name="scheduled_at" class="border rounded-xl px-3 py-2 text-xs w-full" placeholder="Planifier (optionnel)">
+      <div class="flex flex-wrap gap-2">
+        <button class="bg-canvas border font-bold px-4 py-2 rounded-xl text-xs">Enregistrer brouillon</button>
+        <button name="send_now" value="1" class="bg-primary text-white font-bold px-4 py-2 rounded-xl text-xs">Envoyer maintenant</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="bg-white rounded-2xl border p-5">
+    <h2 class="font-extrabold mb-3">Paramètres plateforme</h2>
+    <form method="post" class="space-y-3 text-sm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_settings">
+      <label class="block text-xs font-bold text-ink-muted">Fréquence max / utilisateur / jour (hors critiques)</label>
+      <input type="number" name="max_daily_per_user" min="1" max="50" value="{{ settings_obj.max_daily_per_user }}" class="border rounded-xl px-3 py-2 w-24">
+      <div class="flex flex-wrap gap-2 items-center">
+        <label class="text-xs">Plage calme</label>
+        <input type="time" name="quiet_hours_start" value="{{ settings_obj.quiet_hours_start|time:'H:i' }}" class="border rounded-xl px-2 py-1.5 text-xs">
+        <span class="text-xs">→</span>
+        <input type="time" name="quiet_hours_end" value="{{ settings_obj.quiet_hours_end|time:'H:i' }}" class="border rounded-xl px-2 py-1.5 text-xs">
+      </div>
+      <p class="text-[10px] text-ink-muted">Les alertes sanitaires et sécurité ignorent la plage calme.</p>
+      <div class="flex flex-wrap gap-3 text-xs pt-1">
+        <label><input type="checkbox" name="channel_push_enabled" {% if settings_obj.channel_push_enabled %}checked{% endif %}> Push</label>
+        <label><input type="checkbox" name="channel_sms_enabled" {% if settings_obj.channel_sms_enabled %}checked{% endif %}> SMS</label>
+        <label><input type="checkbox" name="channel_email_enabled" {% if settings_obj.channel_email_enabled %}checked{% endif %}> Email</label>
+        <label><input type="checkbox" name="channel_whatsapp_enabled" {% if settings_obj.channel_whatsapp_enabled %}checked{% endif %}> WhatsApp (API)</label>
+      </div>
+      <button class="bg-primary text-white font-bold px-4 py-2 rounded-xl text-xs">Enregistrer</button>
+    </form>
+  </section>
+</div>
+
+<section class="bg-white rounded-2xl border overflow-x-auto max-w-6xl">
+  <h2 class="font-extrabold p-5 pb-0">Campagnes récentes</h2>
+  <table class="w-full text-sm mt-3">
+    <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+      <tr>
+        <th class="px-4 py-3">Titre</th>
+        <th class="px-4 py-3">Cible</th>
+        <th class="px-4 py-3">Statut</th>
+        <th class="px-4 py-3">Destinataires</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in campaigns %}
+      <tr class="border-t align-top">
+        <td class="px-4 py-3">
+          <p class="font-bold">{{ c.title }}</p>
+          <p class="text-xs text-ink-muted">{{ c.created_at|date:"d/m/Y H:i" }}</p>
+        </td>
+        <td class="px-4 py-3 text-xs">{{ c.get_audience_display }}</td>
+        <td class="px-4 py-3 text-xs">{{ c.get_status_display }}</td>
+        <td class="px-4 py-3 text-xs">{{ c.recipients_count }}</td>
+        <td class="px-4 py-3">
+          {% if c.status == "draft" or c.status == "scheduled" %}
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="send_campaign">
+            <input type="hidden" name="campaign_id" value="{{ c.id }}">
+            <button class="text-xs font-bold text-primary">Envoyer</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="px-4 py-8 text-center text-ink-muted">Aucune campagne</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

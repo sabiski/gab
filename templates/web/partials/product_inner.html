@@ -1,0 +1,299 @@
+{% load portal_urls %}
+{% if client_portal %}<div class="space-y-5">{% else %}<div class="max-w-site mx-auto px-4 py-6 lg:py-8">{% endif %}
+  <nav class="portal-hide-in-espace text-xs text-ink-muted mb-4 flex items-center gap-1.5 flex-wrap">
+    <a href="{% portal_url 'home' %}" class="hover:text-primary">Accueil</a>
+    <span>/</span>
+    <a href="{% portal_url 'search' %}" class="hover:text-primary">Médicaments</a>
+    {% if medicine.category %}
+    <span>/</span>
+    <a href="{% portal_url 'search' %}?category={{ medicine.category.slug }}" class="hover:text-primary">{{ medicine.category.name }}</a>
+    {% endif %}
+    <span>/</span>
+    <span class="text-ink">{{ medicine.name }}</span>
+  </nav>
+
+  <div class="grid lg:grid-cols-12 gap-8 lg:gap-10">
+    <!-- Colonne achat (style parapharmacie) -->
+    <div class="lg:col-span-5">
+      <div class="bg-white border border-slate-100 rounded-2xl overflow-hidden lg:sticky lg:top-24">
+        {% if rating_count %}
+        <div class="px-5 pt-4 flex items-center gap-2">
+          <span class="inline-flex items-center gap-1 bg-primary text-white font-extrabold text-sm px-2.5 py-1 rounded-lg">{{ rating_avg|floatformat:1 }}</span>
+          <a href="#avis-clients" class="text-xs font-bold text-primary underline">{{ rating_count }} avis</a>
+        </div>
+        {% endif %}
+
+        <div class="aspect-[4/3] bg-gradient-to-b from-canvas to-white flex items-center justify-center p-6 relative mx-5 mt-3 rounded-xl">
+          {% if stock.promotional_price %}
+          <span class="absolute top-3 left-3 bg-rose-500 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-md">Promo</span>
+          {% elif medicine.requires_prescription %}
+          <span class="absolute top-3 left-3 bg-amber-500 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-md">Ordonnance</span>
+          {% endif %}
+          {% if medicine.image %}
+          <img src="{{ medicine.image.url }}" alt="{{ medicine.name }}" class="max-h-full max-w-full object-contain">
+          {% else %}
+          <div class="text-center text-primary">
+            <span class="material-symbols-rounded filled text-6xl opacity-80">medication</span>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="p-5 space-y-4">
+          <div>
+            <p class="text-xs text-ink-muted uppercase tracking-wider font-semibold">{{ medicine.laboratory|default:"—" }}</p>
+            <h1 class="text-2xl lg:text-3xl font-extrabold text-ink mt-1 tracking-tight">{{ medicine.name }}</h1>
+            {% if medicine.barcode %}
+            <p class="text-xs text-ink-muted mt-2">Référence : <strong class="text-ink font-semibold">{{ medicine.barcode }}</strong></p>
+            {% endif %}
+            <p class="text-xs font-semibold text-primary-700 mt-1">{{ stock.pharmacy.name }}</p>
+          </div>
+
+          {% if medicine.tagline %}
+          <p class="text-sm font-semibold text-ink leading-snug border-l-4 border-primary pl-3">{{ medicine.tagline }}</p>
+          {% elif medicine.description %}
+          <p class="text-sm font-medium text-ink-muted">{{ medicine.description }}</p>
+          {% endif %}
+
+          {% if variants|length > 1 %}
+          <div>
+            <p class="text-xs font-bold text-ink-muted uppercase mb-2">Contenance</p>
+            <div class="flex flex-wrap gap-2">
+              {% for v in variants %}
+              <a href="{% portal_url 'product_detail' v.id %}"
+                class="px-3.5 py-2 rounded-full text-sm font-bold border transition
+                {% if v.id == stock.id %}bg-primary text-white border-primary{% else %}hover:border-primary hover:text-primary{% endif %}
+                {% if show_availability and v.quantity <= 0 %}opacity-50{% endif %}">
+                {{ v.medicine.format_label|default:"Standard" }}
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          {% elif medicine.format_label %}
+          <div>
+            <p class="text-xs font-bold text-ink-muted uppercase mb-1">Contenance</p>
+            <p class="text-sm font-bold text-ink">{{ medicine.format_label }}</p>
+          </div>
+          {% endif %}
+
+          <div class="flex flex-wrap items-end justify-between gap-4 pt-1">
+            <div>
+              {% if stock.promotional_price %}
+              <p class="text-3xl font-extrabold text-primary tracking-tight">{{ stock.formatted_price }}</p>
+              <p class="text-sm text-ink-muted line-through">{{ stock.price }} FCFA</p>
+              {% else %}
+              <p class="text-3xl font-extrabold text-primary tracking-tight">{{ stock.formatted_price }}</p>
+              {% endif %}
+            </div>
+            {% if user.is_authenticated %}
+              {% if show_availability and stock.quantity <= 0 %}
+              <span class="text-sm font-bold text-rose-600">Rupture de stock</span>
+              {% elif show_availability %}
+              <form method="post" action="{% portal_url 'cart_add' stock.id %}" class="flex items-center gap-2 js-cart-add-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <div class="flex items-center border rounded-full overflow-hidden">
+                  <input type="number" name="qty" value="1" min="1" max="{{ stock.quantity }}" class="w-12 text-center text-sm py-2.5 border-0 outline-none">
+                </div>
+                <button class="bg-primary hover:bg-primary-600 text-white font-bold text-sm px-6 py-2.5 rounded-full inline-flex items-center gap-1 shadow-sm">
+                  <span class="material-symbols-rounded sm">add_shopping_cart</span> Ajouter
+                </button>
+              </form>
+              {% else %}
+              <form method="post" action="{% portal_url 'cart_add' stock.id %}" class="flex items-center gap-2 js-cart-add-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="qty" value="1">
+                <button class="bg-primary hover:bg-primary-600 text-white font-bold text-sm px-6 py-2.5 rounded-full inline-flex items-center gap-1 shadow-sm">
+                  <span class="material-symbols-rounded sm">add_shopping_cart</span> Ajouter au panier
+                </button>
+              </form>
+              {% endif %}
+            {% else %}
+            <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="bg-primary text-white font-bold text-sm px-6 py-2.5 rounded-full">Se connecter</a>
+            {% endif %}
+          </div>
+
+          <ul class="text-sm space-y-2 border-t border-slate-100 pt-4">
+            <li><span class="text-ink-muted">Forme :</span> <strong class="text-ink">{{ medicine.form_label }}</strong></li>
+            {% if medicine.recommended_by %}
+            <li><span class="text-ink-muted">Recommandé par :</span> <strong class="text-ink">{{ medicine.recommended_by }}</strong></li>
+            {% endif %}
+            {% if show_availability %}
+            <li><span class="text-ink-muted">Disponibilité :</span> <strong class="text-ink">{{ stock.availability_label }}</strong></li>
+            {% else %}
+            <li class="flex flex-wrap items-center gap-2">
+              <span class="text-ink-muted">Disponibilité :</span>
+              <a href="{% portal_url 'verify_stock_availability' stock.id %}" class="inline-flex items-center gap-1 text-xs font-bold text-primary bg-primary-50 border border-primary/20 px-3 py-1.5 rounded-full hover:bg-primary-100">
+                <span class="material-symbols-rounded sm">inventory</span> Vérifier la disponibilité
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+
+          <div class="space-y-2 text-xs font-medium border-t border-slate-100 pt-4">
+            <p class="flex items-start gap-2 text-ink">
+              <span class="material-symbols-rounded sm text-primary shrink-0 mt-0.5">local_shipping</span>
+              {{ stock.delivery_promise_text }}
+            </p>
+            <p class="flex items-start gap-2 text-ink-muted">
+              <span class="material-symbols-rounded sm text-primary shrink-0 mt-0.5">verified_user</span>
+              Paiement <strong class="text-ink">100&nbsp;% sécurisé</strong> (CB, Moov Money, Airtel Money)
+            </p>
+          </div>
+
+          {% if medicine.requires_prescription %}
+          <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 font-medium">
+            <strong>Ordonnance obligatoire</strong> — vous devrez joindre une ordonnance valide à la commande.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Colonne contenu -->
+    <div class="lg:col-span-7 space-y-6">
+      {% if medicine.presentation %}
+      <section class="bg-white border border-slate-100 rounded-2xl p-5 lg:p-6">
+        <h2 class="text-xs font-extrabold text-ink-muted uppercase tracking-widest mb-4">Présentation</h2>
+        <div class="text-sm text-ink leading-relaxed whitespace-pre-line">{{ medicine.presentation }}</div>
+      </section>
+      {% endif %}
+
+      {% if stock.pharmacist_advice_text %}
+      <section class="bg-primary-50 border border-primary/20 rounded-2xl p-5 lg:p-6">
+        <h2 class="text-base font-extrabold text-ink mb-3">
+          Avis sur {{ medicine.name }}
+          {% if stock.pharmacist_name %}
+          par {{ stock.pharmacist_name }}, {{ stock.pharmacist_title|default:"Docteur en pharmacie" }}
+          {% else %}
+          — conseil du pharmacien
+          {% endif %}
+        </h2>
+        {% if stock.pharmacist_name %}
+        <div class="flex items-center gap-3 mb-3">
+          <div class="h-11 w-11 rounded-full bg-primary/15 flex items-center justify-center text-primary">
+            <span class="material-symbols-rounded">local_pharmacy</span>
+          </div>
+          <div class="text-xs">
+            <p class="font-bold text-ink">{{ stock.pharmacist_name }}</p>
+            <p class="text-ink-muted">{{ stock.pharmacist_title|default:"Docteur en pharmacie" }}</p>
+            {% if stock.pharmacist_rpps %}<p class="text-ink-muted">RPPS : {{ stock.pharmacist_rpps }}</p>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+        <p class="text-sm text-ink leading-relaxed whitespace-pre-line font-medium">{{ stock.pharmacist_advice_text }}</p>
+      </section>
+      {% endif %}
+
+      {% if medicine.usage_advice %}
+      <section class="bg-white border border-slate-100 rounded-2xl p-5 lg:p-6">
+        <h2 class="text-xs font-extrabold text-ink-muted uppercase tracking-widest mb-4">Conseils d'utilisation</h2>
+        <div class="text-sm text-ink leading-relaxed whitespace-pre-line">{{ medicine.usage_advice }}</div>
+      </section>
+      {% endif %}
+
+      {% if medicine.composition %}
+      <section class="bg-white border border-slate-100 rounded-2xl p-5 lg:p-6">
+        <h2 class="text-xs font-extrabold text-ink-muted uppercase tracking-widest mb-4">Composition</h2>
+        <div class="text-sm text-ink leading-relaxed whitespace-pre-line">{{ medicine.composition }}</div>
+      </section>
+      {% endif %}
+
+      <p class="text-xs text-ink-muted font-medium px-1">Mis à jour le : {{ content_updated_at|date:"d/m/Y" }}</p>
+
+      {% if variants|length > 1 %}
+      <section class="bg-white border border-slate-100 rounded-2xl p-5">
+        <h2 class="text-xs font-extrabold text-ink-muted uppercase tracking-widest mb-3">Variantes de l'article</h2>
+        <ul class="text-sm space-y-1.5">
+          {% for v in variants %}
+          <li>
+            <a href="{% portal_url 'product_detail' v.id %}" class="font-bold text-primary hover:underline">
+              {{ medicine.name }} — Contenance : {{ v.medicine.format_label }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      {% if questions %}
+      <section class="bg-white border border-slate-100 rounded-2xl p-5 lg:p-6">
+        <h2 class="text-lg font-extrabold text-ink mb-4">Questions / Réponses</h2>
+        <div class="space-y-5">
+          {% for q in questions %}
+          <div>
+            <h3 class="font-extrabold text-sm text-ink">{{ q.question }}</h3>
+            <p class="text-sm text-ink-muted mt-1.5 leading-relaxed">{{ q.answer }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      <section id="avis-clients" class="bg-white border border-slate-100 rounded-2xl p-5 lg:p-6">
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+          <div>
+            <h2 class="text-lg font-extrabold text-ink">Avis {{ medicine.name }}</h2>
+            {% if rating_count %}
+            <p class="text-sm text-ink-muted mt-1">
+              Moyenne de <strong class="text-primary text-lg">{{ rating_avg|floatformat:1 }}</strong> sur {{ rating_count }} avis
+            </p>
+            {% endif %}
+          </div>
+          {% if rating_count %}
+          <span class="text-3xl font-extrabold text-primary">{{ rating_avg|floatformat:1 }}</span>
+          {% endif %}
+        </div>
+
+        {% if reviews %}
+        <div class="space-y-4 mb-6">
+          {% for r in reviews %}
+          <article class="border-b border-slate-100 pb-4 last:border-0">
+            <div class="flex flex-wrap items-center gap-2 text-sm mb-1">
+              <span class="font-bold text-ink">{{ r.user.get_full_name|default:r.user.username }}</span>
+              <span class="text-amber-500 font-extrabold">{{ r.rating }}/5</span>
+              <span class="text-xs text-ink-muted">{{ r.created_at|date:"d/m/Y" }}</span>
+            </div>
+            <p class="text-sm text-ink-muted leading-relaxed">{{ r.comment }}</p>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-ink-muted mb-4">Aucun avis pour l'instant.</p>
+        {% endif %}
+
+        {% if user.is_authenticated %}
+        <form method="post" class="border-t border-slate-100 pt-4 space-y-3 text-sm">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="review">
+          <p class="font-extrabold text-ink">Donner votre avis</p>
+          <label class="block">
+            <span class="text-xs font-bold text-ink-muted">Note</span>
+            <select name="rating" class="mt-1 border rounded-xl px-3 py-2">
+              {% for i in "54321" %}
+              <option value="{{ i }}" {% if i == "5" %}selected{% endif %}>{{ i }} / 5</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="block">
+            <span class="text-xs font-bold text-ink-muted">Votre commentaire</span>
+            <textarea name="comment" required rows="3" class="mt-1 w-full border rounded-xl px-3 py-2" placeholder="Partagez votre expérience…"></textarea>
+          </label>
+          <button class="bg-primary text-white font-bold px-5 py-2.5 rounded-full">Publier</button>
+        </form>
+        {% endif %}
+      </section>
+
+      {% if related %}
+      <section>
+        <h2 class="text-lg font-extrabold text-ink mb-4">Produits associés</h2>
+        <div class="grid sm:grid-cols-2 gap-4">
+          {% for s in related %}
+          {% include "web/partials/product_card.html" with stock=s show_availability=False %}
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </div>
+  </div>
+</div>

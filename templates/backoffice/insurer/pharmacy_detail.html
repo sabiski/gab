@@ -1,0 +1,105 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}{{ pharmacy.name }}{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claims-page-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{{ back_url }}" class="ins-claims-back" aria-label="Retour"><span class="material-symbols-rounded">arrow_back</span></a>
+    <div>
+      <h1>{{ pharmacy.name }}</h1>
+      <p>Fiche pharmacie partenaire — {{ pharmacy.code }}</p>
+    </div>
+  </div>
+</header>
+
+<section class="ins-pharmacy-detail-hero">
+  <div class="ins-pharmacy-detail-logo">
+    {% if pharmacy.ui_logo_url %}
+    <img src="{{ pharmacy.ui_logo_url }}" alt="{{ pharmacy.name }}">
+    {% else %}
+    <span class="ins-pharmacy-icon ins-pharmacy-icon--{{ pharmacy.logo_color|default:'green' }}">
+      <span class="material-symbols-rounded">local_pharmacy</span>
+    </span>
+    {% endif %}
+  </div>
+  <div class="ins-pharmacy-detail-meta">
+    <span class="ins-pharmacy-status ins-pharmacy-status--{{ pharmacy.ui_status.tone }}">
+      <span class="material-symbols-rounded sm">{{ pharmacy.ui_status.icon }}</span>{{ pharmacy.ui_status.label }}
+    </span>
+    <p class="ins-pharmacy-detail-address">{{ pharmacy.ui_location }}</p>
+    <p class="text-sm text-ink-muted">{{ pharmacy.city }} · {{ pharmacy.region }}</p>
+    <ul class="ins-pharmacy-detail-facts">
+      <li><strong>Code partenaire</strong> <span class="font-mono">{{ pharmacy.code }}</span></li>
+      <li><strong>Téléphone</strong> {{ pharmacy.phone|default:"—" }}</li>
+      <li><strong>E-mail</strong> {{ pharmacy.email|default:"—" }}</li>
+      <li><strong>Adhésion</strong> {{ pharmacy.ui_adhesion|date:"d/m/Y" }}</li>
+      <li><strong>Horaires</strong> {{ pharmacy.opening_hours|default:"—" }}</li>
+    </ul>
+  </div>
+</section>
+
+<section class="ins-claims-kpi ins-pharmacy-detail-kpi">
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--purple">
+    <span class="material-symbols-rounded">description</span>
+    <div>
+      <p class="ins-claims-kpi__label">Demandes totales</p>
+      <p class="ins-claims-kpi__value">{{ detail.total_claims|intcomma }}</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--green">
+    <span class="material-symbols-rounded">payments</span>
+    <div>
+      <p class="ins-claims-kpi__label">Montant pris en charge</p>
+      <p class="ins-claims-kpi__value">{{ detail.total_amount|intcomma }} <span class="text-xs">FCFA</span></p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--amber">
+    <span class="material-symbols-rounded">schedule</span>
+    <div>
+      <p class="ins-claims-kpi__label">En attente</p>
+      <p class="ins-claims-kpi__value">{{ detail.pending_claims|intcomma }}</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--green">
+    <span class="material-symbols-rounded">check_circle</span>
+    <div>
+      <p class="ins-claims-kpi__label">Validées / payées</p>
+      <p class="ins-claims-kpi__value">{{ detail.approved_claims|add:detail.paid_claims|intcomma }}</p>
+    </div>
+  </article>
+</section>
+
+<div class="ins-pharmacy-detail-actions">
+  <a href="{% url 'bo_insurer_claims' %}?pharmacy={{ pharmacy.id }}&amp;filters=1" class="ins-btn-primary">
+    <span class="material-symbols-rounded sm">description</span> Voir les demandes de prise en charge
+  </a>
+  {% if pharmacy.phone %}<a href="tel:{{ pharmacy.phone }}" class="ins-btn-outline"><span class="material-symbols-rounded sm">call</span> Appeler</a>{% endif %}
+</div>
+
+{% if detail.recent_claims %}
+<section class="ins-panel">
+  <h3 class="ins-claim-section-title">Dernières demandes</h3>
+  <div class="ins-claims-table-wrap">
+    <table class="ins-claims-table">
+      <thead>
+        <tr><th>Référence</th><th>Assuré</th><th>Montant</th><th>Statut</th><th>Date</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for c in detail.recent_claims %}
+        <tr>
+          <td class="font-mono text-xs">{{ c.order.code }}</td>
+          <td>{{ c.client.get_full_name|default:c.client.username }}</td>
+          <td class="font-bold">{{ c.amount|intcomma }} F</td>
+          <td><span class="ins-claims-status ins-claims-status--{{ c.status }}">{{ c.get_status_display }}</span></td>
+          <td>{{ c.created_at|date:"d/m/Y H:i" }}</td>
+          <td><a href="{% url 'bo_insurer_claim_detail' c.id %}" class="ins-pharmacy-view">Détail</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

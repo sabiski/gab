@@ -1,0 +1,28 @@
+{% load humanize %}
+{% if page_obj.paginator.count %}
+<nav class="ins-claims-pagination">
+  <p class="ins-claims-pagination__meta">
+    Affichage {{ page_obj.start_index }} à {{ page_obj.end_index }} sur {{ page_obj.paginator.count|intcomma }} abonnement{{ page_obj.paginator.count|pluralize }}
+  </p>
+  <div class="ins-claims-pagination__controls">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}&amp;tab={{ tab }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if plan %}&amp;plan={{ plan }}{% endif %}{% if sub_status %}&amp;status={{ sub_status }}{% endif %}&amp;per_page={{ per_page }}" class="ins-claims-pagination__btn">←</a>
+    {% endif %}
+    <span class="ins-claims-pagination__current">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}&amp;tab={{ tab }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if plan %}&amp;plan={{ plan }}{% endif %}{% if sub_status %}&amp;status={{ sub_status }}{% endif %}&amp;per_page={{ per_page }}" class="ins-claims-pagination__btn">→</a>
+    {% endif %}
+    <form method="get" class="ins-claims-pagination__per-page">
+      <input type="hidden" name="tab" value="{{ tab }}">
+      {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+      {% if plan %}<input type="hidden" name="plan" value="{{ plan }}">{% endif %}
+      {% if sub_status %}<input type="hidden" name="status" value="{{ sub_status }}">{% endif %}
+      <select name="per_page" onchange="this.form.submit()">
+        <option value="10" {% if per_page == 10 %}selected{% endif %}>10 / page</option>
+        <option value="25" {% if per_page == 25 %}selected{% endif %}>25 / page</option>
+        <option value="50" {% if per_page == 50 %}selected{% endif %}>50 / page</option>
+      </select>
+    </form>
+  </div>
+</nav>
+{% endif %}

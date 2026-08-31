@@ -1,0 +1,211 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}Paramètres{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claims-page-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-claims-back" aria-label="Retour">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </a>
+    <div>
+      <h1>Paramètres</h1>
+      <p>Gérez les paramètres de votre compte et de l'application.</p>
+    </div>
+  </div>
+  <div class="ins-header__actions">
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--sm">Déconnexion</a>
+  </div>
+</header>
+
+<nav class="ins-settings-tabs">
+  {% for key, label in settings_tabs %}
+  <a href="?tab={{ key }}" class="{% if settings_tab == key %}is-active{% endif %}">{{ label }}</a>
+  {% endfor %}
+</nav>
+
+<section class="ins-settings-summary">
+  <article class="ins-settings-card">
+    <h3>Organisation</h3>
+    <p class="font-bold">{{ settings_ctx.org.name }}</p>
+    <p class="text-sm text-ink-muted">{{ settings_ctx.org.account_type }}</p>
+    <a href="?tab=profile" class="ins-btn-outline ins-btn-outline--sm mt-2">Voir le profil</a>
+  </article>
+  <article class="ins-settings-card">
+    <h3>Sécurité</h3>
+    <p class="text-sm">{% if settings_ctx.security.two_factor %}Authentification forte activée{% else %}Authentification standard{% endif %}</p>
+    <p class="text-xs text-ink-muted">Dernière connexion : {{ settings_ctx.security.last_login }}</p>
+    <a href="?tab=security" class="ins-btn-outline ins-btn-outline--sm mt-2">Gérer la sécurité</a>
+  </article>
+  <article class="ins-settings-card">
+    <h3>Notifications</h3>
+    <p class="text-sm">E-mail, SMS et application</p>
+    <a href="?tab=notifications" class="ins-btn-outline ins-btn-outline--sm mt-2">Gérer</a>
+  </article>
+  <article class="ins-settings-card">
+    <h3>Utilisateurs</h3>
+    <p class="font-bold">{{ settings_ctx.team_count }} utilisateur{{ settings_ctx.team_count|pluralize }} actif{{ settings_ctx.team_count|pluralize }}</p>
+    <a href="?tab=users" class="ins-btn-outline ins-btn-outline--sm mt-2">Gérer les utilisateurs</a>
+  </article>
+</section>
+
+{% if settings_tab == 'general' or settings_tab == 'profile' %}
+<section class="ins-panel ins-settings-section">
+  <div class="ins-settings-section__head">
+    <h3>Informations générales</h3>
+    <span class="text-xs text-ink-muted">Lecture / mise à jour limitée</span>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_general">
+    <dl class="ins-settings-dl">
+      <div><dt>Organisation</dt><dd>{{ settings_ctx.org.name }}{% if settings_ctx.org.acronym %} ({{ settings_ctx.org.acronym }}){% endif %}</dd></div>
+      <div><dt>Type de compte</dt><dd>{{ settings_ctx.org.account_type }}</dd></div>
+      <div><dt>Identifiant</dt><dd class="font-mono">{{ settings_ctx.org.org_id }}</dd></div>
+      <div><dt>Adresse</dt><dd><textarea name="headquarters_address" rows="2" class="ins-filters__input w-full">{{ settings_ctx.org.address }}</textarea></dd></div>
+      <div><dt>Téléphone</dt><dd><input name="phone" value="{{ settings_ctx.org.phone }}" class="ins-filters__input"></dd></div>
+      <div><dt>E-mail de contact</dt><dd>{{ settings_ctx.org.email }}</dd></div>
+      <div><dt>Prénom</dt><dd><input name="first_name" value="{{ user.first_name }}" class="ins-filters__input"></dd></div>
+      <div><dt>Nom</dt><dd><input name="last_name" value="{{ user.last_name }}" class="ins-filters__input"></dd></div>
+      <div><dt>Fonction</dt><dd><input name="rep_job_title" value="{{ partner_profile.rep_job_title }}" class="ins-filters__input"></dd></div>
+    </dl>
+    <button type="submit" class="ins-btn-primary mt-3" {% if partner_profile.preview %}disabled{% endif %}>Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if settings_tab == 'preferences' or settings_tab == 'general' %}
+<section class="ins-panel ins-settings-section">
+  <h3>Préférences de l'application</h3>
+  <form method="post" class="ins-form__grid ins-settings-prefs-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_preferences">
+    <label><span>Langue</span>
+      <select name="language" class="ins-filters__input">
+        {% for val, lbl in settings_ctx.language_choices %}
+        <option value="{{ val }}" {% if settings_ctx.portal.language == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><span>Fuseau horaire</span>
+      <select name="timezone" class="ins-filters__input">
+        {% for val, lbl in settings_ctx.timezone_choices %}
+        <option value="{{ val }}" {% if settings_ctx.portal.timezone == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><span>Devise</span>
+      <select name="currency" class="ins-filters__input">
+        {% for val, lbl in settings_ctx.currency_choices %}
+        <option value="{{ val }}" {% if settings_ctx.portal.currency == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label><span>Format de date</span>
+      <select name="date_format" class="ins-filters__input">
+        {% for val, lbl in settings_ctx.date_format_choices %}
+        <option value="{{ val }}" {% if settings_ctx.portal.date_format == val %}selected{% endif %}>{{ lbl }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="ins-btn-primary col-span-full" {% if partner_profile.preview %}disabled{% endif %}>Enregistrer les préférences</button>
+  </form>
+</section>
+{% endif %}
+
+{% if settings_tab == 'system' or settings_tab == 'general' %}
+<section class="ins-panel ins-settings-section">
+  <h3>Paramètres système</h3>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_system">
+    <ul class="ins-settings-system">
+      <li>
+        <div><p class="font-semibold">Mode maintenance</p><p class="text-xs text-ink-muted">Restreint l'accès aux utilisateurs non administrateurs</p></div>
+        <label class="ins-toggle"><input type="checkbox" name="maintenance_mode" {% if settings_ctx.portal.maintenance_mode %}checked{% endif %}><span class="ins-toggle__slider"></span></label>
+      </li>
+      <li>
+        <div><p class="font-semibold">Sauvegarde des données</p><p class="text-xs text-ink-muted">{{ settings_ctx.platform.get_backup_frequency_display }} à 02:00</p></div>
+        <span class="material-symbols-rounded text-ink-muted">chevron_right</span>
+      </li>
+      <li>
+        <div><p class="font-semibold">Journalisation</p><p class="text-xs text-ink-muted">{% if settings_ctx.platform.activity_logging %}Journalisation standard{% else %}Désactivée{% endif %}</p></div>
+        <span class="material-symbols-rounded text-ink-muted">chevron_right</span>
+      </li>
+      <li>
+        <div><p class="font-semibold">Expiration de session</p>
+          <input type="number" name="session_expiry_minutes" value="{{ settings_ctx.security.session_expiry }}" min="5" max="480" class="ins-filters__input ins-settings-session-input"> min
+        </div>
+      </li>
+    </ul>
+    <button type="submit" class="ins-btn-primary mt-3" {% if partner_profile.preview %}disabled{% endif %}>Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if settings_tab == 'integrations' or settings_tab == 'general' %}
+<section class="ins-panel ins-settings-section">
+  <h3>Intégrations et connexions</h3>
+  <ul class="ins-settings-integrations">
+    {% for item in settings_ctx.integrations %}
+    <li>
+      <span>{{ item.label }}</span>
+      <span class="ins-settings-integ-status ins-settings-integ-status--{{ item.tone }}">{{ item.status }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if settings_tab == 'notifications' %}
+<section class="ins-panel ins-settings-section">
+  <h3>Préférences de notification</h3>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_notification_prefs">
+    <ul class="ins-notif-prefs">
+      {% for cat in settings_ctx.categories %}
+      <li><span>{{ cat.label }}</span><label class="ins-toggle"><input type="checkbox" name="cat_{{ cat.key }}" {% if cat.enabled %}checked{% endif %}><span class="ins-toggle__slider"></span></label></li>
+      {% endfor %}
+    </ul>
+    <h4 class="mt-4 font-bold">Canaux</h4>
+    <ul class="ins-notif-prefs">
+      <li><span>E-mail</span><label class="ins-toggle"><input type="checkbox" name="channel_email" {% if notif_prefs.email_enabled %}checked{% endif %}><span class="ins-toggle__slider"></span></label></li>
+      <li><span>SMS</span><label class="ins-toggle"><input type="checkbox" name="channel_sms" {% if notif_prefs.sms_enabled %}checked{% endif %}><span class="ins-toggle__slider"></span></label></li>
+      <li><span>Push application</span><label class="ins-toggle"><input type="checkbox" name="channel_push" {% if notif_prefs.push_enabled %}checked{% endif %}><span class="ins-toggle__slider"></span></label></li>
+    </ul>
+    <button type="submit" class="ins-btn-primary mt-3" {% if partner_profile.preview %}disabled{% endif %}>Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if settings_tab == 'security' %}
+<section class="ins-panel ins-settings-section">
+  <h3>Sécurité du compte</h3>
+  <ul class="ins-settings-system">
+    <li><div><p class="font-semibold">Authentification à deux facteurs</p><p class="text-xs text-ink-muted">{% if settings_ctx.security.two_factor %}Activée au niveau plateforme{% else %}Non requise{% endif %}</p></div></li>
+    <li><div><p class="font-semibold">Dernière connexion</p><p class="text-xs text-ink-muted">{{ settings_ctx.security.last_login }}</p></div></li>
+    <li><div><p class="font-semibold">Expiration de session</p><p class="text-xs text-ink-muted">{{ settings_ctx.security.session_expiry }} minutes</p></div></li>
+  </ul>
+</section>
+{% endif %}
+
+{% if settings_tab == 'users' %}
+<section class="ins-panel ins-settings-section">
+  <h3>Utilisateurs de l'organisation</h3>
+  <p class="text-sm text-ink-muted">{{ settings_ctx.team_count }} compte{{ settings_ctx.team_count|pluralize }} rattaché{{ settings_ctx.team_count|pluralize }} à {{ settings_ctx.org.name }}.</p>
+  <p class="text-xs text-ink-muted mt-2">La gestion multi-utilisateurs sera étendue dans une prochaine version.</p>
+</section>
+{% endif %}
+
+<section class="ins-settings-actions">
+  <a href="{% url 'bo_insurer_payments' %}?export=csv" class="ins-btn-outline">Exporter les données</a>
+  <a href="{% url 'bo_insurer_settings' %}?tab=preferences" class="ins-btn-outline">Réinitialiser les préférences</a>
+  <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--danger">Déconnexion de tous les appareils</a>
+</section>
+{% endblock %}

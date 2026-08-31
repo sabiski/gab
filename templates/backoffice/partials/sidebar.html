@@ -1,0 +1,235 @@
+<aside id="bo-sidebar" class="bo-sidebar {% if bo_role == 'authority' %}bo-sidebar--authority{% elif bo_role == 'partner' %}bo-sidebar--insurer{% elif bo_role == 'client' %}bg-[#3B0764]{% else %}bg-primary-800{% endif %} {% if bo_role != 'authority' and bo_role != 'partner' %}text-white{% endif %} shrink-0 flex flex-col shadow-lift">
+  <div class="bo-sidebar__brand px-4 py-4 flex items-center gap-2.5 border-b {% if bo_role == 'authority' or bo_role == 'partner' %}border-slate-100{% else %}border-white/10{% endif %} shrink-0">
+    <img src="/static/images/logo-gabpharma.png" alt="" class="h-10 w-auto {% if bo_role != 'authority' and bo_role != 'partner' %}brightness-110{% endif %}">
+    <div class="min-w-0 flex-1">
+      <p class="font-extrabold tracking-tight text-sm {% if bo_role == 'authority' %}text-primary{% elif bo_role == 'partner' %}text-[#5B47FB]{% endif %}">Gab'Pharma</p>
+      {% if bo_role == "authority" %}
+      <p class="text-[10px] text-ink-muted font-medium truncate">Plateforme nationale de santé</p>
+      {% elif bo_role == "partner" %}
+      <p class="text-[10px] text-ink-muted font-medium truncate">Compagnie d'assurance</p>
+      {% else %}
+      <p class="text-[10px] text-white/50 font-medium truncate">{{ user.get_role_display }}</p>
+      {% endif %}
+    </div>
+    <button type="button" class="lg:hidden h-9 w-9 rounded-lg {% if bo_role == 'authority' or bo_role == 'partner' %}text-ink-muted hover:bg-slate-100{% else %}text-white/80 hover:bg-white/10{% endif %} shrink-0" id="bo-menu-close" aria-label="Fermer le menu">
+      <span class="material-symbols-rounded">close</span>
+    </button>
+  </div>
+
+  <nav class="bo-sidebar__nav p-3 space-y-0.5 text-sm font-semibold flex-1 min-h-0 overflow-y-auto overscroll-contain">
+    {% if bo_role == "admin" %}
+    <p class="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-white/40">Pilotage</p>
+    <a href="{% url 'bo_admin_dashboard' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'dashboard' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">dashboard</span> Tableau de bord
+    </a>
+    <p class="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-white/40">CRUD métier</p>
+    <a href="{% url 'bo_admin_users' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'users' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">group</span> Utilisateurs
+    </a>
+    <a href="{% url 'bo_admin_authorities' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'authorities' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">account_balance</span> Autorités sanitaires
+    </a>
+    <a href="{% url 'bo_admin_pharmacies' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'pharmacies' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">local_pharmacy</span> Pharmacies
+    </a>
+    <a href="{% url 'bo_admin_medicines' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'medicines' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">medication</span> Médicaments
+    </a>
+    <a href="{% url 'bo_admin_orders' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'orders' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">receipt_long</span> Commandes
+    </a>
+    <a href="{% url 'bo_admin_couriers' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'couriers' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">local_shipping</span> Livreurs
+    </a>
+    <a href="{% url 'bo_admin_payments' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'payments' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">payments</span> Paiements
+    </a>
+    <a href="{% url 'bo_admin_insurance' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'insurance' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">health_and_safety</span> Assurances — pilotage
+    </a>
+    <a href="{% url 'bo_admin_subscriptions' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'subscriptions' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">card_membership</span> Abonnements
+    </a>
+    <a href="{% url 'bo_admin_incidents' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'incidents' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">support_agent</span> Incidents / Support
+    </a>
+    <a href="{% url 'bo_admin_notifications' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'notifications' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">campaign</span> Notifications
+    </a>
+    <a href="{% url 'bo_support_tickets' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'tickets' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">confirmation_number</span> Réclamations
+    </a>
+    {% if is_superadmin or admin_modules.platform_settings %}
+    <a href="{% url 'bo_admin_platform_settings' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'platform_settings' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">settings</span> Paramètres
+    </a>
+    {% endif %}
+    {% if admin_modules.audit %}
+    <a href="{% url 'bo_admin_audit' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'audit' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">history</span> Journal d'audit &amp; sécurité
+    </a>
+    {% endif %}
+    {% if admin_modules.access_config %}
+    <p class="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-white/40">Configuration</p>
+    <a href="{% url 'bo_admin_access_config' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'access_config' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">admin_panel_settings</span> Rôles &amp; permissions
+    </a>
+    {% endif %}
+    <p class="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-white/40">Site public</p>
+    <a href="{% url 'bo_admin_hero' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'hero' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">web</span> Hero accueil
+    </a>
+    <a href="{% url 'bo_admin_ads' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'ads' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">campaign</span> Publicités
+    </a>
+    <a href="{% url 'bo_admin_tips' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'tips' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">clinical_notes</span> Conseils
+    </a>
+    <p class="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-white/40">Espace Autorités sanitaires</p>
+    {% with portal_permissions=authority_admin_nav %}
+    {% include "backoffice/authority/partials/nav_items.html" with nav_variant="admin" %}
+    {% endwith %}
+    <p class="px-3 pt-3 pb-1 text-[10px] uppercase tracking-wider text-white/40">Espace Assurance (CNAMGS…)</p>
+    {% with portal_permissions=insurer_admin_nav %}
+    {% include "backoffice/insurer/partials/nav_items.html" with nav_variant="admin" %}
+    {% endwith %}
+
+    {% elif bo_role == "pharmacy" %}
+    <a href="{% url 'bo_pharmacy_dashboard' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'dashboard' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">dashboard</span> Tableau de bord
+    </a>
+    {% if pharmacy_permissions.stats %}
+    <a href="{% url 'bo_pharmacy_stats' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'stats' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">analytics</span> Statistiques
+    </a>
+    {% endif %}
+    {% if pharmacy_permissions.orders %}
+    <a href="{% url 'bo_pharmacy_orders' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'orders' or bo_section == 'prescription_detail' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">orders</span> Commandes
+    </a>
+    {% endif %}
+    {% if pharmacy_permissions.stocks %}
+    <a href="{% url 'bo_pharmacy_stocks' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'stocks' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">inventory_2</span> Stocks
+    </a>
+    {% endif %}
+    {% if pharmacy_permissions.staff %}
+    <a href="{% url 'bo_pharmacy_personnel' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'personnel' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">groups</span> Personnel &amp; RH
+    </a>
+    {% endif %}
+    {% if pharmacy_permissions.settings %}
+    <a href="{% url 'bo_pharmacy_tips' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'tips' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">clinical_notes</span> Conseils
+    </a>
+    {% endif %}
+    {% if pharmacy_permissions.orders %}
+    <a href="{% url 'bo_pharmacy_messages' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'messages' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %} relative">
+      <span class="material-symbols-rounded sm">chat</span> Messages patients
+      {% if messages_unread %}<span class="ml-auto min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center bg-secondary text-primary-800">{{ messages_unread }}</span>{% endif %}
+    </a>
+    <a href="{% url 'bo_pharmacy_notifications' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'notifications' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %} relative">
+      <span class="material-symbols-rounded sm">notifications</span> Notifications
+      {% if notif_unread %}<span class="ml-auto min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center bg-rose-500 text-white">{{ notif_unread }}</span>{% endif %}
+    </a>
+    {% endif %}
+    {% if pharmacy_permissions.settings %}
+    <a href="{% url 'bo_pharmacy_subscription' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'subscription' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">card_membership</span> Abonnement
+    </a>
+    <a href="{% url 'bo_pharmacy_settings' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'settings' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">store</span> Profil pharmacie
+    </a>
+    {% endif %}
+
+    {% elif bo_role == "regional" %}
+    <a href="{% url 'bo_regional_dashboard' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'dashboard' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">map</span> Supervision régionale
+    </a>
+
+    {% elif bo_role == "partner" %}
+    {% include "backoffice/insurer/partials/nav_items.html" %}
+
+    {% elif bo_role == "courier" %}
+    {% if portal_permissions.dashboard %}
+    <a href="{% url 'bo_courier_dashboard' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'dashboard' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">dashboard</span> Accueil
+    </a>
+    {% endif %}
+    {% if portal_permissions.deliveries %}
+    <a href="{% url 'bo_courier_deliveries' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'deliveries' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">local_shipping</span> Livraisons
+    </a>
+    {% endif %}
+    {% if portal_permissions.profile %}
+    <a href="{% url 'bo_courier_vehicles' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'courier_vehicles' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">two_wheeler</span> Véhicules &amp; documents
+    </a>
+    <a href="{% url 'bo_courier_settings' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'courier_settings' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">badge</span> Profil livreur
+    </a>
+    {% endif %}
+
+    {% elif bo_role == "authority" %}
+    {% include "backoffice/authority/partials/nav_items.html" %}
+
+    {% elif bo_role == "support" %}
+    {% if portal_permissions.dashboard %}
+    <a href="{% url 'bo_support_dashboard' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'dashboard' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">support_agent</span> Centre support
+    </a>
+    {% endif %}
+    {% if portal_permissions.tickets %}
+    <a href="{% url 'bo_support_tickets' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'tickets' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">confirmation_number</span> Réclamations
+    </a>
+    {% endif %}
+    {% if portal_permissions.incidents %}
+    <a href="{% url 'bo_admin_incidents' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'incidents' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">report</span> Incidents
+    </a>
+    {% endif %}
+
+    {% elif bo_role == "client" %}
+    {% include "backoffice/partials/client_sidebar_nav.html" %}
+    {% endif %}
+  </nav>
+
+  <div class="bo-sidebar__footer p-3 border-t {% if bo_role == 'authority' or bo_role == 'partner' %}border-slate-100{% else %}border-white/10{% endif %} space-y-0.5 shrink-0">
+    {% if bo_role == "authority" %}
+    <div class="auth-side-institution mb-2">
+      <span class="material-symbols-rounded sm">account_balance</span>
+      <div>
+        <p class="font-bold text-xs">{% if authority_profile and authority_profile.institution %}{{ authority_profile.institution }}{% else %}Ministère de la Santé{% endif %}</p>
+        <p class="text-[10px] text-ink-muted">Direction Nationale</p>
+      </div>
+    </div>
+    <a href="{% url 'logout' %}" class="auth-side-link auth-side-link--logout">
+      <span class="material-symbols-rounded sm">logout</span> Déconnexion
+    </a>
+    {% elif bo_role == "partner" %}
+    <div class="ins-side-security">
+      <span class="material-symbols-rounded sm">shield</span>
+      <div>
+        <strong>Sécurité &amp; Confidentialité</strong>
+        Chiffrement de niveau bancaire. <a href="{% url 'bo_insurer_settings' %}" class="underline font-bold">En savoir plus</a>
+      </div>
+    </div>
+    <a href="{% url 'logout' %}" class="ins-side-link mt-2">
+      <span class="material-symbols-rounded sm">logout</span> Déconnexion
+    </a>
+    {% else %}
+    {% if bo_role != "client" %}
+    <a href="{% url 'home' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/10 text-sm font-semibold">
+      <span class="material-symbols-rounded sm">storefront</span> Site public
+    </a>
+    <a href="{% url 'bo_my_profile' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'profile' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %} text-sm font-semibold">
+      <span class="material-symbols-rounded sm">account_circle</span> Mon profil
+    </a>
+    {% endif %}
+    <a href="{% url 'logout' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl text-white/70 hover:bg-white/10 text-sm font-semibold">
+      <span class="material-symbols-rounded sm">logout</span> Déconnexion
+    </a>
+    {% endif %}
+  </div>
+</aside>

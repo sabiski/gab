@@ -1,0 +1,18 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% block ins_page_title %}{{ page_title|default:"Section" }}{% endblock %}
+{% block ins_content %}
+<header class="ins-header">
+  <div>
+    <h1>{{ page_title|default:"Section" }}</h1>
+    <p>{{ page_subtitle|default:"Maquette à venir — envoyez l'image de référence pour finaliser cette page." }}</p>
+  </div>
+  <div class="ins-header__actions">
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-btn-outline"><span class="material-symbols-rounded text-sm">arrow_back</span> Tableau de bord</a>
+  </div>
+</header>
+<div class="ins-panel ins-coming-soon">
+  <span class="material-symbols-rounded ins-coming-soon__icon">construction</span>
+  <h2>Page en préparation</h2>
+  <p>Le menu est opérationnel. Envoyez la maquette détaillée de cette section pour l'intégration pixel-perfect.</p>
+</div>
+{% endblock %}

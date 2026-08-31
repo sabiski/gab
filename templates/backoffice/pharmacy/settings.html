@@ -1,0 +1,407 @@
+{% extends "backoffice/base_bo.html" %}
+{% load bo_extras %}
+{% block title %}Ma pharmacie{% endblock %}
+{% block bo_title %}Ma pharmacie{% endblock %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/bo-profile.css?v=2">
+<link rel="stylesheet" href="/static/css/stats-mobile.css?v=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block bo_content %}
+{% if not pharmacy %}
+<div class="bo-prof">
+  <div class="bo-prof-card">
+    <div class="bo-prof-card__body text-sm text-ink-muted">Aucune pharmacie associée. L'admin doit rattacher votre compte à une officine.</div>
+  </div>
+</div>
+{% else %}
+{% if compliance.total %}{% widthratio compliance.complete compliance.total 100 as compliance_pct %}{% endif %}
+
+<div class="bo-prof" id="bo-prof-pharmacy">
+
+  <section class="bo-prof-hero">
+    <div class="bo-prof-hero__row">
+      <div class="bo-prof-hero__media">
+        {% if pharmacy.logo %}
+        <img src="{{ pharmacy.logo.url }}" alt="">
+        {% else %}
+        <span class="material-symbols-rounded text-primary text-3xl">local_pharmacy</span>
+        {% endif %}
+      </div>
+      <div class="bo-prof-hero__body">
+        <p class="bo-prof-hero__eyebrow">Profil officine</p>
+        <h2 class="bo-prof-hero__title">{{ pharmacy.name }}</h2>
+        <div class="bo-prof-hero__meta">
+          <span class="bo-prof-hero__pill bo-prof-hero__pill--active">
+            <span class="material-symbols-rounded sm">verified</span>
+            {{ pharmacy.get_status_display }}
+          </span>
+          {% if pharmacy.is_on_duty %}
+          <span class="bo-prof-hero__pill">De garde</span>
+          {% endif %}
+          {% if pharmacy.is_24h %}
+          <span class="bo-prof-hero__pill">24h/24</span>
+          {% endif %}
+        </div>
+        <div class="bo-prof-hero__actions">
+          <a href="{% url 'pharmacy_detail' pharmacy.slug %}" target="_blank" rel="noopener" class="bo-prof-hero__btn bo-prof-hero__btn--light">
+            <span class="material-symbols-rounded sm">open_in_new</span> Fiche publique
+          </a>
+          <a href="#section-documents" class="bo-prof-hero__btn bo-prof-hero__btn--ghost">
+            <span class="material-symbols-rounded sm">folder</span> Dossier {{ compliance.complete }}/{{ compliance.total }}
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="bo-prof-kpis">
+    <div class="bo-prof-kpi">
+      <p class="bo-prof-kpi__label">Statut</p>
+      <p class="bo-prof-kpi__value">{{ pharmacy.get_status_display }}</p>
+    </div>
+    <div class="bo-prof-kpi">
+      <p class="bo-prof-kpi__label">Note</p>
+      <p class="bo-prof-kpi__value">{{ pharmacy.rating }}<span class="text-sm font-semibold text-ink-muted">/5</span></p>
+    </div>
+    <div class="bo-prof-kpi">
+      <p class="bo-prof-kpi__label">Conformité</p>
+      <p class="bo-prof-kpi__value {% if pharmacy.compliance_score < 80 %}bo-prof-kpi__value--warn{% endif %}">{{ pharmacy.compliance_score }}%</p>
+    </div>
+  </div>
+
+  {% if sub_summary.is_active %}
+  <div class="bo-prof-sub">
+    <div class="flex items-center gap-3 min-w-0">
+      <span class="bo-prof-card__icon"><span class="material-symbols-rounded sm">card_membership</span></span>
+      <div class="min-w-0">
+        <p class="font-extrabold text-sm truncate">Forfait {{ sub_summary.plan_label }}</p>
+        <p class="text-xs text-ink-muted">Jusqu'au {{ sub_summary.ends_at|date:"d/m/Y" }} · {{ sub_summary.amount|floatformat:0 }} FCFA</p>
+      </div>
+    </div>
+    <a href="{% url 'bo_pharmacy_subscription' %}" class="text-xs font-bold text-primary shrink-0">Détail</a>
+  </div>
+  {% endif %}
+
+  <nav class="bo-prof-nav" aria-label="Sections du profil">
+    <a href="#section-identity">Identité</a>
+    <a href="#section-location">Localisation</a>
+    <a href="#section-options">Options</a>
+    <a href="#section-documents">Documents</a>
+  </nav>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update_profile">
+
+    <section class="bo-prof-card" id="section-identity">
+      <div class="bo-prof-card__head">
+        <span class="bo-prof-card__icon"><span class="material-symbols-rounded sm">storefront</span></span>
+        <div>
+          <h3 class="bo-prof-card__title">Identité & contact</h3>
+          <p class="bo-prof-card__sub">Logo, coordonnées et description visible sur le site</p>
+        </div>
+      </div>
+      <div class="bo-prof-card__body bo-prof-card__body--grid">
+        {% include "backoffice/partials/image_field_bo.html" with name="logo" label="Logo de l'officine" current=pharmacy.logo %}
+        <div class="bo-prof-field">
+          <label for="ph-name">Nom de l'officine *</label>
+          <input id="ph-name" name="name" value="{{ pharmacy.name }}" required>
+        </div>
+        <div class="bo-prof-field">
+          <label>Code interne</label>
+          <input value="{{ pharmacy.code }}" disabled>
+        </div>
+        <div class="bo-prof-field">
+          <label for="ph-phone">Téléphone</label>
+          <input id="ph-phone" name="phone" value="{{ pharmacy.phone }}" placeholder="+241…">
+        </div>
+        <div class="bo-prof-field">
+          <label for="ph-email">E-mail</label>
+          <input id="ph-email" name="email" type="email" value="{{ pharmacy.email }}">
+        </div>
+        <div class="bo-prof-field bo-prof-span-2">
+          <label for="ph-desc">Description publique</label>
+          <textarea id="ph-desc" name="description" rows="3">{{ pharmacy.description }}</textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="bo-prof-card" id="section-location">
+      <div class="bo-prof-card__head">
+        <span class="bo-prof-card__icon"><span class="material-symbols-rounded sm">location_on</span></span>
+        <div>
+          <h3 class="bo-prof-card__title">Adresse & horaires</h3>
+          <p class="bo-prof-card__sub">Position sur la carte et informations pratiques</p>
+        </div>
+      </div>
+      <div class="bo-prof-card__body bo-prof-card__body--grid">
+        <div class="bo-prof-field bo-prof-span-2">
+          <label for="ph-address">Adresse</label>
+          <input id="ph-address" name="address" value="{{ pharmacy.address }}">
+        </div>
+        <div class="bo-prof-field">
+          <label for="ph-city">Ville</label>
+          <input id="ph-city" name="city" value="{{ pharmacy.city }}">
+        </div>
+        <div class="bo-prof-field">
+          <label for="ph-district">Quartier</label>
+          <input id="ph-district" name="district" value="{{ pharmacy.district }}">
+        </div>
+        <div class="bo-prof-field">
+          <label for="ph-region">Région</label>
+          <input id="ph-region" name="region" value="{{ pharmacy.region }}">
+        </div>
+        <div class="bo-prof-field">
+          <label for="ph-hours">Horaires</label>
+          <input id="ph-hours" name="opening_hours" value="{{ pharmacy.opening_hours }}" placeholder="08:00 – 20:00">
+        </div>
+        <div class="bo-prof-field bo-prof-span-2">
+          <label>Carte interactive</label>
+          <p class="bo-prof-field__hint mb-2">Cliquez sur la carte ou déplacez le marqueur. « Ma position » utilise le GPS du navigateur.</p>
+          <div id="pharmacy-map" class="bo-prof-map z-0"></div>
+          <div class="bo-prof-map-actions">
+            <div class="bo-prof-field">
+              <label for="id_latitude">Latitude</label>
+              <input id="id_latitude" name="latitude" value="{{ pharmacy.latitude|default:'' }}" placeholder="0.4162">
+            </div>
+            <div class="bo-prof-field">
+              <label for="id_longitude">Longitude</label>
+              <input id="id_longitude" name="longitude" value="{{ pharmacy.longitude|default:'' }}" placeholder="9.4673">
+            </div>
+            <button type="button" id="btn-geolocate" class="bo-prof-btn-geoloc">
+              <span class="material-symbols-rounded sm">my_location</span> Ma position
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bo-prof-card" id="section-options">
+      <div class="bo-prof-card__head">
+        <span class="bo-prof-card__icon"><span class="material-symbols-rounded sm">tune</span></span>
+        <div>
+          <h3 class="bo-prof-card__title">Options & livraison</h3>
+          <p class="bo-prof-card__sub">Affichage sur les fiches produit et pastille carte</p>
+        </div>
+      </div>
+      <div class="bo-prof-card__body bo-prof-card__body--grid">
+        <div class="bo-prof-field bo-prof-span-2">
+          <label for="ph-promise">Promesse livraison</label>
+          <input id="ph-promise" name="delivery_promise" value="{{ pharmacy.delivery_promise }}" placeholder="Ex. Livré demain avant 18h">
+          <p class="bo-prof-field__hint">Affichée sur chaque fiche produit si non surchargée sur l'offre.</p>
+        </div>
+        <div class="bo-prof-field">
+          <label for="ph-color">Couleur pastille</label>
+          <select id="ph-color" name="logo_color">
+            {% for val, label in logo_colors %}
+            <option value="{{ val }}" {% if pharmacy.logo_color == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="bo-prof-checks bo-prof-span-2">
+          <label><input type="checkbox" name="is_24h" {% if pharmacy.is_24h %}checked{% endif %}> Ouverte 24h/24</label>
+          <label><input type="checkbox" name="is_on_duty" {% if pharmacy.is_on_duty %}checked{% endif %}> Pharmacie de garde</label>
+        </div>
+        <div class="bo-prof-span-2 pt-1">
+          <button type="submit" class="bo-prof-submit bo-prof-submit--primary">
+            <span class="material-symbols-rounded sm">save</span> Enregistrer le profil
+          </button>
+        </div>
+      </div>
+    </section>
+  </form>
+
+  <section class="bo-prof-card" id="section-documents">
+    <div class="bo-prof-card__head">
+      <span class="bo-prof-card__icon"><span class="material-symbols-rounded sm">folder_open</span></span>
+      <div class="flex-1 min-w-0">
+        <h3 class="bo-prof-card__title">Documents officiels</h3>
+        <p class="bo-prof-card__sub">PDF ou image — alerte 30 jours avant expiration</p>
+      </div>
+      <div class="bo-prof-compliance__ring shrink-0" style="--pct: {{ compliance_pct|default:0 }}">
+        <span>{{ compliance.complete }}/{{ compliance.total }}</span>
+      </div>
+    </div>
+    <div class="bo-prof-card__body">
+
+      {% if compliance.missing or compliance.alerts %}
+      <div class="bo-prof-compliance bo-prof-compliance--warn">
+        <span class="material-symbols-rounded text-amber-600">warning</span>
+        <div class="text-sm">
+          <p class="font-extrabold text-amber-950">Action requise</p>
+          <p class="text-amber-900/90 mt-0.5 font-medium">
+            {% if compliance.missing %}<strong>{{ compliance.missing }}</strong> document{{ compliance.missing|pluralize }} manquant{{ compliance.missing|pluralize }}.{% endif %}
+            {% if compliance.alerts %}{% if compliance.missing %} {% endif %}<strong>{{ compliance.alerts }}</strong> à renouveler.{% endif %}
+            Visibilité limitée tant que le dossier est incomplet.
+          </p>
+        </div>
+      </div>
+      {% else %}
+      <div class="bo-prof-compliance bo-prof-compliance--ok">
+        <span class="material-symbols-rounded text-emerald-600">verified</span>
+        <div class="text-sm">
+          <p class="font-extrabold text-emerald-900">Dossier conforme</p>
+          <p class="text-emerald-800/90 mt-0.5">Toutes les pièces obligatoires sont à jour.</p>
+        </div>
+      </div>
+      {% endif %}
+
+      {% for item in doc_checklist %}
+      <div class="bo-prof-doc bo-prof-doc--{{ item.status }}">
+        <span class="bo-prof-doc__icon {% if item.status == 'ok' %}bg-emerald-100 text-emerald-700{% elif item.status == 'missing' %}bg-amber-100 text-amber-700{% else %}bg-rose-100 text-rose-700{% endif %}">
+          <span class="material-symbols-rounded sm">{% if item.status == 'ok' %}check_circle{% elif item.status == 'missing' %}upload_file{% else %}error{% endif %}</span>
+        </span>
+        <div class="bo-prof-doc__main">
+          <p class="bo-prof-doc__title">{{ item.label }}</p>
+          <p class="bo-prof-doc__desc">{{ item.description }}</p>
+          {% if item.doc %}
+          <p class="bo-prof-doc__meta">
+            <strong>{{ item.doc.title }}</strong> · {{ item.doc.uploaded_at|date:"d/m/Y" }}
+            {% if item.doc.expires_at %} · expire {{ item.doc.expires_at|date:"d/m/Y" }}{% endif %}
+          </p>
+          {% endif %}
+        </div>
+        <div class="bo-prof-doc__aside">
+          <span class="bo-prof-badge bo-prof-badge--{% if item.status == 'ok' %}ok{% elif item.status == 'missing' %}missing{% elif item.status == 'expiring' %}expiring{% else %}expired{% endif %}">{{ item.status_label }}</span>
+          {% if item.doc %}
+          <a href="{{ item.doc.file.url }}" target="_blank" rel="noopener" class="bo-prof-link">
+            <span class="material-symbols-rounded sm">download</span> Télécharger
+          </a>
+          {% else %}
+          <button type="button" class="bo-prof-link doc-prefill" data-title="{{ item.title }}">
+            <span class="material-symbols-rounded sm">upload</span> Téléverser
+          </button>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <details class="bo-prof-details border border-[#e8eeea] rounded-xl overflow-hidden mt-3" id="doc-upload-panel">
+        <summary>
+          <span class="material-symbols-rounded sm">add_circle</span> Ajouter ou remplacer un document
+        </summary>
+        <form method="post" enctype="multipart/form-data" class="bo-prof-details__body bo-prof-card__body--grid">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="add_document">
+          <div class="bo-prof-field bo-prof-span-2">
+            <label for="doc-type-select">Type de document</label>
+            <select id="doc-type-select">
+              <option value="">— Choisir —</option>
+              {% for t in required_document_types %}
+              <option value="{{ t.title }}">{{ t.label }}</option>
+              {% endfor %}
+              <option value="__custom__">Autre (titre libre)</option>
+            </select>
+          </div>
+          <div class="bo-prof-field bo-prof-span-2">
+            <label for="doc-title-input">Intitulé *</label>
+            <input id="doc-title-input" name="doc_title" required placeholder="Ex. RCCM Pharmacie…">
+          </div>
+          <div class="bo-prof-field">
+            <label>Expiration</label>
+            <input type="date" name="doc_expires_at">
+            <p class="bo-prof-field__hint">RCCM, agrément, CNI…</p>
+          </div>
+          <div class="bo-prof-field">
+            <label>Fichier *</label>
+            <input type="file" name="doc_file" required accept=".pdf,.jpg,.jpeg,.png">
+          </div>
+          <div class="bo-prof-span-2">
+            <button type="submit" class="bo-prof-submit bo-prof-submit--primary">Enregistrer le document</button>
+          </div>
+        </form>
+      </details>
+
+      {% if extra_documents %}
+      <div class="mt-5 pt-4 border-t border-[#eef2ef]">
+        <p class="text-xs font-bold text-ink-muted uppercase mb-2">Autres documents</p>
+        {% for doc in extra_documents %}
+        <div class="flex flex-wrap items-center justify-between gap-2 border rounded-xl px-3 py-2 text-sm mb-2">
+          <div>
+            <p class="font-bold">{{ doc.title }}</p>
+            <p class="text-xs text-ink-muted">{{ doc.uploaded_at|date:"d/m/Y" }}{% if doc.expires_at %} · expire {{ doc.expires_at|date:"d/m/Y" }}{% endif %}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="{{ doc.file.url }}" target="_blank" class="bo-prof-link">Télécharger</a>
+            <form method="post" onsubmit="return confirm('Supprimer ce document ?')">{% csrf_token %}<input type="hidden" name="action" value="delete_document"><input type="hidden" name="doc_id" value="{{ doc.id }}"><button type="submit" class="text-xs font-bold text-rose-600">Supprimer</button></form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+
+{% include "backoffice/partials/pharmacy_bottom_nav.html" %}
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(function () {
+  var mapEl = document.getElementById('pharmacy-map');
+  if (!mapEl || typeof L === 'undefined') return;
+  var latInput = document.getElementById('id_latitude');
+  var lngInput = document.getElementById('id_longitude');
+  var defaultLat = 0.4162, defaultLng = 9.4673;
+  var lat = parseFloat(latInput.value) || defaultLat;
+  var lng = parseFloat(lngInput.value) || defaultLng;
+  var map = L.map('pharmacy-map').setView([lat, lng], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+  var marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+  function syncInputs(ll) {
+    latInput.value = ll.lat.toFixed(6);
+    lngInput.value = ll.lng.toFixed(6);
+  }
+  marker.on('dragend', function () { syncInputs(marker.getLatLng()); });
+  map.on('click', function (e) { marker.setLatLng(e.latlng); syncInputs(e.latlng); });
+  function updateFromInputs() {
+    var la = parseFloat(latInput.value), lo = parseFloat(lngInput.value);
+    if (isNaN(la) || isNaN(lo)) return;
+    marker.setLatLng([la, lo]);
+    map.setView([la, lo], map.getZoom());
+  }
+  latInput.addEventListener('change', updateFromInputs);
+  lngInput.addEventListener('change', updateFromInputs);
+  var btn = document.getElementById('btn-geolocate');
+  if (btn) {
+    btn.addEventListener('click', function () {
+      if (!navigator.geolocation) { alert('Géolocalisation non disponible.'); return; }
+      btn.disabled = true;
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        var ll = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        marker.setLatLng(ll);
+        map.setView(ll, 16);
+        syncInputs(ll);
+        btn.disabled = false;
+      }, function () {
+        alert('Impossible d\'obtenir la position.');
+        btn.disabled = false;
+      }, { enableHighAccuracy: true, timeout: 10000 });
+    });
+  }
+  setTimeout(function () { map.invalidateSize(); }, 300);
+})();
+
+(function () {
+  var select = document.getElementById('doc-type-select');
+  var titleInput = document.getElementById('doc-title-input');
+  var panel = document.getElementById('doc-upload-panel');
+  if (select && titleInput) {
+    select.addEventListener('change', function () {
+      if (select.value && select.value !== '__custom__') titleInput.value = select.value;
+      else if (select.value === '__custom__') { titleInput.value = ''; titleInput.focus(); }
+    });
+  }
+  document.querySelectorAll('.doc-prefill').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (titleInput) titleInput.value = btn.getAttribute('data-title') || '';
+      if (panel) { panel.open = true; panel.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      if (titleInput) titleInput.focus();
+    });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

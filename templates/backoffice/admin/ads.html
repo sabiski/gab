@@ -1,0 +1,72 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Publicités{% endblock %}
+{% block bo_label %}Site public{% endblock %}
+{% block bo_title %}Publicités{% endblock %}
+{% block bo_content %}
+<p class="text-sm text-ink-muted font-medium mb-4">Bannières du site (ex. Airtel Money, Moov Money, BCEG). Format : entre <strong>600×200</strong> et <strong>1920×800</strong> px — JPG/PNG/WebP, 3 Mo max. Des pubs de démo sont préchargées (supprimables).</p>
+<form method="get" class="mb-4 flex justify-end">
+  <a href="?new=1" class="bg-primary text-white font-bold text-sm px-4 py-2 rounded-xl inline-flex items-center gap-1"><span class="material-symbols-rounded sm">add</span> Ajouter</a>
+</form>
+<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} publicité{{ total_count|pluralize }}</p>
+
+{% if show_create %}
+<section class="bg-white rounded-2xl border p-5 mb-4">
+  <div class="flex justify-between mb-3"><h2 class="font-extrabold">Nouvelle publicité</h2><a href="{% url 'bo_admin_ads' %}" class="text-xs font-bold text-ink-muted">Fermer</a></div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-2 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="create">
+    <input name="title" required placeholder="Titre *" class="border rounded-xl px-3 py-2">
+    <input name="link_url" placeholder="Lien (URL)" class="border rounded-xl px-3 py-2">
+    <select name="placement" class="border rounded-xl px-3 py-2">{% for val, label in placements %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select>
+    <input name="priority" type="number" value="0" placeholder="Priorité" class="border rounded-xl px-3 py-2">
+    {% include "backoffice/partials/image_field.html" with name="image" label="Visuel publicitaire *" required=True rule="ad" hint=image_rules.hint min_w=image_rules.min_width max_w=image_rules.max_width min_h=image_rules.min_height max_h=image_rules.max_height max_bytes=image_rules.max_bytes %}
+    <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="is_active" checked> Active</label>
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Créer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if edit_obj %}
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-5 mb-4">
+  <div class="flex justify-between mb-3"><h2 class="font-extrabold">Modifier — {{ edit_obj.title }}</h2><a href="{% url 'bo_admin_ads' %}" class="text-xs font-bold text-ink-muted">Fermer</a></div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-2 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="update"><input type="hidden" name="ad_id" value="{{ edit_obj.id }}">
+    <input name="title" value="{{ edit_obj.title }}" class="border rounded-xl px-3 py-2">
+    <input name="link_url" value="{{ edit_obj.link_url }}" class="border rounded-xl px-3 py-2">
+    <select name="placement" class="border rounded-xl px-3 py-2">{% for val, label in placements %}<option value="{{ val }}" {% if edit_obj.placement == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <input name="priority" type="number" value="{{ edit_obj.priority }}" class="border rounded-xl px-3 py-2">
+    {% include "backoffice/partials/image_field.html" with name="image" label="Visuel (laisser vide pour conserver)" current=edit_obj.image rule="ad" hint=image_rules.hint min_w=image_rules.min_width max_w=image_rules.max_width min_h=image_rules.min_height max_h=image_rules.max_height max_bytes=image_rules.max_bytes %}
+    <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="is_active" {% if edit_obj.is_active %}checked{% endif %}> Active</label>
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="bg-white rounded-2xl border overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+      <tr><th class="px-4 py-3">Visuel</th><th class="px-4 py-3">Titre</th><th class="px-4 py-3">Emplacement</th><th class="px-4 py-3">Statut</th><th class="px-4 py-3 text-right">Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for ad in page_obj %}
+      <tr class="border-t hover:bg-canvas/50">
+        <td class="px-4 py-3">
+          {% if ad.image %}
+          <img src="{{ ad.image.url }}" alt="{{ ad.title }}" class="h-16 w-36 object-cover rounded-xl border border-slate-100 bg-canvas" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'text-xs text-rose-600 font-bold',textContent:'Image introuvable'}))">
+          {% else %}
+          <span class="text-xs text-ink-muted font-medium">Aucun visuel</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 font-bold">{{ ad.title }}</td>
+        <td class="px-4 py-3 text-ink-muted">{{ ad.get_placement_display }}</td>
+        <td class="px-4 py-3">{% if ad.is_active %}<span class="text-xs font-bold text-primary">Active</span>{% else %}<span class="text-xs text-ink-muted">Off</span>{% endif %}</td>
+        <td class="px-4 py-3 text-right whitespace-nowrap">
+          <a href="?edit={{ ad.id }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-50 text-primary"><span class="material-symbols-rounded sm">edit</span></a>
+          <form method="post" class="inline" onsubmit="return confirm('Supprimer ?')">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="ad_id" value="{{ ad.id }}"><button class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-rose-50 text-rose-600"><span class="material-symbols-rounded sm">delete</span></button></form>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="5" class="px-4 py-10 text-center text-ink-muted">Aucune publicité</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endblock %}

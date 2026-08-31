@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Vérification en deux étapes{% endblock %}
+{% block content %}
+<div class="max-w-site mx-auto px-4 py-12">
+  <div class="max-w-md mx-auto bg-white border border-slate-100 rounded-3xl p-8 shadow-card">
+    <div class="text-center mb-6">
+      <img src="/static/images/logo-gabpharma.png" alt="Gab'Pharma" class="h-14 mx-auto mb-3">
+      <h1 class="text-2xl font-extrabold text-ink tracking-tight">Vérification en deux étapes</h1>
+      <p class="text-sm text-ink-muted font-medium mt-1">
+        Saisissez le code à 6 chiffres envoyé par {{ channel_label }}
+        {% if destination_masked %}à <strong class="text-ink">{{ destination_masked }}</strong>{% endif %}.
+      </p>
+    </div>
+
+    {% if info %}
+    <div class="mb-4 text-sm bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-xl px-3 py-2.5 font-medium">{{ info }}</div>
+    {% endif %}
+    {% if error %}
+    <div class="mb-4 text-sm bg-rose-50 text-rose-700 border border-rose-100 rounded-xl px-3 py-2.5 font-medium">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1.5">Code de vérification</label>
+        <input name="code" required autocomplete="one-time-code" inputmode="numeric" maxlength="6" pattern="[0-9]{6}"
+          placeholder="000000"
+          class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm text-center tracking-[0.35em] font-bold outline-none focus:border-primary focus:ring-4 focus:ring-primary/10">
+        <p class="text-[11px] text-ink-muted mt-2 font-medium">Valide {{ ttl_minutes }} minutes.</p>
+      </div>
+      <button type="submit" class="w-full bg-primary hover:bg-primary-600 text-white font-bold text-sm py-3 rounded-full transition">Valider</button>
+    </form>
+
+    <form method="post" action="{% url 'two_factor_resend' %}" class="mt-4">
+      {% csrf_token %}
+      <button type="submit" class="w-full text-sm font-bold text-primary hover:underline py-2">Renvoyer le code</button>
+    </form>
+
+    <p class="text-center text-sm text-ink-muted mt-5 font-medium">
+      <a href="{% url 'login' %}" class="text-primary font-bold hover:underline">Retour à la connexion</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

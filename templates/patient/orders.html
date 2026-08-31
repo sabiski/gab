@@ -1,0 +1,26 @@
+{% extends "patient/base_patient.html" %}
+{% block title %}Mes commandes{% endblock %}
+{% block content %}
+<h1 class="text-xl md:text-2xl font-semibold text-ink mb-4">Mes commandes</h1>
+{% if orders %}
+<div class="space-y-3 max-w-2xl">
+  {% for order in orders %}
+  <div class="bg-white rounded-2xl p-4 shadow-card">
+    <div class="flex justify-between items-start">
+      <div>
+        <p class="text-sm font-semibold text-ink">Commande {{ order.code }}</p>
+        <p class="text-xs text-ink-muted mt-0.5">{{ order.pharmacy.name|default:"—" }} · {{ order.created_at|date:"d/m/Y H:i" }}</p>
+      </div>
+      <span class="text-[11px] font-medium px-2 py-1 rounded-full bg-primary-50 text-primary">{{ order.get_status_display }}</span>
+    </div>
+    <p class="text-sm font-semibold text-primary mt-2">{{ order.total }} FCFA</p>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-2xl p-8 text-center shadow-card max-w-md">
+  <p class="text-ink-muted text-sm mb-4">Vous n'avez pas encore de commande.</p>
+  <a href="{% url 'search' %}" class="inline-flex bg-primary text-white text-sm font-medium px-4 py-2.5 rounded-xl">Rechercher un médicament</a>
+</div>
+{% endif %}
+{% endblock %}

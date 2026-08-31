@@ -1,0 +1,7 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Commander{% endblock %}
+{% block portal_heading %}Finaliser la commande{% endblock %}
+{% block portal_body %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% include "web/partials/checkout_inner.html" %}
+{% endblock %}

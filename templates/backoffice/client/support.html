@@ -1,0 +1,66 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Réclamations{% endblock %}
+{% block portal_heading %}Réclamations & support{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Signalez un problème de commande ou de service — notre équipe vous répond sous 48 h.</p>
+{% endblock %}
+{% block portal_body %}
+<div class="grid lg:grid-cols-2 gap-5">
+  <section class="c-card p-5">
+    <h2 class="c-card__title mb-4">Nouvelle réclamation</h2>
+    <form method="post" enctype="multipart/form-data" class="space-y-4 text-sm">
+      {% csrf_token %}
+      <div class="c-field">
+        <label class="c-label">Catégorie</label>
+        <select name="category" class="c-select">
+          {% for val, label in categories %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="c-field">
+        <label class="c-label">Commande liée (optionnel)</label>
+        <select name="order_id" class="c-select">
+          <option value="">— Aucune commande —</option>
+          {% for o in orders %}<option value="{{ o.id }}">{{ o.code }} · {{ o.get_status_display }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="c-field">
+        <label class="c-label">Sujet</label>
+        <input name="subject" required maxlength="200" class="c-input" placeholder="Ex. Article manquant">
+      </div>
+      <div class="c-field">
+        <label class="c-label">Description</label>
+        <textarea name="description" required rows="4" class="c-textarea" placeholder="Décrivez le problème en détail…"></textarea>
+      </div>
+      <div class="c-field">
+        <label class="c-label">Pièce jointe (optionnel)</label>
+        <input type="file" name="attachment" class="c-file w-full border border-dashed border-[#E5E7EB] rounded-xl p-2">
+      </div>
+      <button type="submit" class="c-btn c-btn--primary">Envoyer la réclamation</button>
+    </form>
+  </section>
+  <section class="c-card p-5">
+    <div class="c-card__head">
+      <h2 class="c-card__title">Mes tickets</h2>
+      <span class="c-pill c-pill--muted">{{ tickets|length }}</span>
+    </div>
+    <div class="space-y-3 max-h-[min(70vh,560px)] overflow-y-auto pr-1">
+      {% for t in tickets %}
+      <div class="c-ticket">
+        <div class="flex justify-between gap-2 items-start">
+          <p class="font-bold text-sm text-[#374151]">{{ t.code }}</p>
+          <span class="c-pill {% if t.status == 'resolved' %}c-pill--success{% elif t.status == 'pending' %}c-pill--warn{% else %}c-pill--muted{% endif %}">{{ t.get_status_display }}</span>
+        </div>
+        <p class="font-semibold text-sm text-[#6C3AED] mt-1">{{ t.subject }}</p>
+        <p class="text-xs text-[#6B7280] mt-1">{{ t.get_category_display }} · {{ t.created_at|date:"d/m/Y H:i" }}{% if t.order %} · {{ t.order.code }}{% endif %}</p>
+        <p class="text-sm text-[#374151] mt-2 line-clamp-3">{{ t.description }}</p>
+      </div>
+      {% empty %}
+      <div class="c-empty py-8">
+        <div class="c-empty__icon"><span class="material-symbols-rounded">support</span></div>
+        <p class="text-sm text-[#6B7280]">Aucune réclamation pour le moment.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

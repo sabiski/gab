@@ -1,0 +1,52 @@
+<a href="{% url 'search' %}?q={{ stock.medicine.name|urlencode }}" class="snap-start shrink-0 w-[148px] md:w-auto bg-white rounded-2xl p-3 shadow-card hover:shadow-soft transition block">
+
+  <div class="relative mb-2">
+
+    <div class="aspect-square rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden">
+
+      {% if stock.medicine.image %}
+
+      <img src="{{ stock.medicine.image.url }}" alt="{{ stock.medicine.name }}" class="object-contain h-full w-full p-2">
+
+      {% else %}
+
+      <div class="h-16 w-12 rounded bg-gradient-to-b from-red-400 to-red-600 shadow-sm relative">
+
+        <div class="absolute inset-x-1 top-2 h-4 bg-white/90 rounded-sm"></div>
+
+      </div>
+
+      {% endif %}
+
+    </div>
+
+    <button type="button" class="absolute top-1 right-1 p-1.5 rounded-full bg-white/90 text-ink-muted hover:text-rose-500" aria-label="Favori">
+
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364 4.318 12.682a4.5 4.5 0 010-6.364z"/></svg>
+
+    </button>
+
+  </div>
+
+  <h3 class="text-sm font-semibold text-ink leading-tight line-clamp-2">{{ stock.medicine.name }}{% if stock.medicine.dosage %} {{ stock.medicine.dosage }}{% endif %}</h3>
+
+  <p class="text-[11px] text-ink-muted mt-0.5">{{ stock.medicine.form_label }}</p>
+
+  <p class="text-sm font-semibold text-ink mt-1">{{ stock.formatted_price }}</p>
+
+  {% if show_availability %}
+
+    {% if stock.availability == "available" %}
+
+    <span class="inline-flex items-center gap-1 mt-1.5 text-[11px] text-secondary font-medium"><span class="h-1.5 w-1.5 rounded-full bg-secondary"></span> Disponible</span>
+
+    {% elif stock.availability == "low" %}
+
+    <span class="inline-flex items-center gap-1 mt-1.5 text-[11px] text-amber-600 font-medium"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span> Stock faible</span>
+
+    {% endif %}
+
+  {% endif %}
+
+</a>
+

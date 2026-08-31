@@ -1,0 +1,73 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Abonnement{% endblock %}
+{% block bo_label %}Espace pharmacie{% endblock %}
+{% block bo_title %}Forfait Gab'Pharma{% endblock %}
+{% block bo_content %}
+{% if not pharmacy %}
+<p class="text-sm text-ink-muted">Aucune pharmacie associée.</p>
+{% else %}
+
+{% if summary.is_active %}
+<section class="bg-gradient-to-br from-primary-700 to-primary rounded-2xl p-6 text-white mb-6 max-w-3xl">
+  <div class="flex flex-wrap justify-between gap-4 items-start">
+    <div>
+      <p class="text-xs font-bold uppercase tracking-wide text-white/70">Forfait actif</p>
+      <h2 class="text-2xl font-extrabold mt-1">{{ summary.plan_label }}</h2>
+      <p class="text-sm text-white/85 mt-2">{{ summary.billing }} · {{ summary.amount|floatformat:0 }} FCFA</p>
+      <p class="text-sm mt-1">Du {{ summary.starts_at|date:"d/m/Y" }} au {{ summary.ends_at|date:"d/m/Y" }}
+        <span class="font-bold">({{ summary.days_left }} jour{{ summary.days_left|pluralize }} restant{{ summary.days_left|pluralize }})</span>
+      </p>
+    </div>
+    <span class="inline-flex items-center gap-1 bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+      <span class="material-symbols-rounded sm">verified</span> {{ summary.status_label }}
+    </span>
+  </div>
+</section>
+
+{% if summary.features %}
+<section class="bg-white border rounded-2xl p-5 mb-6 max-w-3xl">
+  <h3 class="font-extrabold mb-3">Avantages inclus</h3>
+  <ul class="space-y-2 text-sm">
+    {% for f in summary.features %}
+    <li class="flex items-center gap-2"><span class="material-symbols-rounded sm text-primary">check_circle</span> {{ f }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% else %}
+<section class="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 max-w-3xl">
+  <p class="font-extrabold text-amber-900">Aucun forfait actif</p>
+  <p class="text-sm text-amber-800 mt-1">Contactez Gab'Pharma pour souscrire ou réactiver un abonnement (Essentiel, Professionnel ou Entreprise).</p>
+</section>
+{% endif %}
+
+<section class="bg-white border rounded-2xl p-5 max-w-3xl">
+  <h3 class="font-extrabold mb-4">Historique des abonnements</h3>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+        <tr>
+          <th class="px-3 py-2">Forfait</th>
+          <th class="px-3 py-2">Montant</th>
+          <th class="px-3 py-2">Période</th>
+          <th class="px-3 py-2">Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in history %}
+        <tr class="border-t">
+          <td class="px-3 py-2.5 font-bold">{{ s.get_plan_display }}</td>
+          <td class="px-3 py-2.5">{{ s.amount|floatformat:0 }} F</td>
+          <td class="px-3 py-2.5 text-ink-muted">{{ s.starts_at|date:"d/m/Y" }} → {{ s.ends_at|date:"d/m/Y" }}</td>
+          <td class="px-3 py-2.5"><span class="text-xs font-bold {% if s.status == 'active' %}text-primary{% else %}text-ink-muted{% endif %}">{{ s.get_status_display }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="px-3 py-8 text-center text-ink-muted">Aucun abonnement enregistré.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

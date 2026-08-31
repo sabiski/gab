@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  .profile-page { font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif; background: #F3F4F6; }
+  .profile-page main { background: #F3F4F6; }
+  .profile-card { background: #fff; border-radius: 1rem; border: 1px solid #E5E7EB; }
+  .profile-section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #6B7280; padding: 0.75rem 1rem 0.25rem; }
+  .profile-bottom-nav + .profile-page-spacer { padding-bottom: 5rem; }
+  @media (min-width: 768px) { .profile-bottom-nav + .profile-page-spacer { padding-bottom: 2rem; } }
+</style>
+{% block profile_extra_head %}{% endblock %}
+{% endblock %}
+{% block content %}
+<div class="profile-page profile-page-spacer min-h-[calc(100vh-8rem)]">
+  {% block profile_content %}{% endblock %}
+</div>
+{% include "web/partials/profile_bottom_nav.html" %}
+{% endblock %}

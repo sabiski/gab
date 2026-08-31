@@ -1,0 +1,129 @@
+{% extends "patient/base_patient.html" %}
+{% block title %}Recherche de médicaments{% endblock %}
+
+{% block content %}
+<!-- Mobile page header -->
+<div class="md:hidden flex items-center justify-between mb-4">
+  <a href="{% url 'home' %}" class="p-2 -ml-2 rounded-full hover:bg-white" aria-label="Retour">
+    <svg class="w-5 h-5 text-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+  </a>
+  <h1 class="text-base font-semibold text-ink">Recherche de médicaments</h1>
+  <button type="button" class="relative p-2 rounded-full" aria-label="Notifications">
+    <svg class="w-5 h-5 text-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+    <span class="absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[10px] font-semibold flex items-center justify-center">{{ unread_count }}</span>
+  </button>
+</div>
+
+<div class="hidden md:block mb-6">
+  <h1 class="text-2xl font-semibold text-ink">Recherche de médicaments</h1>
+  <p class="text-sm text-ink-muted mt-1">Trouvez le bon médicament en quelques secondes — nom, DCI ou laboratoire.</p>
+</div>
+
+<!-- Search bar -->
+<form action="{% url 'search' %}" method="get" class="mb-3">
+  <div class="flex items-center gap-2 bg-white rounded-2xl border border-slate-200 px-3 py-2.5 shadow-card focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+    <svg class="w-5 h-5 text-ink-muted shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"/></svg>
+    <input type="search" name="q" value="{{ q }}" placeholder="Rechercher un médicament, un principe actif..."
+      class="flex-1 bg-transparent text-sm outline-none placeholder:text-ink-muted min-w-0" autocomplete="off">
+    <button type="button" class="p-1.5 text-ink-muted hover:text-primary" title="Recherche vocale (bientôt)" aria-label="Micro">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+    </button>
+    <button type="button" class="p-1.5 text-ink-muted hover:text-primary" title="Scanner une ordonnance (bientôt)" aria-label="Scan">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v-4m6 6v-2m0 2h2M4 12H2m2 0h2m0 0v2m0-2V8m12 0V6a2 2 0 00-2-2h-2m0 16h2a2 2 0 002-2v-2M4 18v2a2 2 0 002 2h2"/></svg>
+    </button>
+  </div>
+</form>
+
+<!-- Recent chips -->
+{% if not q %}
+<p class="text-xs text-ink-muted mb-2">Recherches récentes</p>
+<div class="flex flex-wrap gap-2 mb-5">
+  {% for term in recent_searches %}
+  <a href="{% url 'search' %}?q={{ term|urlencode }}" class="px-3 py-1.5 rounded-full text-xs font-medium text-primary bg-primary-50 border border-primary/20 hover:bg-primary-100 transition">{{ term }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Quick filters -->
+<div class="flex gap-2 overflow-x-auto pb-2 mb-5 scrollbar-hide -mx-1 px-1">
+  <a href="{% url 'search' %}{% if q %}?q={{ q|urlencode }}{% endif %}"
+    class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition
+    {% if active_category == 'all' or not active_category %}bg-secondary text-white border-secondary{% else %}bg-white text-ink border-slate-200{% endif %}">
+    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+    Toutes catégories
+  </a>
+  {% for cat in quick_filters %}
+  <a href="{% url 'search' %}?category={{ cat.slug }}{% if q %}&q={{ q|urlencode }}{% endif %}"
+    class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition
+    {% if active_category == cat.slug %}bg-secondary text-white border-secondary{% else %}bg-white text-ink border-slate-200 hover:border-primary/40{% endif %}">
+    {{ cat.name }}
+  </a>
+  {% endfor %}
+</div>
+
+{% if not q %}
+<!-- Main categories grid -->
+<section class="mb-6">
+  <h2 class="text-sm font-semibold text-ink mb-3">Catégories principales</h2>
+  <div class="grid grid-cols-4 gap-3 md:gap-4">
+    {% for cat in categories %}
+    <a href="{% url 'search' %}?category={{ cat.slug }}" class="flex flex-col items-center gap-1.5 group">
+      <span class="h-14 w-14 md:h-16 md:w-16 rounded-2xl flex items-center justify-center shadow-card group-hover:scale-105 transition
+        {% if cat.bg_color == 'green' %}bg-secondary-50 text-secondary
+        {% elif cat.bg_color == 'orange' %}bg-orange-50 text-orange-500
+        {% elif cat.bg_color == 'blue' %}bg-sky-50 text-sky-600
+        {% elif cat.bg_color == 'pink' %}bg-pink-50 text-pink-500
+        {% elif cat.bg_color == 'amber' %}bg-amber-50 text-amber-600
+        {% else %}bg-primary-50 text-primary{% endif %}">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M19.5 12.5c0 4-3.5 7-7.5 7s-7.5-3-7.5-7 3.5-8 7.5-8 7.5 4 7.5 8z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M9 11h.01M15 11h.01M9.5 15c.8.8 1.7 1.2 2.5 1.2s1.7-.4 2.5-1.2"/></svg>
+      </span>
+      <span class="text-[10px] md:text-xs text-center text-ink-muted leading-tight">{{ cat.name }}</span>
+    </a>
+    {% empty %}
+    <p class="col-span-4 text-sm text-ink-muted">Catégories en cours de chargement…</p>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- Actions -->
+<div class="flex flex-wrap gap-2 mb-5">
+  <button type="submit" form="" onclick="document.querySelector('form').requestSubmit()" class="inline-flex items-center gap-2 bg-primary text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-primary-600 transition">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"/></svg>
+    Rechercher
+  </button>
+  <button type="button" class="inline-flex items-center gap-2 bg-white text-primary text-sm font-medium px-4 py-2.5 rounded-xl border border-primary/30 hover:bg-primary-50 transition">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v-4"/></svg>
+    Scanner une ordonnance
+  </button>
+  {% if q %}
+  <a href="{% url 'search' %}" class="inline-flex items-center gap-2 bg-slate-100 text-ink-muted text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-slate-200 transition">Effacer</a>
+  {% endif %}
+</div>
+
+<!-- Results -->
+{% if q or active_category and active_category != 'all' %}
+<section>
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-sm font-semibold text-ink">
+      {% if q %}Résultats pour « {{ q }} » ({{ results_count }}){% else %}Catégorie ({{ results_count }}){% endif %}
+    </h2>
+    <button type="button" class="text-xs text-ink-muted inline-flex items-center gap-1">Pertinence <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></button>
+  </div>
+  <div class="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+    {% for stock in results %}
+    {% include "components/search_result_card.html" with stock=stock show_availability=show_availability %}
+    {% empty %}
+    <div class="bg-white rounded-2xl p-6 text-center shadow-card col-span-2">
+      <p class="text-sm text-ink-muted">Aucun résultat. Essayez un autre terme ou une autre catégorie.</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% if results_count > 0 %}
+  <div class="text-center mt-4">
+    <a href="#" class="text-sm text-primary font-medium inline-flex items-center gap-1">Voir plus de résultats <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg></a>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

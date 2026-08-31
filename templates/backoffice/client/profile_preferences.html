@@ -1,0 +1,96 @@
+{% extends "backoffice/client/profile_form_base.html" %}
+{% block profile_back_href %}{% url 'bo_client_parametres' %}{% endblock %}
+{% block profile_back_label %}Retour aux paramètres{% endblock %}
+{% block profile_lead %}
+<p class="c-lead">Langue d'affichage et apparence de l'interface — les changements sont appliqués immédiatement.</p>
+{% endblock %}
+{% block profile_form %}
+<form method="post" class="space-y-5 text-sm" id="prefs-form">
+  {% csrf_token %}
+  <div>
+    <p class="c-label mb-2">Langue</p>
+    <div class="space-y-2" data-choice-group="language">
+      <label class="c-choice {% if language == 'fr' %}is-selected{% endif %}">
+        <input type="radio" name="language" value="fr" {% if language == 'fr' %}checked{% endif %} class="sr-only">
+        <span class="text-lg">🇫🇷</span>
+        <span class="flex-1">
+          <span class="block font-semibold text-[#374151]">Français</span>
+          <span class="block text-xs text-[#6B7280]">Interface en français</span>
+        </span>
+        <span class="material-symbols-rounded text-[#6C3AED] c-choice__check">check_circle</span>
+      </label>
+      <label class="c-choice is-disabled">
+        <input type="radio" name="language" value="en" disabled class="sr-only">
+        <span class="text-lg">🇬🇧</span>
+        <span class="flex-1">
+          <span class="block font-semibold text-[#374151]">English</span>
+          <span class="block text-xs text-[#6B7280]">Bientôt disponible</span>
+        </span>
+      </label>
+    </div>
+  </div>
+  <div>
+    <p class="c-label mb-2" id="theme">Thème</p>
+    <div class="space-y-2" data-choice-group="theme">
+      <label class="c-choice {% if theme == 'light' %}is-selected{% endif %}">
+        <input type="radio" name="theme" value="light" {% if theme == 'light' %}checked{% endif %} class="sr-only">
+        <span class="material-symbols-rounded text-[#F59E0B]">light_mode</span>
+        <span class="flex-1">
+          <span class="block font-semibold text-[#374151]">Clair</span>
+          <span class="block text-xs text-[#6B7280]">Fond clair, lisible en journée</span>
+        </span>
+        <span class="material-symbols-rounded text-[#6C3AED] c-choice__check">check_circle</span>
+      </label>
+      <label class="c-choice is-disabled">
+        <input type="radio" name="theme" value="dark" disabled class="sr-only">
+        <span class="material-symbols-rounded text-[#6B7280]">dark_mode</span>
+        <span class="flex-1">
+          <span class="block font-semibold text-[#374151]">Sombre</span>
+          <span class="block text-xs text-[#6B7280]">Bientôt disponible</span>
+        </span>
+      </label>
+    </div>
+  </div>
+  <p class="text-xs text-[#9CA3AF] text-center" id="prefs-status" aria-live="polite"></p>
+</form>
+{% endblock %}
+{% block profile_scripts %}
+<script>
+(function () {
+  var form = document.getElementById('prefs-form');
+  if (!form) return;
+  var statusEl = document.getElementById('prefs-status');
+  var saving = false;
+
+  function syncChoices(name) {
+    form.querySelectorAll('input[name="' + name + '"]').forEach(function (input) {
+      var label = input.closest('.c-choice');
+      if (!label || label.classList.contains('is-disabled')) return;
+      label.classList.toggle('is-selected', input.checked);
+    });
+  }
+
+  function applyTheme(value) {
+    document.documentElement.setAttribute('data-theme', value);
+    try { localStorage.setItem('gabpharma_theme', value); } catch (e) {}
+  }
+
+  form.querySelectorAll('input[type="radio"]:not([disabled])').forEach(function (input) {
+    input.addEventListener('change', function () {
+      if (saving) return;
+      syncChoices(input.name);
+      if (input.name === 'theme') applyTheme(input.value);
+      if (statusEl) {
+        statusEl.textContent = 'Enregistrement…';
+        statusEl.classList.remove('text-emerald-600');
+      }
+      saving = true;
+      form.submit();
+    });
+  });
+
+  ['language', 'theme'].forEach(syncChoices);
+  applyTheme('{{ theme|default:"light" }}');
+})();
+</script>
+{% endblock %}

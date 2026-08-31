@@ -1,0 +1,254 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}Fraudes et alertes{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claims-page-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-claims-back" aria-label="Retour">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </a>
+    <div>
+      <h1>Fraudes et alertes</h1>
+      <p>Surveillez les activités suspectes et gérez les alertes.</p>
+    </div>
+  </div>
+  <div class="ins-header__actions">
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--sm">Déconnexion</a>
+  </div>
+</header>
+
+<section class="ins-claims-kpi">
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--purple">
+    <span class="material-symbols-rounded">notifications_active</span>
+    <div>
+      <p class="ins-claims-kpi__label">Alertes totales</p>
+      <p class="ins-claims-kpi__value">{{ fraud_stats.total|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ fraud_stats.pct_total }} % ce mois</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--red">
+    <span class="material-symbols-rounded">error</span>
+    <div>
+      <p class="ins-claims-kpi__label">Alertes critiques</p>
+      <p class="ins-claims-kpi__value">{{ fraud_stats.critical|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ fraud_stats.pct_critical }} % — Action requise</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--amber">
+    <span class="material-symbols-rounded">hourglass_top</span>
+    <div>
+      <p class="ins-claims-kpi__label">En cours d'analyse</p>
+      <p class="ins-claims-kpi__value">{{ fraud_stats.analysis|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ fraud_stats.pct_analysis }} % — En traitement</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--green">
+    <span class="material-symbols-rounded">check_circle</span>
+    <div>
+      <p class="ins-claims-kpi__label">Résolues</p>
+      <p class="ins-claims-kpi__value">{{ fraud_stats.resolved|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ fraud_stats.pct_resolved }} % ce mois</p>
+    </div>
+  </article>
+</section>
+
+<form method="get" class="ins-fraud-toolbar">
+  <div class="ins-claims-search ins-fraud-search">
+    <span class="material-symbols-rounded">search</span>
+    <input name="q" value="{{ q }}" placeholder="Rechercher par assuré, pharmacie, référence, type d'alerte…">
+  </div>
+  <a href="?filters=1{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if date_from %}&amp;date_from={{ date_from }}{% endif %}{% if date_to %}&amp;date_to={{ date_to }}{% endif %}" class="ins-claims-filter-btn{% if show_filters %} is-open{% endif %}">
+    <span class="material-symbols-rounded sm">tune</span> Filtres
+    {% if active_filters %}<span class="ins-claims-filter-btn__badge">{{ active_filters }}</span>{% endif %}
+  </a>
+  <a href="?export=csv{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if date_from %}&amp;date_from={{ date_from }}{% endif %}{% if date_to %}&amp;date_to={{ date_to }}{% endif %}{% if alert_type %}&amp;alert_type={{ alert_type }}{% endif %}{% if alert_level %}&amp;level={{ alert_level }}{% endif %}{% if alert_status %}&amp;status={{ alert_status }}{% endif %}{% if zone %}&amp;zone={{ zone|urlencode }}{% endif %}" class="ins-btn-outline ins-members-export">
+    <span class="material-symbols-rounded sm">download</span> Exporter
+  </a>
+</form>
+
+{% if show_filters %}
+<form method="get" class="ins-claims-filters-panel" data-open>
+  <input type="hidden" name="filters" value="1">
+  <input type="hidden" name="q" value="{{ q }}">
+  {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+  <label class="ins-payments-date"><span>Du</span><input type="date" name="date_from" value="{{ date_from }}"></label>
+  <label class="ins-payments-date"><span>Au</span><input type="date" name="date_to" value="{{ date_to }}"></label>
+  <label class="ins-claims-filters-panel__field">
+    <span>Type</span>
+    <select name="alert_type">
+      <option value="">Tous les types</option>
+      <option value="suspicious" {% if alert_type == 'suspicious' %}selected{% endif %}>Demande suspecte</option>
+      <option value="overbilling" {% if alert_type == 'overbilling' %}selected{% endif %}>Sur-facturation</option>
+      <option value="document" {% if alert_type == 'document' %}selected{% endif %}>Document suspect</option>
+      <option value="abuse" {% if alert_type == 'abuse' %}selected{% endif %}>Utilisation anormale</option>
+    </select>
+  </label>
+  <label class="ins-claims-filters-panel__field">
+    <span>Statut</span>
+    <select name="status">
+      <option value="">Tous les statuts</option>
+      <option value="open" {% if alert_status == 'open' %}selected{% endif %}>En cours</option>
+      <option value="analysis" {% if alert_status == 'analysis' %}selected{% endif %}>En analyse</option>
+      <option value="resolved" {% if alert_status == 'resolved' %}selected{% endif %}>Résolue</option>
+    </select>
+  </label>
+  <label class="ins-claims-filters-panel__field">
+    <span>Niveau</span>
+    <select name="level">
+      <option value="">Tous les niveaux</option>
+      <option value="critical" {% if alert_level == 'critical' %}selected{% endif %}>Critique</option>
+      <option value="high" {% if alert_level == 'high' %}selected{% endif %}>Élevé</option>
+      <option value="medium" {% if alert_level == 'medium' %}selected{% endif %}>Moyen</option>
+      <option value="low" {% if alert_level == 'low' %}selected{% endif %}>Faible</option>
+    </select>
+  </label>
+  <label class="ins-claims-filters-panel__field">
+    <span>Zone</span>
+    <input type="text" name="zone" value="{{ zone }}" placeholder="Ville ou zone">
+  </label>
+  <button type="submit" class="ins-btn-primary">Appliquer</button>
+</form>
+{% else %}
+<form method="get" class="ins-fraud-quick-filters">
+  <input type="hidden" name="q" value="{{ q }}">
+  <label class="ins-payments-date"><input type="date" name="date_from" value="{{ date_from }}"></label>
+  <label class="ins-payments-date"><input type="date" name="date_to" value="{{ date_to }}"></label>
+  <select name="alert_type" class="ins-filters__input ins-payments-select" onchange="this.form.submit()">
+    <option value="">Tous les types</option>
+    <option value="suspicious" {% if alert_type == 'suspicious' %}selected{% endif %}>Demande suspecte</option>
+    <option value="overbilling" {% if alert_type == 'overbilling' %}selected{% endif %}>Sur-facturation</option>
+    <option value="document" {% if alert_type == 'document' %}selected{% endif %}>Document suspect</option>
+    <option value="abuse" {% if alert_type == 'abuse' %}selected{% endif %}>Utilisation anormale</option>
+  </select>
+  <select name="status" class="ins-filters__input ins-payments-select" onchange="this.form.submit()">
+    <option value="">Tous les statuts</option>
+    <option value="open" {% if alert_status == 'open' %}selected{% endif %}>En cours</option>
+    <option value="analysis" {% if alert_status == 'analysis' %}selected{% endif %}>En analyse</option>
+    <option value="resolved" {% if alert_status == 'resolved' %}selected{% endif %}>Résolue</option>
+  </select>
+  <input type="text" name="zone" value="{{ zone }}" placeholder="Toutes les zones" class="ins-filters__input ins-payments-select">
+  <button type="submit" class="sr-only">Filtrer</button>
+</form>
+{% endif %}
+
+<p class="ins-pharmacies-list-title">Liste des alertes</p>
+
+<div class="ins-claims-table-wrap">
+  <table class="ins-claims-table ins-fraud-table">
+    <thead>
+      <tr>
+        <th>Référence</th>
+        <th>Type d'alerte</th>
+        <th>Assuré / Pharmacie</th>
+        <th>Date de détection</th>
+        <th>Niveau</th>
+        <th>Statut</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in page_obj %}
+      <tr>
+        <td class="font-mono text-xs font-bold">{{ a.reference }}</td>
+        <td>{{ a.alert_type }}</td>
+        <td>
+          <p class="font-bold text-sm">{{ a.holder_name }}</p>
+          <p class="text-xs text-ink-muted">{{ a.holder_sub }}</p>
+        </td>
+        <td class="text-xs">{{ a.detected_at|date:"d/m/Y H:i" }}</td>
+        <td><span class="ins-fraud-level ins-fraud-level--{{ a.level }}">{{ a.get_level_display }}</span></td>
+        <td><span class="ins-fraud-status ins-fraud-status--{{ a.status }}">{{ a.get_status_display }}</span></td>
+        <td class="ins-reports-actions">
+          {% if a.claim_id %}
+          <a href="{% url 'bo_insurer_claim_detail' a.claim_id %}" title="Voir la demande" aria-label="Voir">
+            <span class="material-symbols-rounded sm">visibility</span>
+          </a>
+          {% endif %}
+          {% if a.status != 'resolved' %}
+          <form method="post" class="ins-fraud-status-form">
+            {% csrf_token %}
+            <input type="hidden" name="alert_id" value="{{ a.pk }}">
+            <select name="status" onchange="this.form.submit()" title="Changer le statut">
+              <option value="">⋯</option>
+              <option value="open">En cours</option>
+              <option value="analysis">En analyse</option>
+              <option value="resolved">Résolue</option>
+            </select>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="ins-claims-empty">
+          <span class="material-symbols-rounded">shield</span>
+          Aucune alerte pour cette période.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "backoffice/insurer/partials/fraud_pagination.html" %}
+
+<section class="ins-fraud-bottom">
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Répartition par type d'alerte</h3>
+    <div class="ins-doughnut-wrap">
+      <div class="ins-chart-wrap ins-chart-wrap--short"><canvas id="chartFraudTypes"></canvas></div>
+      <div class="ins-doughnut-center">
+        <span id="chartFraudTotal">—</span>
+        <small>alertes</small>
+      </div>
+    </div>
+  </article>
+  <article class="ins-panel ins-panel--wide">
+    <h3 class="ins-claim-section-title">Recommandations</h3>
+    <div class="ins-fraud-recos" id="fraudRecos"></div>
+  </article>
+</section>
+
+<div class="ins-claims-info-banner ins-fraud-vigilance">
+  <span class="material-symbols-rounded">verified_user</span>
+  <div>
+    <p class="font-bold">Restez vigilant</p>
+    <p class="text-sm">Signalez toute anomalie à l'équipe conformité et documentez vos analyses.</p>
+  </div>
+  <a href="{% url 'bo_insurer_support' %}" class="ins-btn-outline ins-btn-outline--sm">En savoir plus</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const charts = {{ charts_json|safe }};
+  if (typeof Chart === "undefined" || !charts) return;
+
+  if (charts.type_split) {
+    const el = document.getElementById("chartFraudTotal");
+    if (el) el.textContent = new Intl.NumberFormat("fr-FR").format(charts.type_split.total);
+    new Chart(document.getElementById("chartFraudTypes"), {
+      type: "doughnut",
+      data: {
+        labels: charts.type_split.labels,
+        datasets: [{ data: charts.type_split.data, backgroundColor: charts.type_split.colors, borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: { legend: { position: "bottom" } } }
+    });
+  }
+
+  const recosEl = document.getElementById("fraudRecos");
+  if (recosEl && charts.recommendations) {
+    recosEl.innerHTML = charts.recommendations.map(function (r) {
+      return '<article class="ins-fraud-reco"><span class="material-symbols-rounded">' + r.icon + '</span><div><p class="font-bold text-sm">' + r.title + '</p><p class="text-xs text-ink-muted">' + r.text + '</p></div></article>';
+    }).join("");
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,10 @@
+<div class="ins-user-chip">
+  <div class="ins-user-chip__avatar">
+    {% if user.avatar %}<img src="{{ user.avatar.url }}" alt="">{% else %}{{ user.first_name|default:user.username|slice:":1"|upper }}{% endif %}
+  </div>
+  <div class="min-w-0">
+    <p class="ins-user-chip__name">{{ partner_profile.display_name|default:partner_profile.organization_name }}</p>
+    <p class="ins-user-chip__role">Administrateur</p>
+  </div>
+  <span class="material-symbols-rounded sm text-ink-muted">expand_more</span>
+</div>

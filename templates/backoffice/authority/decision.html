@@ -1,0 +1,89 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Centre de décision{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Centre de décision <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Aide à la décision et scénarios stratégiques — seuils OMS/ODD appliqués aux données nationales.</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <a href="{% url 'bo_authority_reports' %}" class="auth-filter-btn auth-filter-btn--outline text-xs">Voir les indicateurs →</a>
+  </div>
+</header>
+
+<p class="auth-reports-note">{{ decision.methodology }}</p>
+
+<section class="auth-kpi-grid auth-kpi-grid--4 auth-kpi-grid--national auth-delivery-kpis">
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-rose">
+    <span class="auth-kpi__icon material-symbols-rounded">error</span>
+    <p class="auth-kpi__label">Scénarios critiques</p>
+    <p class="auth-kpi__value text-rose-700">{{ decision.summary.critical }}</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-amber">
+    <span class="auth-kpi__icon material-symbols-rounded">priority_high</span>
+    <p class="auth-kpi__label">Priorité élevée</p>
+    <p class="auth-kpi__value text-amber-700">{{ decision.summary.high }}</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-sky">
+    <span class="auth-kpi__icon material-symbols-rounded">inventory_2</span>
+    <p class="auth-kpi__label">Disponibilité stocks</p>
+    <p class="auth-kpi__value">{{ decision.summary.stock_availability }}%</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-green">
+    <span class="auth-kpi__icon material-symbols-rounded">local_pharmacy</span>
+    <p class="auth-kpi__label">Pharmacies actives</p>
+    <p class="auth-kpi__value">{{ decision.summary.active_pharmacies|intcomma }}</p>
+    <p class="auth-kpi__hint">{{ decision.summary.open_alerts }} alerte(s) ouverte(s)</p>
+  </article>
+</section>
+
+<section class="auth-decision-mid">
+  <article class="auth-panel auth-decision-scenarios-panel">
+    <h3>Scénarios stratégiques recommandés</h3>
+    {% if decision.scenarios %}
+    <ul class="auth-decision-scenario-list">
+      {% for s in decision.scenarios %}
+      <li class="auth-decision-scenario auth-decision-scenario--{{ s.severity }}">
+        <div class="auth-decision-scenario__head">
+          <span class="auth-decision-severity auth-decision-severity--{{ s.severity }}">{{ s.severity }}</span>
+          <h4>{{ s.title }}</h4>
+        </div>
+        <p class="auth-decision-scenario__evidence">{{ s.evidence }}</p>
+        <p class="auth-decision-scenario__reco"><strong>Recommandation :</strong> {{ s.recommendation }}</p>
+        <div class="auth-decision-scenario__meta">
+          <span>Impact {{ s.impact }}/100</span>
+          <span>Urgence {{ s.urgency }}/100</span>
+          <a href="{{ s.action_href }}" class="auth-map-link">{{ s.action_label|default:"Agir →" }}</a>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="auth-portal__banner !bg-emerald-50 !text-emerald-900 border border-emerald-200">
+      Aucun scénario critique détecté sur les données actuelles. Le réseau est dans les seuils OMS/ODD configurés.
+    </div>
+    {% endif %}
+  </article>
+
+  <article class="auth-panel">
+    <h3>Matrice urgence × impact</h3>
+    <div class="auth-decision-matrix" aria-hidden="true">
+      {% for s in decision.scenarios %}
+      <span
+        class="auth-decision-matrix__dot auth-decision-matrix__dot--{{ s.severity }}"
+        style="left:{{ s.urgency }}%;bottom:{{ s.impact }}%"
+        title="{{ s.title }}"
+      ></span>
+      {% endfor %}
+      <span class="auth-decision-matrix__label auth-decision-matrix__label--x">Urgence →</span>
+      <span class="auth-decision-matrix__label auth-decision-matrix__label--y">Impact ↑</span>
+    </div>
+    <p class="auth-kpi__hint mt-2">{{ decision.scenario_total }} scénario{{ decision.scenario_total|pluralize }} analysé{{ decision.scenario_total|pluralize }}</p>
+  </article>
+</section>
+
+<footer class="auth-national-footer auth-national-footer--info">
+  <p><span class="material-symbols-rounded text-sm align-middle">info</span> Dernière analyse : {{ decision.last_updated|date:"d/m/Y H:i" }}</p>
+</footer>
+{% endblock %}

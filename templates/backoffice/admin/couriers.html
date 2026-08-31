@@ -1,0 +1,166 @@
+{% extends "backoffice/base_bo.html" %}
+{% load bo_extras %}
+{% block title %}Livreurs{% endblock %}
+{% block bo_label %}Administration{% endblock %}
+{% block bo_title %}Livreurs{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="/static/css/courier-portal.css?v=2">
+<style>
+.admin-courier-form { max-width: 56rem; padding-bottom: 1rem; }
+.admin-courier-form .cp-btn-primary { width: auto; min-width: 12rem; }
+</style>
+{% endblock %}
+{% block bo_content %}
+<form method="get" class="bg-white rounded-2xl border p-3 mb-4 flex flex-wrap gap-2 items-center">
+  <div class="relative flex-1 min-w-[200px]">
+    <span class="material-symbols-rounded sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
+    <input name="q" value="{{ q }}" placeholder="Nom, téléphone, zone…" class="w-full border rounded-xl pl-9 pr-3 py-2 text-sm">
+  </div>
+  <select name="status" class="border rounded-xl px-3 py-2 text-sm">
+    <option value="">Tous les statuts</option>
+    {% for val, label in statuses %}<option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl">Filtrer</button>
+  <a href="?new=1" class="bg-primary text-white font-bold text-sm px-4 py-2 rounded-xl inline-flex items-center gap-1"><span class="material-symbols-rounded sm">add</span> Ajouter un livreur</a>
+</form>
+<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} résultat{{ total_count|pluralize }}</p>
+
+{% if show_create %}
+<section class="bg-white rounded-2xl border p-5 mb-4">
+  <div class="flex justify-between mb-1">
+    <h2 class="font-extrabold text-lg">Nouveau livreur</h2>
+    <a href="{% url 'bo_admin_couriers' %}" class="text-xs font-bold text-ink-muted">Fermer</a>
+  </div>
+  <p class="text-xs text-ink-muted mb-4">Créez le compte et renseignez le profil métier (véhicule, documents, zone).</p>
+  {% include "backoffice/admin/partials/courier_form.html" with is_edit=False user_obj=blank_user courier_profile=blank_profile vehicle=blank_vehicle documents=create_documents eligibility=blank_eligibility map_suffix="new" active_tab=active_tab statuses=statuses courier_statuses=courier_statuses courier_levels=courier_levels pharmacies=pharmacies %}
+</section>
+{% endif %}
+
+{% if edit_obj %}
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-5 mb-4">
+  <div class="flex justify-between mb-1">
+    <h2 class="font-extrabold text-lg">Modifier — {{ edit_obj.get_full_name|default:edit_obj.username }}</h2>
+    <a href="{% url 'bo_admin_couriers' %}" class="text-xs font-bold text-ink-muted">Fermer</a>
+  </div>
+  <p class="text-xs text-ink-muted mb-4">@{{ edit_obj.username }} · {{ edit_obj.email }}</p>
+  {% include "backoffice/admin/partials/courier_form.html" with is_edit=True user_obj=edit_obj courier_profile=edit_profile vehicle=edit_vehicle documents=edit_documents eligibility=edit_eligibility map_suffix=edit_obj.id active_tab=active_tab statuses=statuses courier_statuses=courier_statuses courier_levels=courier_levels pharmacies=pharmacies %}
+</section>
+{% endif %}
+
+<div class="bg-white rounded-2xl border overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+      <tr>
+        <th class="px-4 py-3">Livreur</th>
+        <th class="px-4 py-3">Contact</th>
+        <th class="px-4 py-3">Zone / Véhicule</th>
+        <th class="px-4 py-3">Éligibilité</th>
+        <th class="px-4 py-3">Statuts</th>
+        <th class="px-4 py-3 text-right">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in page_obj %}
+      {% with p=c.courier_profile %}
+      <tr class="border-t hover:bg-canvas/50">
+        <td class="px-4 py-3">
+          <p class="font-bold">{{ c.get_full_name|default:c.username }}</p>
+          <p class="text-xs text-ink-muted">@{{ c.username }}</p>
+        </td>
+        <td class="px-4 py-3 text-ink-muted text-xs">{{ c.phone|default:"—" }}<br>{{ c.email }}</td>
+        <td class="px-4 py-3 text-xs">
+          {% if p %}
+          <p>{{ p.zone|default:"—" }}</p>
+          <p class="text-ink-muted font-mono mt-0.5">{{ p.vehicle_plate|default:"Pas de plaque" }}</p>
+          {% if p.pharmacy %}<p class="text-primary font-bold mt-0.5">{{ p.pharmacy.name }}</p>{% endif %}
+          {% else %}
+          <span class="text-ink-muted">Profil incomplet</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-xs">
+          {% if p %}
+            {% with elig=p|courier_eligibility_info %}
+            {% if elig.is_eligible %}
+            <span class="cp-badge cp-badge--ok">Éligible</span>
+            {% elif elig.status == 'pending_admin' %}
+            <span class="cp-badge cp-badge--wait">À valider</span>
+            <p class="text-[10px] text-ink-muted mt-1">Dossier {{ elig.progress_label }} complet</p>
+            {% else %}
+            <span class="cp-badge cp-badge--wait">{{ elig.progress_label }}</span>
+            <p class="text-[10px] text-ink-muted mt-1">Documents manquants</p>
+            {% endif %}
+            {% endwith %}
+          {% else %}—{% endif %}
+        </td>
+        <td class="px-4 py-3">
+          <span class="text-[10px] font-bold text-primary block">{{ c.get_status_display }}</span>
+          {% if p %}
+          <span class="text-[10px] font-bold text-ink-muted">{{ p.get_courier_status_display }}</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-right">
+          <a href="?edit={{ c.id }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-50 text-primary" title="Modifier">
+            <span class="material-symbols-rounded sm">edit</span>
+          </a>
+        </td>
+      </tr>
+      {% endwith %}
+      {% empty %}
+      <tr><td colspan="6" class="px-4 py-10 text-center text-ink-muted">Aucun livreur</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/courier-portal.js?v=2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(function () {
+  document.querySelectorAll("[data-cp-tabs]").forEach(function (root) {
+    var hidden = root.querySelector("[data-cp-active-tab]");
+  });
+  document.querySelectorAll("[data-cp-tab]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var root = btn.closest("[data-cp-tabs]");
+      var hidden = root && root.querySelector("[data-cp-active-tab]");
+      if (hidden) hidden.value = btn.getAttribute("data-cp-tab");
+    });
+  });
+
+  if (typeof L === "undefined") return;
+  document.querySelectorAll("[id^='admin-courier-map-']").forEach(function (el) {
+    var suffix = el.id.replace("admin-courier-map-", "");
+    var latInput = document.getElementById("admin-courier-lat-" + suffix);
+    var lngInput = document.getElementById("admin-courier-lng-" + suffix);
+    if (!latInput || !lngInput) return;
+    var lat = parseFloat(latInput.value) || 0.4162;
+    var lng = parseFloat(lngInput.value) || 9.4673;
+    var map = L.map(el.id).setView([lat, lng], 14);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "&copy; OSM" }).addTo(map);
+    var marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    function sync(ll) {
+      latInput.value = ll.lat.toFixed(6);
+      lngInput.value = ll.lng.toFixed(6);
+    }
+    marker.on("dragend", function () { sync(marker.getLatLng()); });
+    map.on("click", function (e) { marker.setLatLng(e.latlng); sync(e.latlng); });
+    setTimeout(function () { map.invalidateSize(); }, 300);
+  });
+  document.querySelectorAll(".admin-courier-geolocate").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      if (!navigator.geolocation) return;
+      var suffix = btn.getAttribute("data-map-suffix");
+      var latInput = document.getElementById("admin-courier-lat-" + suffix);
+      var lngInput = document.getElementById("admin-courier-lng-" + suffix);
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        if (latInput) latInput.value = pos.coords.latitude.toFixed(6);
+        if (lngInput) lngInput.value = pos.coords.longitude.toFixed(6);
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

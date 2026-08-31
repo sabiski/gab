@@ -1,0 +1,240 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}{{ page_title|default:"Contrats et polices" }}{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claims-page-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-claims-back" aria-label="Retour">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </a>
+    <div>
+      <h1>{{ page_title|default:"Contrats et polices" }}</h1>
+      <p>Consultez et gérez tous les contrats d'assurance.</p>
+    </div>
+  </div>
+  <div class="ins-header__actions">
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--sm">Déconnexion</a>
+  </div>
+</header>
+
+<form method="get" class="ins-claims-toolbar">
+  <div class="ins-claims-search">
+    <span class="material-symbols-rounded">search</span>
+    <input name="q" value="{{ q }}" placeholder="Rechercher par référence, assuré, type de contrat…">
+    {% if tab and tab != 'all' %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+    {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+  </div>
+  <button type="button" class="ins-claims-filter-btn{% if show_filters %} is-open{% endif %}" data-toggle-filters>
+    <span class="material-symbols-rounded sm">tune</span> Filtres
+  </button>
+  <button type="button" class="ins-btn-primary ins-members-add-btn" data-open-new-contract>
+    <span class="material-symbols-rounded sm">add</span> Nouveau contrat
+  </button>
+</form>
+
+{% if show_filters %}
+<form method="get" class="ins-claims-filters-panel" data-open>
+  <input type="hidden" name="q" value="{{ q }}">
+  <input type="hidden" name="filters" value="1">
+  {% if tab and tab != 'all' %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+  {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+  <label class="ins-claims-filters-panel__field">
+    <span>Type de contrat</span>
+    <select name="plan">
+      <option value="">Tous</option>
+      <option value="plus" {% if plan == 'plus' %}selected{% endif %}>Santé Plus</option>
+      <option value="entreprise" {% if plan == 'entreprise' %}selected{% endif %}>Santé Entreprise</option>
+      <option value="essentiel" {% if plan == 'essentiel' %}selected{% endif %}>Essentiel / Autres</option>
+    </select>
+  </label>
+  <button type="submit" class="ins-btn-primary">Appliquer</button>
+  <a href="{{ contracts_reset_url }}" class="ins-btn-outline">Réinitialiser</a>
+</form>
+{% endif %}
+
+<section class="ins-claims-kpi">
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--purple">
+    <span class="material-symbols-rounded">contract</span>
+    <div>
+      <p class="ins-claims-kpi__label">Total des contrats</p>
+      <p class="ins-claims-kpi__value">{{ contract_stats.total|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ contract_stats.pct_total }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--green">
+    <span class="material-symbols-rounded">check_circle</span>
+    <div>
+      <p class="ins-claims-kpi__label">Contrats actifs</p>
+      <p class="ins-claims-kpi__value">{{ contract_stats.active|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ contract_stats.pct_active }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--amber">
+    <span class="material-symbols-rounded">schedule</span>
+    <div>
+      <p class="ins-claims-kpi__label">En cours d'expiration</p>
+      <p class="ins-claims-kpi__value">{{ contract_stats.expiring|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ contract_stats.pct_expiring }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--red">
+    <span class="material-symbols-rounded">cancel</span>
+    <div>
+      <p class="ins-claims-kpi__label">Résiliés / expirés</p>
+      <p class="ins-claims-kpi__value">{{ contract_stats.expired|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ contract_stats.pct_expired }} %</p>
+    </div>
+  </article>
+</section>
+
+{% include "backoffice/insurer/partials/contracts_tabs.html" %}
+
+<div class="ins-claims-table-wrap">
+  <table class="ins-claims-table ins-contracts-table">
+    <thead>
+      <tr>
+        <th>Référence</th>
+        <th>Assuré</th>
+        <th>Type de contrat</th>
+        <th>Date d'effet</th>
+        <th>Date d'expiration</th>
+        <th>Statut</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in page_obj %}
+      {% with c=row.ui_contract %}
+      <tr>
+        <td class="font-mono text-xs font-bold">{{ c.reference }}</td>
+        <td>
+          <p class="font-bold text-sm">{{ c.holder_name }}</p>
+          <p class="text-xs text-ink-muted">N° {{ c.holder_sub }}</p>
+        </td>
+        <td><span class="ins-contract-plan">{{ c.plan_label }}</span></td>
+        <td>{{ c.start_date|date:"d/m/Y" }}</td>
+        <td>{{ c.end_date|date:"d/m/Y" }}</td>
+        <td>
+          <span class="ins-contract-status ins-contract-status--{{ c.status.tone }}">
+            <span class="material-symbols-rounded sm">{{ c.status.icon }}</span>{{ c.status.label }}
+          </span>
+        </td>
+        <td>
+          <div class="ins-pharmacy-actions">
+            <a href="{% url 'bo_insurer_members' %}?q={{ c.user_email|urlencode }}" class="ins-pharmacy-view" title="Voir l'assuré">
+              <span class="material-symbols-rounded sm">visibility</span>
+            </a>
+            <details class="ins-claims-actions">
+              <summary aria-label="Actions"><span class="material-symbols-rounded">more_vert</span></summary>
+              <div class="ins-claims-actions__menu">
+                <a href="{% url 'bo_insurer_members' %}?q={{ c.user_email|urlencode }}">Voir l'assuré</a>
+                <a href="{% url 'bo_insurer_claims' %}?q={{ c.holder_sub|urlencode }}">Demandes liées</a>
+              </div>
+            </details>
+          </div>
+        </td>
+      </tr>
+      {% endwith %}
+      {% empty %}
+      <tr>
+        <td colspan="7" class="ins-claims-empty">
+          <span class="material-symbols-rounded">contract</span>
+          Aucun contrat rattaché à votre organisme.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "backoffice/insurer/partials/contracts_pagination.html" %}
+
+<section class="ins-payments-charts ins-contracts-widgets">
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Répartition par type de contrat</h3>
+    <div class="ins-chart-wrap ins-chart-wrap--short"><canvas id="chartContractType"></canvas></div>
+  </article>
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Échéances à venir</h3>
+    <ol class="ins-contracts-upcoming" id="contractsUpcoming"></ol>
+  </article>
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Documents récents</h3>
+    <ul class="ins-contracts-docs" id="contractsDocs"></ul>
+  </article>
+</section>
+
+<div class="ins-claims-info-banner ins-payments-info">
+  <span class="material-symbols-rounded">info</span>
+  <p><strong>Information :</strong> Les contrats expirant bientôt seront automatiquement notifiés aux assurés et aux pharmacies partenaires.</p>
+</div>
+
+<div class="ins-members-footer">
+  <a href="?export=csv{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if tab and tab != 'all' %}&amp;tab={{ tab }}{% endif %}{% if plan %}&amp;plan={{ plan }}{% endif %}" class="ins-btn-outline ins-members-export">
+    <span class="material-symbols-rounded sm">download</span> Exporter la liste
+  </a>
+</div>
+
+<dialog id="new-contract-dialog" class="ins-members-dialog">
+  <form method="dialog" class="ins-members-dialog__inner">
+    <h2 class="font-extrabold text-lg">Nouveau contrat</h2>
+    <p class="text-sm text-ink-muted mt-2">Les contrats sont créés lorsque les patients s'inscrivent avec votre organisme d'assurance sur Gab'Pharma.</p>
+    <p class="text-sm mt-2">Pour un contrat collectif ou une pharmacie partenaire, contactez le support Gab'Pharma.</p>
+    <div class="flex gap-2 mt-4 justify-end">
+      <button type="submit" class="ins-btn-primary">Compris</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const charts = {{ charts_json|safe }};
+  if (typeof Chart !== "undefined" && charts && charts.plan_split) {
+    new Chart(document.getElementById("chartContractType"), {
+      type: "doughnut",
+      data: {
+        labels: charts.plan_split.labels,
+        datasets: [{ data: charts.plan_split.data, backgroundColor: charts.plan_split.colors, borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
+    });
+  }
+  const up = document.getElementById("contractsUpcoming");
+  if (up && charts && charts.upcoming) {
+    up.innerHTML = charts.upcoming.map(function (u) {
+      return '<li><strong>' + u.name + '</strong><span class="text-xs text-ink-muted block">Expire le ' + u.end_date + ' — Dans ' + u.days_left + ' jours</span></li>';
+    }).join("") || '<li class="text-sm text-ink-muted">Aucune échéance proche</li>';
+  }
+  const docs = document.getElementById("contractsDocs");
+  if (docs && charts && charts.recent_docs) {
+    docs.innerHTML = charts.recent_docs.map(function (d) {
+      return '<li><span class="material-symbols-rounded sm">picture_as_pdf</span> ' + d.label + '</li>';
+    }).join("") || '<li class="text-sm text-ink-muted">Aucun document</li>';
+  }
+
+  const filterBtn = document.querySelector("[data-toggle-filters]");
+  const panel = document.querySelector(".ins-claims-filters-panel");
+  if (filterBtn && panel) {
+    filterBtn.addEventListener("click", () => {
+      const open = panel.style.display === "grid";
+      panel.style.display = open ? "none" : "grid";
+    });
+    if (!panel.hasAttribute("data-open")) panel.style.display = "none";
+  }
+  document.querySelector("[data-open-new-contract]")?.addEventListener("click", () => {
+    document.getElementById("new-contract-dialog")?.showModal();
+  });
+  const searchInput = document.querySelector(".ins-claims-search input[name='q']");
+  const toolbarForm = document.querySelector(".ins-claims-toolbar");
+  let t;
+  searchInput?.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => toolbarForm?.submit(), 450); });
+})();
+</script>
+{% endblock %}

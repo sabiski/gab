@@ -1,0 +1,27 @@
+{% extends "patient/base_patient.html" %}
+{% block title %}Mon profil{% endblock %}
+{% block content %}
+<h1 class="text-xl md:text-2xl font-semibold text-ink mb-4">Mon compte</h1>
+<div class="bg-white rounded-3xl p-5 shadow-card max-w-lg mb-4">
+  <div class="flex items-center gap-4 mb-4">
+    <div class="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-secondary text-white text-xl font-semibold flex items-center justify-center">
+      {% if user.is_authenticated %}{{ user.first_name|default:user.username|slice:":1"|upper }}{% else %}G{% endif %}
+    </div>
+    <div>
+      {% if user.is_authenticated %}
+      <p class="font-semibold text-ink">{{ user.get_full_name|default:user.username }}</p>
+      <p class="text-sm text-ink-muted">{{ user.email }}</p>
+      <p class="text-xs text-secondary mt-1">{{ user.loyalty_points }} points fidélité</p>
+      {% else %}
+      <p class="font-semibold text-ink">Invité</p>
+      <p class="text-sm text-ink-muted">Connectez-vous pour gérer votre compte</p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="space-y-2 text-sm">
+    <a href="/admin/" class="block px-3 py-2.5 rounded-xl bg-canvas hover:bg-primary-50 text-ink">Administration Django</a>
+    <a href="/api/v1/health/" class="block px-3 py-2.5 rounded-xl bg-canvas hover:bg-primary-50 text-ink">Statut API v1</a>
+  </div>
+</div>
+<p class="text-xs text-ink-muted max-w-lg">API REST prête pour Flutter (`/api/v1/`) — JWT, recherche, commandes, livraisons, paiements.</p>
+{% endblock %}

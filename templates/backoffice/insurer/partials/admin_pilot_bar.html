@@ -1,0 +1,13 @@
+<div class="ins-admin-pilot-bar">
+  <a href="{% url 'bo_admin_insurance' %}" class="ins-admin-pilot-bar__back">
+    <span class="material-symbols-rounded">arrow_back</span>
+    Retour au pilotage assureurs (admin)
+  </a>
+  <div class="ins-admin-pilot-bar__meta">
+    {% if partner_profile.preview %}
+    <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-1 rounded-lg">Aperçu · {{ partner_profile.display_name }}</span>
+    {% endif %}
+    <span class="text-xs text-ink-muted font-semibold hidden sm:inline">Portail compagnie</span>
+    {% include "backoffice/insurer/partials/user_chip.html" %}
+  </div>
+</div>

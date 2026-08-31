@@ -1,0 +1,48 @@
+{% extends "backoffice/base_bo.html" %}
+{% load humanize %}
+{% block title %}Espace partenaire{% endblock %}
+{% block bo_label %}Institution partenaire{% endblock %}
+{% block bo_title %}{{ profile.organization_name }}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/stats-mobile.css?v=1">
+{% endblock %}
+{% block bo_content %}
+
+<div class="stats-portal stats-portal--partner max-w-5xl">
+<p class="text-sm text-ink-muted mb-4">Accès en lecture aux données contractuelles (remboursements, statistiques agrégées). Aucune donnée nominative hors périmètre assureur.</p>
+
+<div class="stats-kpi-scroll mb-6">
+  <div class="stats-kpi-card">
+    <p class="stats-kpi-card__label">En attente</p>
+    <p class="stats-kpi-card__value" style="color:#F59E0B">{{ stats.pending|intcomma }}</p>
+  </div>
+  <div class="stats-kpi-card">
+    <p class="stats-kpi-card__label">Approuvées</p>
+    <p class="stats-kpi-card__value stats-kpi-card__value--neutral">{{ stats.approved|intcomma }}</p>
+  </div>
+  <div class="stats-kpi-card">
+    <p class="stats-kpi-card__label">Payées</p>
+    <p class="stats-kpi-card__value">{{ stats.paid|intcomma }}</p>
+  </div>
+  <div class="stats-kpi-card">
+    <p class="stats-kpi-card__label">Montant validé</p>
+    <p class="stats-kpi-card__value">{{ stats.total_amount|intcomma }} F</p>
+  </div>
+</div>
+
+<section class="stats-top-list">
+  <h2>Prises en charge récentes</h2>
+  {% for c in recent_claims %}
+  <div class="stats-top-row">
+    <div class="min-w-0">
+      <p class="font-bold">{{ c.order.code }}</p>
+      <p class="text-xs text-ink-muted">{{ c.get_status_display }} · {{ c.created_at|date:"d/m/Y" }}</p>
+    </div>
+    <span class="font-extrabold shrink-0" style="color:var(--stats-accent)">{{ c.amount }} F</span>
+  </div>
+  {% empty %}
+  <p class="text-sm text-ink-muted">Aucune prise en charge pour votre organisme.</p>
+  {% endfor %}
+</section>
+</div>
+{% endblock %}

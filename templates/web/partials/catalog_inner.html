@@ -1,0 +1,185 @@
+{% load portal_urls %}
+{% if client_portal %}<div class="space-y-5">{% else %}<div class="max-w-site mx-auto px-4 py-6 lg:py-8">{% endif %}
+  <!-- Breadcrumb -->
+  <nav class="portal-hide-in-espace text-xs text-ink-muted mb-4 flex items-center gap-1.5 flex-wrap">
+    <a href="{% portal_url 'home' %}" class="hover:text-primary">Accueil</a>
+    <span>/</span>
+    <a href="{% portal_url 'search' %}" class="hover:text-primary">Médicaments</a>
+    {% if category %}
+    <span>/</span>
+    <span class="text-ink">{{ category.name }}</span>
+    {% elif q %}
+    <span>/</span>
+    <span class="text-ink">« {{ q }} »</span>
+    {% endif %}
+  </nav>
+
+  <div class="flex flex-col lg:flex-row gap-6">
+    <!-- Sidebar filters -->
+    <aside class="lg:w-56 shrink-0">
+      <div class="bg-white border border-[#E5E7EB] rounded-2xl p-4 lg:p-5 sticky top-24">
+        <h2 class="text-sm font-semibold text-ink mb-3">Catégories</h2>
+        <ul class="space-y-1 text-sm">
+          <li>
+            <a href="{% portal_url 'search' %}{% if q %}?q={{ q|urlencode }}{% endif %}{% if sort and sort != 'relevance' %}{% if q %}&{% else %}?{% endif %}sort={{ sort }}{% endif %}"
+              class="block px-2 py-1.5 rounded-lg {% if not category %}bg-primary-50 text-primary font-medium{% else %}text-ink-muted hover:bg-slate-50{% endif %}">
+              Toutes
+            </a>
+          </li>
+          {% for cat in categories %}
+          <li>
+            <a href="{% portal_url 'search' %}?category={{ cat.slug }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}"
+              class="block px-2 py-1.5 rounded-lg {% if category and category.slug == cat.slug %}bg-primary-50 text-primary font-medium{% else %}text-ink-muted hover:bg-slate-50{% endif %}">
+              {{ cat.name }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </aside>
+
+    <!-- Results -->
+    <div class="flex-1 min-w-0">
+      <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+        <div>
+          <h1 class="portal-hide-in-espace text-xl lg:text-2xl font-bold text-ink">
+            {% if q %}Résultats pour « {{ q }} »{% elif category %}{{ category.name }}{% else %}Tous les médicaments{% endif %}
+          </h1>
+          <p class="text-sm text-ink-muted mt-1">
+            {% if q %}
+            {{ results_count }} produit{{ results_count|pluralize }} · {{ pharmacy_count }} pharmacie{{ pharmacy_count|pluralize }}
+            {% else %}
+            {{ results_count }} produit{{ results_count|pluralize }}
+            {% if show_availability %}· disponibilité affichée{% else %}· disponibilité masquée (recherche ou vérification){% endif %}
+            {% endif %}
+          </p>
+        </div>
+        <form method="get" class="text-xs text-ink-muted flex items-center gap-2">
+          {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+          {% if category %}<input type="hidden" name="category" value="{{ category.slug }}">{% endif %}
+          <label for="sort" class="font-semibold">Trier</label>
+          <select id="sort" name="sort" onchange="this.form.submit()"
+            class="border border-slate-200 rounded-lg text-sm px-2 py-1.5 bg-white text-ink font-medium">
+            <option value="relevance" {% if sort == "relevance" %}selected{% endif %}>Pertinence</option>
+            <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>Prix croissant</option>
+            <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>Prix décroissant</option>
+          </select>
+        </form>
+      </div>
+
+      {% if search_blocked %}
+      <section class="mb-6 rounded-2xl border-2 border-[#6C3AED]/30 bg-gradient-to-br from-[#F5F3FF] to-white p-6 lg:p-8 text-center">
+        <span class="material-symbols-rounded text-4xl text-[#6C3AED]">lock</span>
+        <h2 class="text-xl font-extrabold mt-3">Résultats réservés aux abonnés</h2>
+        <p class="text-sm text-ink-muted mt-2 max-w-lg mx-auto">
+          {% if results_count or pharmacy_count %}
+          <strong>{{ results_count }}</strong> produit{{ results_count|pluralize }} et <strong>{{ pharmacy_count }}</strong> pharmacie{{ pharmacy_count|pluralize }} correspondent à « {{ q }} ».
+          {% else %}
+          Aucun résultat public pour « {{ q }} » sans forfait actif.
+          {% endif %}
+          Choisissez un pass pour voir stocks, prix et officines.
+        </p>
+        <div class="flex flex-wrap justify-center gap-3 mt-5">
+          <a href="{% portal_url 'subscription_plans' %}?next={{ request.get_full_path|urlencode }}" class="inline-flex items-center gap-1 bg-[#6C3AED] hover:opacity-90 text-white font-bold text-sm px-6 py-3 rounded-full">
+            Voir les forfaits <span class="material-symbols-rounded sm">chevron_right</span>
+          </a>
+        </div>
+      </section>
+      {% elif access_status %}
+      <div class="mb-4 text-xs bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-xl px-3 py-2 flex flex-wrap justify-between gap-2">
+        <span><span class="material-symbols-rounded sm align-middle">verified</span> {{ access_status }}</span>
+        <a href="{% portal_url 'subscription_plans' %}" class="font-bold underline">Prolonger</a>
+      </div>
+      {% endif %}
+
+      {% if not show_availability and not search_blocked %}
+      <div class="mb-4 text-xs bg-slate-50 text-ink-muted border border-slate-200 rounded-xl px-3 py-2">
+        Les indicateurs de stock sont masqués. Lancez une <a href="{% portal_url 'search' %}" class="font-bold text-primary underline">recherche</a> ou ouvrez une fiche produit et cliquez sur <strong>Vérifier la disponibilité</strong>.
+      </div>
+      {% endif %}
+
+      {% if mask_catalog_details and not search_blocked %}
+      <div class="mb-4 text-xs bg-amber-50 text-amber-900 border border-amber-200 rounded-xl px-3 py-2">
+        Catalogue en aperçu — <a href="{% portal_url 'subscription_plans' %}?next={{ request.get_full_path|urlencode }}" class="font-bold underline">activez un forfait</a> pour voir prix, stocks et pharmacies.
+      </div>
+      {% endif %}
+
+      {% if show_availability %}
+      <div class="mb-4 text-xs bg-secondary-50 text-secondary border border-secondary/20 rounded-lg px-3 py-2">
+        Disponibilité et stocks affichés suite à votre recherche « {{ q }} ».
+      </div>
+      {% endif %}
+
+      {% if q and pharmacy_results %}
+      <section class="mb-8">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <h2 class="text-base font-extrabold text-ink inline-flex items-center gap-1.5">
+            <span class="material-symbols-rounded text-primary">local_pharmacy</span>
+            Pharmacies ({{ pharmacy_count }})
+          </h2>
+          {% if client_portal %}
+          <span class="text-xs font-bold text-primary">Pharmacies proches</span>
+          {% else %}
+          <a href="{% url 'pharmacy_list' %}?q={{ q|urlencode }}" class="text-xs font-bold text-primary">Voir toutes →</a>
+          {% endif %}
+        </div>
+        <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {% for pharmacy in pharmacy_results %}
+          {% if client_portal %}
+          <div class="bg-white border border-slate-100 rounded-2xl p-4 flex gap-3">
+          {% else %}
+          <a href="{% url 'pharmacy_detail' pharmacy.slug %}" class="bg-white border border-slate-100 rounded-2xl p-4 hover:shadow-lift hover:border-primary/25 transition flex gap-3">
+          {% endif %}
+            <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary flex items-center justify-center shrink-0 overflow-hidden">
+              {% if pharmacy.logo %}
+              <img src="{{ pharmacy.logo.url }}" alt="" class="h-full w-full object-cover">
+              {% else %}
+              <span class="material-symbols-rounded filled">local_pharmacy</span>
+              {% endif %}
+            </div>
+            <div class="min-w-0">
+              <p class="font-bold text-ink text-sm truncate">{{ pharmacy.name }}</p>
+              <p class="text-xs text-ink-muted mt-0.5 font-medium line-clamp-2">{{ pharmacy.district }}{% if pharmacy.district and pharmacy.city %}, {% endif %}{{ pharmacy.city }}</p>
+              <p class="text-[11px] text-primary mt-1 font-semibold inline-flex items-center gap-0.5">
+                <span class="material-symbols-rounded sm filled text-amber-500">star</span>
+                {{ pharmacy.rating }} · {{ pharmacy.status_label }}
+              </p>
+            </div>
+          {% if client_portal %}
+          </div>
+          {% else %}
+          </a>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if q %}
+      <h2 class="text-base font-extrabold text-ink mb-3 inline-flex items-center gap-1.5">
+        <span class="material-symbols-rounded text-primary">medication</span>
+        Médicaments ({{ results_count }})
+      </h2>
+      {% endif %}
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4">
+        {% for stock in results %}
+        {% include "web/partials/product_card.html" with stock=stock show_availability=show_availability mask_details=mask_catalog_details %}
+        {% empty %}
+        <div class="col-span-full bg-white border border-slate-100 rounded-xl p-10 text-center">
+          <p class="text-ink-muted text-sm mb-4">
+            {% if q and pharmacy_count %}
+            Aucun médicament trouvé — des pharmacies correspondent à votre recherche ci-dessus.
+            {% elif q %}
+            Aucun médicament ni pharmacie trouvé pour « {{ q }} ».
+            {% else %}
+            Aucun produit trouvé.
+            {% endif %}
+          </p>
+          <a href="{% portal_url 'search' %}" class="text-primary text-sm font-medium hover:underline">Retour au catalogue</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>

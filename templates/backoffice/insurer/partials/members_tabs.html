@@ -1,0 +1,5 @@
+<nav class="ins-claims-tabs" aria-label="Filtres assurés">
+  <a href="{% url 'bo_insurer_members' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'all' or not tab %} is-active{% endif %}">Tous les assurés <span class="ins-claims-tabs__count">({{ member_stats.total|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_members' %}?tab=active{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'active' %} is-active{% endif %}">Assurés actifs <span class="ins-claims-tabs__count">({{ member_stats.active|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_members' %}?tab=inactive{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if tab == 'inactive' %} is-active{% endif %}">Assurés inactifs <span class="ins-claims-tabs__count">({{ inactive_tab_count|default:0 }})</span></a>
+</nav>

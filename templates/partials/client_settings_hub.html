@@ -1,0 +1,102 @@
+{# Écran Paramètres — maquette CDC écran 19 #}
+<div class="c-settings mt-3 max-w-lg">
+
+  <section class="c-settings__section">
+    <h2 class="c-settings__title">Général</h2>
+    <div class="c-card overflow-hidden divide-y divide-[#F3F4F6]">
+      {% include "partials/settings_row.html" with url=notifications_url icon="notifications" label="Notifications" sublabel="Gérer les alertes et rappels" %}
+      {% include "partials/settings_row.html" with url=preferences_url icon="language" label="Langue de l'application" value=settings_language %}
+      {% include "partials/settings_row.html" with url=preferences_theme_url icon="dark_mode" label="Thème de l'application" value=settings_theme %}
+    </div>
+  </section>
+
+  <section class="c-settings__section">
+    <h2 class="c-settings__title">Sécurité et confidentialité</h2>
+    <div class="c-card overflow-hidden divide-y divide-[#F3F4F6]">
+      {% include "partials/settings_row.html" with url=security_url icon="lock" label="Sécurité du compte" sublabel="Mot de passe, empreinte, code PIN" %}
+      {% include "partials/settings_row.html" with url=privacy_url icon="shield" label="Confidentialité" sublabel="Gérer vos données personnelles" %}
+      {% include "partials/settings_row.html" with url=sessions_url icon="devices" label="Sessions actives" sublabel="Voir et gérer vos connexions" %}
+    </div>
+  </section>
+
+  <section class="c-settings__section">
+    <h2 class="c-settings__title">Préférences</h2>
+    <div class="c-card overflow-hidden divide-y divide-[#F3F4F6]">
+      {% include "partials/settings_row.html" with url=address_url icon="location_on" label="Adresse de livraison par défaut" value=settings_address %}
+      {% include "partials/settings_row.html" with url=payment_url icon="payments" label="Moyen de paiement par défaut" value=settings_payment %}
+      <a href="{% url 'bo_client_subscriptions' %}" class="c-settings-row">
+        <span class="c-settings-row__icon"><span class="material-symbols-rounded sm">schedule</span></span>
+        <span class="c-settings-row__body">
+          <span class="c-settings-row__label">Durée du pass par défaut</span>
+        </span>
+        <span class="c-settings-row__value">{{ settings_default_pass }}</span>
+        <span class="material-symbols-rounded sm c-settings-row__chev">chevron_right</span>
+      </a>
+      <form method="post" class="c-settings-row c-settings-row--toggle scroll-mt-24" id="save-searches">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_searches">
+        <input type="hidden" name="enabled" value="{% if settings_save_searches %}1{% else %}0{% endif %}" id="input-save-searches">
+        <span class="c-settings-row__icon"><span class="material-symbols-rounded sm">history</span></span>
+        <span class="c-settings-row__body">
+          <span class="c-settings-row__label">Enregistrer mes recherches</span>
+        </span>
+        <button type="button" class="c-switch {% if settings_save_searches %}is-on{% endif %}" data-toggle-form="save-searches" data-input="input-save-searches" aria-label="Enregistrer mes recherches"></button>
+      </form>
+      <form method="post" class="c-settings-row c-settings-row--toggle scroll-mt-24" id="data-saver">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="data_saver">
+        <input type="hidden" name="enabled" value="{% if settings_data_saver %}1{% else %}0{% endif %}" id="input-data-saver">
+        <span class="c-settings-row__icon"><span class="material-symbols-rounded sm">data_saver_on</span></span>
+        <span class="c-settings-row__body">
+          <span class="c-settings-row__label">Mode économie de données</span>
+        </span>
+        <button type="button" class="c-switch {% if settings_data_saver %}is-on{% endif %}" data-toggle-form="data-saver" data-input="input-data-saver" aria-label="Mode économie de données"></button>
+      </form>
+    </div>
+  </section>
+
+  <section class="c-settings__section">
+    <h2 class="c-settings__title">À propos</h2>
+    <div class="c-card overflow-hidden divide-y divide-[#F3F4F6]">
+      <div class="c-settings-row c-settings-row--static">
+        <span class="c-settings-row__icon"><span class="material-symbols-rounded sm">medication</span></span>
+        <span class="c-settings-row__body">
+          <span class="c-settings-row__label">À propos de Gab'Pharma</span>
+        </span>
+        <a href="{% url 'bo_client_about' %}" class="c-settings-row__value hover:text-[#6C3AED]">Version {{ app_version }}</a>
+      </div>
+      {% include "partials/settings_row.html" with url=support_url icon="help" label="Aide et support" sublabel="FAQ et contact" %}
+      {% include "partials/settings_row.html" with url=terms_url icon="description" label="Conditions d'utilisation" %}
+      {% include "partials/settings_row.html" with url=privacy_url icon="policy" label="Politique de confidentialité" %}
+    </div>
+  </section>
+
+  <a href="{% url 'logout' %}" class="c-settings-logout">
+    <span class="material-symbols-rounded sm">logout</span> Se déconnecter
+  </a>
+
+  <div class="c-settings-aside mt-5 space-y-3">
+    <div class="c-card p-4 flex gap-3 items-start bg-[#EFF6FF] border-[#2563EB]/20">
+      <span class="material-symbols-rounded text-[#2563EB]">support_agent</span>
+      <div>
+        <p class="font-bold text-sm text-[#374151]">Besoin d'aide ?</p>
+        <p class="text-xs text-[#6B7280] mt-1">Notre équipe est disponible 7j/7 de 7h à 22h.</p>
+        <a href="tel:+24111223344" class="text-sm font-bold text-[#2563EB] mt-1 inline-block">+241 11 22 33 44</a>
+      </div>
+    </div>
+    <div class="c-card p-4 flex gap-3 items-start">
+      <span class="material-symbols-rounded text-emerald-600">verified_user</span>
+      <div>
+        <p class="font-bold text-sm text-[#374151]">Vos données sont sécurisées</p>
+        <p class="text-xs text-[#6B7280] mt-1">Chiffrement de niveau bancaire pour vos informations de santé.</p>
+      </div>
+    </div>
+    <div class="c-card p-4 flex gap-3 items-start bg-[#F5F3FF] border-[#6C3AED]/15">
+      <span class="material-symbols-rounded text-[#6C3AED]">tips_and_updates</span>
+      <div>
+        <p class="font-bold text-sm text-[#374151]">Astuce</p>
+        <p class="text-xs text-[#6B7280] mt-1">Activez le mode économie de données pour une navigation plus rapide sur réseau mobile.</p>
+      </div>
+    </div>
+  </div>
+</div>

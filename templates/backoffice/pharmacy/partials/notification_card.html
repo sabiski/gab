@@ -1,0 +1,35 @@
+{# Carte notification pharmacie — badge d'alerte + contenu #}
+<a href="{{ n.open_url }}" class="block rounded-2xl border overflow-hidden text-sm transition hover:shadow-md
+  {% if n.alert_severity == 'critical' %}border-rose-300 ring-1 ring-rose-100
+  {% elif n.alert_severity == 'warning' %}border-amber-300 ring-1 ring-amber-100
+  {% elif n.alert_severity == 'order' %}border-primary/25
+  {% else %}border-slate-200
+  {% endif %}
+  {% if not n.is_read %}
+    {% if n.alert_severity == 'critical' %}bg-rose-50/80
+    {% elif n.alert_severity == 'warning' %}bg-amber-50/60
+    {% else %}bg-primary-50/40 ring-1 ring-primary/10
+    {% endif %}
+  {% else %}bg-white{% endif %}">
+
+  <div class="flex items-center gap-2 px-4 py-2 text-[11px] font-extrabold uppercase tracking-wide
+    {% if n.alert_severity == 'critical' %}bg-rose-600 text-white
+    {% elif n.alert_severity == 'warning' %}bg-amber-500 text-white
+    {% elif n.alert_severity == 'order' %}bg-primary text-white
+    {% else %}bg-slate-100 text-ink-muted
+    {% endif %}">
+    <span class="material-symbols-rounded text-sm">{{ n.alert_icon }}</span>
+    <span>{{ n.alert_label }}</span>
+    {% if not n.is_read %}
+    <span class="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full
+      {% if n.alert_severity == 'critical' or n.alert_severity == 'warning' %}bg-white/25 text-white
+      {% else %}bg-white text-primary{% endif %}">Nouveau</span>
+    {% endif %}
+  </div>
+
+  <div class="p-4">
+    <p class="font-extrabold text-[#14291C]">{{ n.title }}</p>
+    <p class="text-[#5B6B63] mt-1 leading-relaxed">{{ n.message }}</p>
+    <p class="text-[11px] text-ink-muted mt-2 font-semibold">{{ n.created_at|date:"d/m/Y H:i" }}</p>
+  </div>
+</a>

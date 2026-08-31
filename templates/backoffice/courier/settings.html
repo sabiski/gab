@@ -1,0 +1,103 @@
+{% extends "backoffice/base_bo.html" %}
+{% load l10n %}
+{% block title %}Profil livreur{% endblock %}
+{% block bo_label %}Espace Livreur{% endblock %}
+{% block bo_title %}Mon profil livreur{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="/static/css/courier-portal.css?v=2">
+{% endblock %}
+{% block bo_content %}
+
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-4 mb-5 text-sm max-w-3xl flex flex-wrap justify-between gap-3 items-center">
+  <div>
+    <p class="font-extrabold mb-1">Profil métier livreur (CDC)</p>
+    <p class="text-ink-muted font-medium">Coordonnées et position de base. Les 7 documents (dont pièce d'identité) → onglet Documents.</p>
+  </div>
+  <a href="{% url 'bo_courier_vehicles' %}" class="inline-flex items-center gap-1 bg-primary text-white font-bold text-xs px-4 py-2 rounded-xl">
+    <span class="material-symbols-rounded sm">two_wheeler</span> Véhicules &amp; documents
+  </a>
+</section>
+
+<form method="post" enctype="multipart/form-data" class="bg-white rounded-2xl border p-5 grid sm:grid-cols-2 gap-3 text-sm max-w-3xl">
+  {% csrf_token %}
+  {% include "backoffice/partials/image_field.html" with name="avatar" label="Photo" current=user.avatar %}
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Prénom</label>
+    <input name="first_name" value="{{ user.first_name }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Nom</label>
+    <input name="last_name" value="{{ user.last_name }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">E-mail</label>
+    <input name="email" type="email" value="{{ user.email }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Téléphone</label>
+    <input name="phone" value="{{ user.phone }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Zone de livraison</label>
+    <input name="zone" value="{{ profile.zone }}" placeholder="Glass, Akanda…" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Ville</label>
+    <input name="city" value="{{ user.city }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Quartier</label>
+    <input name="district" value="{{ user.district }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div class="sm:col-span-2 rounded-xl border border-primary/20 bg-primary-50 p-4">
+    <p class="text-xs font-bold text-ink-muted mb-1">Dossier réglementaire ({{ eligibility.progress_label }})</p>
+    <p class="text-sm font-medium mb-2">
+      Pièce d'identité, permis, assurance et 4 autres documents se déposent sur la page dédiée.
+    </p>
+    <a href="{% url 'bo_courier_vehicles' %}?tab=documents" class="inline-flex items-center gap-1 bg-primary text-white font-bold text-xs px-4 py-2 rounded-xl">
+      <span class="material-symbols-rounded sm">folder</span>
+      Gérer mes 7 documents
+    </a>
+  </div>
+  <div class="sm:col-span-2">
+    <p class="text-xs font-bold text-ink-muted mb-2">Position de base</p>
+    <div id="courier-map" class="h-56 w-full rounded-xl border mb-2 z-0"></div>
+    <div class="grid sm:grid-cols-3 gap-2">
+      <input id="id_latitude" name="latitude" value="{% localize off %}{{ user.latitude|default:'' }}{% endlocalize %}" placeholder="Latitude" class="border rounded-xl px-3 py-2">
+      <input id="id_longitude" name="longitude" value="{% localize off %}{{ user.longitude|default:'' }}{% endlocalize %}" placeholder="Longitude" class="border rounded-xl px-3 py-2">
+      <button type="button" id="btn-geolocate" class="border border-primary text-primary font-bold rounded-xl">Ma position</button>
+    </div>
+  </div>
+  <button class="bg-primary text-white font-bold rounded-xl py-2.5 sm:col-span-2">Enregistrer</button>
+</form>
+
+{% include "backoffice/partials/change_password.html" %}
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/courier-portal.js?v=2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(function () {
+  if (typeof L === 'undefined') return;
+  var latInput = document.getElementById('id_latitude');
+  var lngInput = document.getElementById('id_longitude');
+  var lat = parseFloat(latInput.value) || 0.4162;
+  var lng = parseFloat(lngInput.value) || 9.4673;
+  var map = L.map('courier-map').setView([lat, lng], 14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OSM' }).addTo(map);
+  var marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+  function sync(ll) { latInput.value = ll.lat.toFixed(6); lngInput.value = ll.lng.toFixed(6); }
+  marker.on('dragend', function () { sync(marker.getLatLng()); });
+  map.on('click', function (e) { marker.setLatLng(e.latlng); sync(e.latlng); });
+  document.getElementById('btn-geolocate').addEventListener('click', function () {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var ll = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      marker.setLatLng(ll); map.setView(ll, 16); sync(ll);
+    });
+  });
+  setTimeout(function () { map.invalidateSize(); }, 200);
+})();
+</script>
+{% endblock %}

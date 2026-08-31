@@ -1,0 +1,89 @@
+/* En-tête portail pharmacie */
+.bo-pharmacy-header {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fcf9 100%);
+  border-bottom: 1px solid rgba(34, 133, 69, 0.1);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+.bo-pharmacy-header__icon {
+  display: flex;
+  height: 2.35rem;
+  width: 2.35rem;
+  border-radius: 0.875rem;
+  background: linear-gradient(145deg, #228545 0%, #015533 100%);
+  color: #fff;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(34, 133, 69, 0.28);
+}
+
+@media (min-width: 640px) {
+  .bo-pharmacy-header__icon {
+    height: 2.75rem;
+    width: 2.75rem;
+  }
+}
+
+.bo-pharmacy-header__title {
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--gp-ink, #14291c);
+}
+
+@media (min-width: 640px) {
+  .bo-pharmacy-header__title {
+    font-size: 1.35rem;
+  }
+}
+
+.bo-pharmacy-header__pharmacy {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--gp-muted, #5b6b63);
+  margin-top: 0.15rem;
+  line-height: 1.3;
+}
+
+.bo-pharmacy-header__role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.55rem 0.2rem 0.4rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  background: #eaf5ee;
+  color: #1b6b37;
+  border: 1px solid rgba(34, 133, 69, 0.18);
+  white-space: nowrap;
+}
+
+.bo-pharmacy-header__role--cashier {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: rgba(37, 99, 235, 0.2);
+}
+
+.bo-pharmacy-header__role--owner,
+.bo-pharmacy-header__role--manager {
+  background: #f5f3ff;
+  color: #5b21b6;
+  border-color: rgba(91, 33, 182, 0.18);
+}
+
+.bo-pharmacy-header__role--pharmacist {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: rgba(4, 120, 87, 0.2);
+}
+
+.bo-pharmacy-header__subtitle {
+  font-size: 0.75rem;
+  color: var(--gp-muted, #5b6b63);
+  margin-top: 0.2rem;
+  line-height: 1.35;
+}

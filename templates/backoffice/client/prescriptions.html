@@ -1,0 +1,156 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Ordonnances{% endblock %}
+{% block portal_heading %}Mes ordonnances{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Stockez vos ordonnances ici. Lors d'une commande sur ordonnance, vous choisirez laquelle utiliser — rien n'est envoyé à la pharmacie sans votre validation.</p>
+{% endblock %}
+{% block portal_body %}
+
+<section class="c-card p-5 mb-5">
+  <h2 class="c-card__title mb-1">Ajouter une ordonnance</h2>
+  <p class="c-card__sub mb-4">PDF ou photo (JPG, PNG)</p>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-2 gap-4 text-sm" id="rx-upload-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="upload">
+    <div class="c-field sm:col-span-2">
+      <label class="c-label">Fichier *</label>
+      <input type="file" name="file" id="rx-file-input" required accept=".pdf,.jpg,.jpeg,.png,image/*" class="c-file w-full border border-dashed border-[#DDD6FE] rounded-xl p-3 bg-[#FAF8FF]">
+    </div>
+    <div class="sm:col-span-2 hidden" id="rx-live-preview">
+      <p class="c-label mb-2">Prévisualisation</p>
+      <div class="c-rx-preview rounded-xl border border-[#E5E7EB] min-h-[140px] p-2" id="rx-live-preview-box"></div>
+      <button type="button" class="text-xs font-bold text-[#6B7280] mt-2 hover:text-rose-600" id="rx-clear-preview">Retirer le fichier</button>
+    </div>
+    <div class="c-field">
+      <label class="c-label">Médecin (optionnel)</label>
+      <input name="doctor_name" placeholder="Dr. …" class="c-input">
+    </div>
+    <div class="c-field">
+      <label class="c-label">Note</label>
+      <input name="notes" placeholder="Précisions…" class="c-input">
+    </div>
+    <button type="submit" class="c-btn c-btn--primary sm:col-span-2">Enregistrer dans mon dossier</button>
+  </form>
+</section>
+
+<div class="space-y-4">
+  {% for rx in prescriptions %}
+  <article class="c-rx-card">
+    <div class="p-4 flex flex-wrap justify-between gap-3 items-start">
+      <div>
+        <p class="font-extrabold text-[#374151]">Ordonnance #{{ rx.id }}</p>
+        <p class="text-xs text-[#6B7280] mt-0.5">{{ rx.created_at|date:"d/m/Y H:i" }}{% if rx.doctor_name %} · {{ rx.doctor_name }}{% endif %}</p>
+        <span class="c-pill mt-2 {% if rx.status == 'validated' or rx.status == 'used' %}c-pill--success{% elif rx.status == 'rejected' %}c-pill--danger{% elif rx.status == 'pending' %}c-pill--warn{% else %}c-pill--muted{% endif %}">{{ rx.get_status_display }}</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" class="c-btn c-btn--ghost rx-open-modal" data-title="Ordonnance #{{ rx.id }}" data-url="{% url 'bo_prescription_file' rx.id %}" data-pdf="{% if rx.is_pdf %}1{% else %}0{% endif %}" data-image="{% if rx.is_image %}1{% else %}0{% endif %}">
+          <span class="material-symbols-rounded sm">fullscreen</span> Agrandir
+        </button>
+        {% if rx.status == "draft" or rx.status == "pending" %}
+        <form method="post" onsubmit="return confirm('Supprimer cette ordonnance ?')">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="rx_id" value="{{ rx.id }}">
+          <button type="submit" class="c-btn c-btn--ghost text-rose-600 border-rose-200">Supprimer</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    <div class="c-rx-preview">
+      {% if rx.is_image %}
+      <img src="{% url 'bo_prescription_file' rx.id %}" alt="Ordonnance {{ rx.id }}">
+      {% elif rx.is_pdf %}
+      <embed src="{% url 'bo_prescription_file' rx.id %}#toolbar=0" type="application/pdf">
+      {% else %}
+      <p class="p-4 text-xs text-[#6B7280]">Aperçu indisponible — utilisez « Agrandir ».</p>
+      {% endif %}
+    </div>
+  </article>
+  {% empty %}
+  <div class="c-card c-empty">
+    <div class="c-empty__icon"><span class="material-symbols-rounded">prescriptions</span></div>
+    <p class="text-sm font-bold text-[#374151]">Dossier vide</p>
+    <p class="text-xs text-[#6B7280] mt-1">Ajoutez votre première ordonnance avec le formulaire ci-dessus.</p>
+  </div>
+  {% endfor %}
+</div>
+
+<div id="rx-modal" class="c-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="rx-modal-title">
+  <div class="c-modal__backdrop" data-rx-close></div>
+  <div class="c-modal__panel">
+    <div class="c-modal__head">
+      <p class="c-modal__title" id="rx-modal-title">Ordonnance</p>
+      <button type="button" class="c-modal__close" data-rx-close aria-label="Fermer">
+        <span class="material-symbols-rounded sm">close</span>
+      </button>
+    </div>
+    <div class="c-modal__body" id="rx-modal-body"></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var input = document.getElementById('rx-file-input');
+  var wrap = document.getElementById('rx-live-preview');
+  var box = document.getElementById('rx-live-preview-box');
+  var clearBtn = document.getElementById('rx-clear-preview');
+  function clearPreview() {
+    if (input) input.value = '';
+    if (box) box.innerHTML = '';
+    if (wrap) wrap.classList.add('hidden');
+  }
+  if (input) {
+    input.addEventListener('change', function () {
+      box.innerHTML = '';
+      wrap.classList.add('hidden');
+      var f = input.files && input.files[0];
+      if (!f) return;
+      var url = URL.createObjectURL(f);
+      if (f.type === 'application/pdf') {
+        box.innerHTML = '<iframe src="' + url + '" class="w-full h-56 rounded-lg"></iframe>';
+      } else if ((f.type || '').indexOf('image/') === 0) {
+        box.innerHTML = '<img src="' + url + '" class="max-h-56 mx-auto object-contain" alt="Aperçu">';
+      } else {
+        box.innerHTML = '<p class="p-3 text-xs text-[#6B7280]">' + f.name + '</p>';
+      }
+      wrap.classList.remove('hidden');
+    });
+  }
+  if (clearBtn) clearBtn.addEventListener('click', clearPreview);
+
+  var modal = document.getElementById('rx-modal');
+  var modalBody = document.getElementById('rx-modal-body');
+  var modalTitle = document.getElementById('rx-modal-title');
+  function closeModal() {
+    if (!modal) return;
+    modal.classList.add('is-hidden');
+    document.body.classList.remove('bo-nav-open');
+    if (modalBody) modalBody.innerHTML = '';
+  }
+  function openModal(title, url, isPdf, isImage) {
+    if (!modal || !modalBody) return;
+    modalTitle.textContent = title;
+    if (isImage === '1') {
+      modalBody.innerHTML = '<img src="' + url + '" alt="' + title + '">';
+    } else if (isPdf === '1') {
+      modalBody.innerHTML = '<iframe src="' + url + '" class="w-full min-h-[70vh] rounded-lg" title="' + title + '"></iframe>';
+    } else {
+      modalBody.innerHTML = '<iframe src="' + url + '" class="w-full min-h-[70vh] rounded-lg"></iframe>';
+    }
+    modal.classList.remove('is-hidden');
+  }
+  document.querySelectorAll('.rx-open-modal').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      openModal(btn.getAttribute('data-title'), btn.getAttribute('data-url'), btn.getAttribute('data-pdf'), btn.getAttribute('data-image'));
+    });
+  });
+  document.querySelectorAll('[data-rx-close]').forEach(function (el) {
+    el.addEventListener('click', closeModal);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeModal();
+  });
+})();
+</script>
+{% endblock %}

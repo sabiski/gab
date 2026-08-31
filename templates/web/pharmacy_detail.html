@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load l10n %}
+{% block title %}{{ pharmacy.name }}{% endblock %}
+{% block extra_head %}
+{% if pharmacy.latitude and pharmacy.longitude %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endif %}
+{% endblock %}
+{% block content %}
+<div class="max-w-site mx-auto px-4 py-8">
+  <nav class="text-xs text-ink-muted mb-4"><a href="{% url 'home' %}" class="hover:text-primary">Accueil</a> / <a href="{% url 'pharmacy_list' %}" class="hover:text-primary">Pharmacies</a> / <span class="text-ink">{{ pharmacy.name }}</span></nav>
+  <div class="bg-white border border-slate-100 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row gap-5">
+    <div class="h-20 w-20 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden {% if pharmacy.logo_color == 'blue' %}bg-sky-100 text-sky-600{% else %}bg-secondary-100 text-secondary{% endif %}">
+      {% if pharmacy.logo %}
+      <img src="{{ pharmacy.logo.url }}" alt="{{ pharmacy.name }}" class="h-full w-full object-cover">
+      {% else %}
+      <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M11 2h2v7h7v2h-7v7h-2v-7H4V9h7V2z"/></svg>
+      {% endif %}
+    </div>
+    <div>
+      <h1 class="text-2xl font-bold text-ink">{{ pharmacy.name }}</h1>
+      <p class="text-sm text-ink-muted mt-1">{{ pharmacy.address }}, {{ pharmacy.district }}, {{ pharmacy.city }}</p>
+      <p class="text-sm text-secondary mt-2">{{ pharmacy.status_label }} · ⭐ {{ pharmacy.rating }} · {{ pharmacy.phone }}</p>
+      {% if pharmacy.description %}<p class="text-sm text-ink-muted mt-2 max-w-xl">{{ pharmacy.description }}</p>{% endif %}
+    </div>
+  </div>
+  {% if pharmacy.latitude and pharmacy.longitude %}
+  <div class="mb-8">
+    <h2 class="text-lg font-bold text-ink mb-3">Localisation</h2>
+    <div id="public-pharmacy-map" class="h-72 w-full rounded-2xl border border-slate-100 bg-white z-0"></div>
+    <p class="text-xs text-ink-muted mt-2">
+      {% localize off %}{{ pharmacy.latitude }}, {{ pharmacy.longitude }}{% endlocalize %}
+      · <a class="text-primary font-bold" target="_blank" rel="noopener"
+           href="https://www.openstreetmap.org/?mlat={% localize off %}{{ pharmacy.latitude }}{% endlocalize %}&mlon={% localize off %}{{ pharmacy.longitude }}{% endlocalize %}#map=16/{% localize off %}{{ pharmacy.latitude }}/{{ pharmacy.longitude }}{% endlocalize %}">Ouvrir dans OpenStreetMap</a>
+    </p>
+  </div>
+  {% endif %}
+  <h2 class="text-lg font-bold text-ink mb-4">Catalogue de la pharmacie</h2>
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+    {% for stock in stocks %}
+    {% include "web/partials/product_card.html" with stock=stock show_availability=False %}
+    {% empty %}
+    <p class="text-sm text-ink-muted">Aucun produit.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if pharmacy.latitude and pharmacy.longitude %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(function () {
+  var lat = {% localize off %}{{ pharmacy.latitude }}{% endlocalize %};
+  var lng = {% localize off %}{{ pharmacy.longitude }}{% endlocalize %};
+  if (typeof L === 'undefined' || !document.getElementById('public-pharmacy-map')) return;
+  var map = L.map('public-pharmacy-map').setView([lat, lng], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+  L.marker([lat, lng]).addTo(map).bindPopup("{{ pharmacy.name|escapejs }}");
+  setTimeout(function () { map.invalidateSize(); }, 150);
+})();
+</script>
+{% endif %}
+{% endblock %}

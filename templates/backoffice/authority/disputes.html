@@ -1,0 +1,274 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Centre des litiges & réclamations{% endblock %}
+{% block auth_extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Centre des litiges &amp; réclamations <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Suivez les réclamations patients, les litiges pharmacie et la qualité de résolution.</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <div class="auth-date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{{ dispute.period_start|date:"d/m/Y" }} – {{ dispute.period_end|date:"d/m/Y" }}</span>
+    </div>
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline" id="auth-dispute-filter-toggle">
+      <span class="material-symbols-rounded text-sm">tune</span> Filtres
+    </button>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-icon-btn relative" aria-label="Alertes sanitaires">
+      <span class="material-symbols-rounded">notifications</span>
+    </a>
+    {% if bo_role != "admin" %}{% include "backoffice/authority/partials/user_chip.html" %}{% endif %}
+  </div>
+</header>
+
+<form method="get" id="auth-dispute-filters" class="auth-stocks-filters auth-pharma-filters {% if filter_status or filter_priority or filter_search %}{% else %}hidden{% endif %}">
+  <div>
+    <label>Statut</label>
+    <select name="status" class="auth-stocks-filters__input">
+      <option value="">Tous</option>
+      {% for val, label in dispute.status_choices %}
+      <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Priorité</label>
+    <select name="priority" class="auth-stocks-filters__input">
+      <option value="">Toutes</option>
+      {% for val, label in dispute.priority_choices %}
+      <option value="{{ val }}" {% if filter_priority == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="flex-1 min-w-[10rem]">
+    <label>Recherche</label>
+    <input type="search" name="q" value="{{ filter_search }}" placeholder="ID, client, pharmacie…" class="auth-stocks-filters__input w-full">
+  </div>
+  <button type="submit" class="auth-filter-btn">Appliquer</button>
+  <a href="{% url 'bo_authority_disputes' %}" class="auth-map-link text-xs">Réinitialiser</a>
+</form>
+
+<section class="auth-kpi-grid auth-kpi-grid--5 auth-kpi-grid--national auth-delivery-kpis">
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-sky">
+    <span class="auth-kpi__icon material-symbols-rounded">folder_open</span>
+    <p class="auth-kpi__label">Litiges totaux</p>
+    <p class="auth-kpi__value">{{ dispute.kpis.total|intcomma }}</p>
+    <p class="auth-kpi__trend {% if dispute.kpis.total_trend >= 0 %}text-sky-700{% else %}is-up{% endif %}">
+      {% if dispute.kpis.total_trend >= 0 %}+{% endif %}{{ dispute.kpis.total_trend }}% vs période précédente
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-amber">
+    <span class="auth-kpi__icon material-symbols-rounded">hourglass_top</span>
+    <p class="auth-kpi__label">En cours</p>
+    <p class="auth-kpi__value text-amber-700">{{ dispute.kpis.in_progress|intcomma }}</p>
+    <p class="auth-kpi__hint">{{ dispute.kpis.in_progress_pct }}% du total</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-violet">
+    <span class="auth-kpi__icon material-symbols-rounded">mark_email_unread</span>
+    <p class="auth-kpi__label">En attente de réponse</p>
+    <p class="auth-kpi__value text-violet-700">{{ dispute.kpis.pending|intcomma }}</p>
+    <p class="auth-kpi__hint">{{ dispute.kpis.pending_pct }}% du total</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-green">
+    <span class="auth-kpi__icon material-symbols-rounded">check_circle</span>
+    <p class="auth-kpi__label">Résolus</p>
+    <p class="auth-kpi__value text-emerald-700">{{ dispute.kpis.resolved|intcomma }}</p>
+    <p class="auth-kpi__trend is-up">
+      {% if dispute.kpis.resolved_trend >= 0 %}+{% endif %}{{ dispute.kpis.resolved_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-rose">
+    <span class="auth-kpi__icon material-symbols-rounded">block</span>
+    <p class="auth-kpi__label">Rejetés / non fondés</p>
+    <p class="auth-kpi__value text-rose-700">{{ dispute.kpis.rejected|intcomma }}</p>
+    <p class="auth-kpi__trend {% if dispute.kpis.rejected_trend <= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      {% if dispute.kpis.rejected_trend >= 0 %}+{% endif %}{{ dispute.kpis.rejected_trend }}%
+    </p>
+  </article>
+</section>
+
+{% if not dispute.has_data %}
+<div class="auth-portal__banner !bg-sky-50 !text-sky-900 border border-sky-200 mb-3">
+  Aucune réclamation enregistrée sur la plateforme pour le moment.
+</div>
+{% endif %}
+
+<section class="auth-dispute-mid">
+  <article class="auth-panel">
+    <h3>Répartition par statut</h3>
+    <div class="auth-trends-donut auth-trends-donut--compact">
+      <div class="auth-trends-donut__ring" style="background: {{ dispute.donut_gradient }};">
+        <span class="auth-trends-donut__center">{{ dispute.donut_total|intcomma }}<small>Total</small></span>
+      </div>
+      <ul class="auth-trends-donut__legend">
+        {% for s in dispute.donut_slices %}
+        <li>
+          <span class="inline-flex items-center gap-2"><span class="auth-dot" style="background:{{ s.color }}"></span>{{ s.label }}</span>
+          <strong>{{ s.pct }}%</strong>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Évolution des litiges <small class="text-ink-muted font-normal">(30 jours)</small></h3>
+    <div class="auth-dispute-evo">
+      <svg viewBox="0 0 300 64" preserveAspectRatio="none" class="auth-dispute-evo__svg">
+        <polyline class="auth-dispute-evo__line auth-dispute-evo__line--opened" points="{{ dispute.evolution_lines.opened }}" />
+        <polyline class="auth-dispute-evo__line auth-dispute-evo__line--resolved" points="{{ dispute.evolution_lines.resolved }}" />
+        <polyline class="auth-dispute-evo__line auth-dispute-evo__line--rejected" points="{{ dispute.evolution_lines.rejected }}" />
+      </svg>
+      <ul class="auth-dispute-evo__legend">
+        <li><span class="auth-dot auth-dot--amber"></span> Ouverts</li>
+        <li><span class="auth-dot auth-dot--green"></span> Résolus</li>
+        <li><span class="auth-dot auth-dot--rose"></span> Rejetés</li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="auth-panel auth-dispute-priority-panel">
+    <h3>Litiges prioritaires</h3>
+    <ul class="auth-dispute-priority-list">
+      {% for p in dispute.priority_tickets %}
+      <li class="auth-dispute-priority-item">
+        <span class="auth-dispute-priority auth-dispute-priority--{{ p.priority }}">{{ p.priority_label }}</span>
+        <div>
+          <p class="auth-dispute-priority-item__title">{{ p.title }}</p>
+          <p class="auth-dispute-priority-item__meta">{{ p.code }} · {{ p.pharmacy }}</p>
+        </div>
+      </li>
+      {% empty %}
+      <li class="text-sm text-ink-muted py-4">Aucun litige ouvert prioritaire.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+
+<section class="auth-panel auth-dispute-table-panel mt-4">
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <h3 class="!mb-0">Derniers litiges et réclamations</h3>
+    <a href="{% url 'bo_authority_reports' %}?type=disputes&export=csv" class="auth-filter-btn auth-filter-btn--outline text-xs">Exporter</a>
+  </div>
+  <div class="auth-pharma-table-wrap">
+    <table class="auth-pharma-table auth-dispute-table">
+      <thead>
+        <tr>
+          <th>ID litige</th>
+          <th>Type</th>
+          <th>Client</th>
+          <th>Pharmacie</th>
+          <th>Statut</th>
+          <th>Priorité</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in dispute.table_rows %}
+        <tr>
+          <td class="font-bold">{{ row.code }}</td>
+          <td>{{ row.type_label }}</td>
+          <td>{{ row.client }}</td>
+          <td>{{ row.pharmacy }}</td>
+          <td><span class="auth-dispute-status auth-dispute-status--{{ row.status_bucket }}">{{ row.status_label }}</span></td>
+          <td><span class="auth-dispute-priority auth-dispute-priority--{{ row.priority }}">{{ row.priority_label }}</span></td>
+          <td>{{ row.created_at|date:"d/m/Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-sm text-ink-muted py-8">Aucun résultat pour ces filtres.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="auth-dispute-bottom">
+  <article class="auth-panel">
+    <h3>Indicateurs de performance</h3>
+    <div class="auth-pharma-key-list">
+      {% for ind in dispute.key_indicators %}
+      <div class="auth-pharma-key-item">
+        <span class="material-symbols-rounded">{{ ind.icon }}</span>
+        <div>
+          <p class="auth-pharma-key-item__label">{{ ind.label }}</p>
+          <p class="auth-pharma-key-item__value">{{ ind.value }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Analyse des litiges par catégorie</h3>
+    <div class="auth-pharma-nc-bars">
+      {% for c in dispute.category_bars %}
+      <div class="auth-pharma-nc-row">
+        <span class="auth-pharma-nc-row__label">{{ c.label }}</span>
+        <span class="auth-pharma-nc-row__bar"><span style="width:{{ c.bar_pct }}%;background:#8b5cf6"></span></span>
+        <span class="auth-pharma-nc-row__pct">{{ c.pct }}%</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ink-muted py-4">Aucune catégorie.</p>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Répartition par zone géographique</h3>
+    <div class="auth-dispute-geo-grid">
+      <div id="auth-map-disputes" class="auth-map auth-map--trends" role="img" aria-label="Carte litiges"></div>
+      <ul class="auth-pharma-geo-list">
+        {% for z in dispute.zone_bars|slice:":6" %}
+        <li><span>{{ z.label }}</span><strong>{{ z.count }} ({{ z.pct }}%)</strong></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Évaluation de la satisfaction</h3>
+    {% if dispute.satisfaction_total %}
+    <div class="auth-trends-donut auth-trends-donut--compact">
+      <div class="auth-trends-donut__ring" style="background: {{ dispute.satisfaction_gradient }};">
+        <span class="auth-trends-donut__center">{{ dispute.satisfaction_total }}<small>Avis</small></span>
+      </div>
+      <ul class="auth-trends-donut__legend">
+        {% for s in dispute.satisfaction_donut %}
+        <li>
+          <span class="inline-flex items-center gap-2"><span class="auth-dot" style="background:{{ s.color }}"></span>{{ s.label }}</span>
+          <strong>{{ s.pct }}%</strong>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% else %}
+    <p class="text-sm text-ink-muted py-4">Pas encore d'évaluations liées aux litiges résolus.</p>
+    {% endif %}
+  </article>
+</section>
+
+<footer class="auth-national-footer auth-national-footer--info">
+  <p>
+    <span class="material-symbols-rounded text-sm align-middle">info</span>
+    Données issues des réclamations clients (SupportTicket) et des évaluations post-livraison sur Gab'Pharma.
+  </p>
+  <span class="text-[0.65rem]">
+    Dernière mise à jour : {{ dispute.last_updated|date:"d/m/Y" }} à {{ dispute.last_updated|date:"H:i" }}
+  </span>
+</footer>
+
+{{ dispute.map_data|json_script:"authority-map-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=8"></script>
+<script>
+document.getElementById('auth-dispute-filter-toggle')?.addEventListener('click', function () {
+  document.getElementById('auth-dispute-filters')?.classList.toggle('hidden');
+});
+</script>
+{% endblock %}

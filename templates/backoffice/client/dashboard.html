@@ -1,0 +1,105 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Mon espace{% endblock %}
+{% block bo_label %}Espace patient{% endblock %}
+{% block bo_title %}Bonjour {{ user.first_name|default:user.username }}{% endblock %}
+{% block bo_content %}
+
+<section class="bg-white border border-[#6C3AED]/20 rounded-2xl p-5 mb-6 max-w-5xl">
+  <p class="text-xs font-bold uppercase tracking-wide text-[#6C3AED]">Guide patient</p>
+  <h2 class="text-lg font-extrabold mt-0.5 mb-2 text-[#374151]">Votre espace santé Gab'Pharma</h2>
+  <p class="text-sm text-[#6B7280] font-medium mb-3">Profil, commandes, ordonnances et notifications — tout au même endroit.</p>
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2 text-xs font-semibold">
+    <a href="{% url 'bo_client_orders' %}" class="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-[#374151] hover:border-[#6C3AED] hover:bg-[#F5F3FF]">
+      <span class="material-symbols-rounded sm text-[#6C3AED]">receipt_long</span> Mes commandes
+    </a>
+    <a href="{% url 'bo_client_prescriptions' %}" class="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-[#374151] hover:border-[#6C3AED] hover:bg-[#F5F3FF]">
+      <span class="material-symbols-rounded sm text-[#6C3AED]">prescriptions</span> Ordonnances
+    </a>
+    <a href="{% url 'bo_client_loyalty' %}" class="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-[#374151] hover:border-[#6C3AED] hover:bg-[#F5F3FF]">
+      <span class="material-symbols-rounded sm text-[#6C3AED]">loyalty</span> Fidélité
+    </a>
+    <a href="{% url 'bo_client_subscriptions' %}" class="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-[#374151] hover:border-[#6C3AED] hover:bg-[#F5F3FF]">
+      <span class="material-symbols-rounded sm text-[#6C3AED]">card_membership</span> Forfaits
+    </a>
+    <a href="{% url 'bo_client_support' %}" class="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-[#374151] hover:border-[#6C3AED] hover:bg-[#F5F3FF]">
+      <span class="material-symbols-rounded sm text-[#6C3AED]">support</span> Réclamations
+    </a>
+    <a href="{% url 'bo_client_notifications' %}" class="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-[#374151] hover:border-[#6C3AED] hover:bg-[#F5F3FF]">
+      <span class="material-symbols-rounded sm text-[#6C3AED]">notifications</span> Notifications{% if unread_notifs %} ({{ unread_notifs }}){% endif %}
+    </a>
+    <a href="{% url 'bo_client_settings' %}" class="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-[#374151] hover:border-[#6C3AED] hover:bg-[#F5F3FF]">
+      <span class="material-symbols-rounded sm text-[#6C3AED]">manage_accounts</span> Mon profil
+    </a>
+  </div>
+</section>
+
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+  <a href="{% url 'bo_client_loyalty' %}" class="bg-white rounded-2xl border border-[#E5E7EB] p-4 hover:border-[#6C3AED] transition block">
+    <p class="text-xs font-bold text-[#6B7280] uppercase">Points fidélité</p>
+    <p class="text-2xl font-extrabold text-[#6C3AED] mt-1">{{ user.loyalty_points }}</p>
+    <p class="text-[11px] text-[#6B7280] font-medium mt-0.5">Voir le programme →</p>
+  </a>
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] p-4">
+    <p class="text-xs font-bold text-[#6B7280] uppercase">Commandes</p>
+    <p class="text-2xl font-extrabold text-[#374151] mt-1">{{ orders_count }}</p>
+  </div>
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] p-4">
+    <p class="text-xs font-bold text-[#6B7280] uppercase">Favoris</p>
+    <p class="text-2xl font-extrabold text-[#374151] mt-1">{{ favorites_count }}</p>
+  </div>
+  <a href="{% url 'bo_client_notifications' %}" class="bg-white rounded-2xl border border-[#E5E7EB] p-4 hover:border-[#6C3AED] transition block">
+    <p class="text-xs font-bold text-[#6B7280] uppercase">Notifications</p>
+    <p class="text-2xl font-extrabold mt-1 {% if unread_notifs %}text-[#F59E0B]{% else %}text-[#374151]{% endif %}">{{ unread_notifs }}</p>
+    <p class="text-[11px] text-[#6B7280] font-medium mt-0.5">non lue{{ unread_notifs|pluralize }} · {{ notifs_count }} au total</p>
+  </a>
+  <div class="bg-white rounded-2xl border border-[#E5E7EB] p-4">
+    <p class="text-xs font-bold text-[#6B7280] uppercase">Ordonnances</p>
+    <p class="text-2xl font-extrabold text-[#374151] mt-1">{{ prescriptions_count }}</p>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+  <section class="bg-white rounded-2xl border border-[#E5E7EB] p-5 lg:col-span-2">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="font-extrabold text-[#374151]">Mes commandes</h2>
+      <a href="{% url 'bo_client_orders' %}" class="text-xs font-bold text-[#6C3AED]">Tout voir</a>
+    </div>
+    {% for o in orders %}
+    <a href="{% url 'bo_client_order_detail' o.pk %}" class="flex justify-between gap-2 text-sm py-2.5 border-b border-[#F3F4F6] hover:bg-[#F5F3FF] -mx-1 px-1 rounded min-w-0">
+      <div class="min-w-0">
+        <p class="font-bold text-[#374151] truncate">{{ o.code }}</p>
+        <p class="text-xs text-[#6B7280] truncate">{{ o.pharmacy.name|default:"—" }} · {{ o.created_at|date:"d/m/Y" }}</p>
+      </div>
+      <div class="text-right shrink-0">
+        <p class="font-bold text-[#6C3AED]">{{ o.total }} F</p>
+        <p class="text-[11px] text-[#6B7280]">{{ o.get_status_display }}</p>
+      </div>
+    </a>
+    {% empty %}
+    <p class="text-sm text-[#6B7280] mb-3">Pas encore de commande.</p>
+    <a href="{% url 'bo_client_catalog' %}" class="inline-flex bg-[#6C3AED] text-white text-sm font-bold px-4 py-2 rounded-full">Parcourir le catalogue</a>
+    {% endfor %}
+  </section>
+
+  <div class="space-y-6">
+    <section class="bg-white rounded-2xl border border-[#E5E7EB] p-5">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-extrabold text-[#374151]">Notifications</h2>
+        <a href="{% url 'bo_client_notifications' %}" class="text-xs font-bold text-[#6C3AED]">Voir</a>
+      </div>
+      {% for n in notifs %}
+      <div class="text-sm py-2 border-b border-[#F3F4F6] {% if not n.is_read %}bg-[#F5F3FF] -mx-2 px-2 rounded{% endif %}">
+        <p class="font-bold text-[#374151]">{{ n.title }}</p>
+        <p class="text-xs text-[#6B7280] line-clamp-2">{{ n.message }}</p>
+      </div>
+      {% empty %}<p class="text-sm text-[#6B7280]">Aucune notification.</p>{% endfor %}
+    </section>
+    <section class="bg-white rounded-2xl border border-[#E5E7EB] p-5">
+      <h2 class="font-extrabold text-[#374151] mb-3">Favoris</h2>
+      {% for f in favorites %}
+      <a href="{% url 'bo_client_catalog' %}?q={{ f.stock.medicine.name|urlencode }}" class="block text-sm py-2 border-b border-[#F3F4F6] font-bold text-[#374151] hover:text-[#6C3AED]">{{ f.stock.medicine.name }} · {{ f.stock.pharmacy.name }}</a>
+      {% empty %}<p class="text-sm text-[#6B7280]">Aucun favori.</p>{% endfor %}
+    </section>
+  </div>
+</div>
+{% endblock %}

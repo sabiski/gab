@@ -1,0 +1,288 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Alertes sanitaires et épidémiologiques{% endblock %}
+{% block auth_extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Alertes sanitaires et épidémiologiques <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Surveillez les événements sanitaires en temps réel et les risques pour la population.</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <div class="auth-date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{{ alerts.period_start|date:"d/m/Y" }} – {{ alerts.period_end|date:"d/m/Y" }}</span>
+    </div>
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline" id="auth-alerts-filter-toggle">
+      <span class="material-symbols-rounded text-sm">tune</span> Filtres
+    </button>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-icon-btn relative" aria-label="Alertes sanitaires">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if alerts.kpis.active %}<span class="auth-icon-btn__badge">{{ alerts.kpis.active }}</span>{% endif %}
+    </a>
+    {% if bo_role != "admin" %}{% include "backoffice/authority/partials/user_chip.html" %}{% endif %}
+  </div>
+</header>
+
+{% if crisis_mode %}
+<section class="auth-crisis-panel {% if crisis_active %}auth-crisis-panel--active{% endif %}">
+  <div class="auth-crisis-panel__head">
+    <span class="material-symbols-rounded">crisis_alert</span>
+    <div>
+      <h2>Plan d'action — alertes sanitaires élevées</h2>
+      <p>Recommandation du centre de décision : activer la cellule de crise régionale et traiter les alertes prioritaires.</p>
+    </div>
+  </div>
+  <ol class="auth-crisis-panel__steps">
+    <li><strong>1.</strong> Filtrer et examiner les {{ alerts.kpis.high }} alerte(s) de niveau élevé ci-dessous.</li>
+    <li><strong>2.</strong> Identifier les zones affectées sur la carte et coordonner les autorités locales.</li>
+    <li><strong>3.</strong> Activer la cellule de crise pour notifier MSNS, directions régionales et pharmacies clés.</li>
+    <li><strong>4.</strong> Suivre la résolution et consolider le rapport dans <a href="{% url 'bo_authority_reports' %}" class="auth-map-link">Rapports &amp; indicateurs</a>.</li>
+  </ol>
+  <div class="auth-crisis-panel__actions">
+    {% if not crisis_active %}
+    <form method="post" class="inline">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="activate_crisis_cell">
+      <button type="submit" class="auth-filter-btn">Activer la cellule de crise régionale</button>
+    </form>
+    {% else %}
+    <p class="auth-crisis-panel__status"><span class="material-symbols-rounded text-sm">check_circle</span> Cellule de crise activée</p>
+    {% endif %}
+    <a href="{% url 'bo_authority_map' %}" class="auth-filter-btn auth-filter-btn--outline">Voir la carte sanitaire</a>
+    <a href="{% url 'bo_authority_decision' %}" class="auth-map-link text-sm">← Retour au centre de décision</a>
+  </div>
+</section>
+{% endif %}
+
+<form method="get" id="auth-alerts-filters" class="auth-stocks-filters {% if filter_level %}{% else %}hidden{% endif %}">
+  <div>
+    <label>Niveau d'alerte</label>
+    <select name="level" class="auth-stocks-filters__input">
+      <option value="">Tous les niveaux</option>
+      <option value="high" {% if filter_level == "high" %}selected{% endif %}>Élevée</option>
+      <option value="medium" {% if filter_level == "medium" %}selected{% endif %}>Moyenne</option>
+      <option value="low" {% if filter_level == "low" %}selected{% endif %}>Faible</option>
+    </select>
+  </div>
+  <button type="submit" class="auth-filter-btn">Appliquer</button>
+  {% if filter_level %}
+  <a href="{% url 'bo_authority_alerts' %}" class="auth-map-link text-xs">Réinitialiser</a>
+  {% endif %}
+</form>
+
+<section class="auth-kpi-grid auth-kpi-grid--5 auth-kpi-grid--national auth-alerts-kpis">
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-rose-500">warning</span>
+    <p class="auth-kpi__label">Alertes actives</p>
+    <p class="auth-kpi__value">{{ alerts.kpis.active|intcomma }}</p>
+    <p class="auth-kpi__trend {% if alerts.kpis.active_trend >= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      <span class="material-symbols-rounded text-xs">{% if alerts.kpis.active_trend >= 0 %}trending_up{% else %}trending_down{% endif %}</span>
+      {% if alerts.kpis.active_trend >= 0 %}+{% endif %}{{ alerts.kpis.active_trend }}% vs période précédente
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-orange-500">priority_high</span>
+    <p class="auth-kpi__label">Alertes élevées</p>
+    <p class="auth-kpi__value text-orange-600">{{ alerts.kpis.high|intcomma }}</p>
+    <p class="auth-kpi__trend {% if alerts.kpis.high_trend >= 0 %}text-orange-600{% else %}is-up{% endif %}">
+      <span class="material-symbols-rounded text-xs">{% if alerts.kpis.high_trend >= 0 %}trending_up{% else %}trending_down{% endif %}</span>
+      {% if alerts.kpis.high_trend >= 0 %}+{% endif %}{{ alerts.kpis.high_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-amber-500">error</span>
+    <p class="auth-kpi__label">Alertes moyennes</p>
+    <p class="auth-kpi__value text-amber-600">{{ alerts.kpis.medium|intcomma }}</p>
+    <p class="auth-kpi__trend {% if alerts.kpis.medium_trend >= 0 %}text-amber-600{% else %}is-up{% endif %}">
+      <span class="material-symbols-rounded text-xs">{% if alerts.kpis.medium_trend >= 0 %}trending_up{% else %}trending_down{% endif %}</span>
+      {% if alerts.kpis.medium_trend >= 0 %}+{% endif %}{{ alerts.kpis.medium_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-sky-500">info</span>
+    <p class="auth-kpi__label">Alertes faibles</p>
+    <p class="auth-kpi__value text-sky-600">{{ alerts.kpis.low|intcomma }}</p>
+    <p class="auth-kpi__trend {% if alerts.kpis.low_trend >= 0 %}text-sky-600{% else %}is-up{% endif %}">
+      <span class="material-symbols-rounded text-xs">{% if alerts.kpis.low_trend >= 0 %}trending_up{% else %}trending_down{% endif %}</span>
+      {% if alerts.kpis.low_trend >= 0 %}+{% endif %}{{ alerts.kpis.low_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon">
+    <span class="auth-kpi__icon material-symbols-rounded text-violet-500">task_alt</span>
+    <p class="auth-kpi__label">Alertes résolues</p>
+    <p class="auth-kpi__value text-violet-600">{{ alerts.kpis.resolved|intcomma }}</p>
+    <p class="auth-kpi__trend is-up">
+      <span class="material-symbols-rounded text-xs">trending_up</span> +{{ alerts.kpis.resolved_trend }}%
+    </p>
+  </article>
+</section>
+
+<section class="auth-alerts-mid">
+  <article class="auth-panel auth-alerts-table-panel">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h3 class="!mb-0">Liste des alertes</h3>
+      <nav class="auth-alerts-tabs" aria-label="Filtrer par niveau">
+        {% for tab in alerts.tabs %}
+        <a href="{% if tab.key %}{% url 'bo_authority_alerts' %}?level={{ tab.key }}{% else %}{% url 'bo_authority_alerts' %}{% endif %}"
+           class="auth-alerts-tabs__btn {% if filter_level == tab.key %}is-active{% endif %}">
+          {{ tab.label }} ({{ tab.count }})
+        </a>
+        {% endfor %}
+      </nav>
+    </div>
+    <div class="auth-alerts-table-wrap">
+      <table class="auth-alerts-table">
+        <thead>
+          <tr>
+            <th>Niveau</th>
+            <th>Type d'alerte</th>
+            <th>Zone affectée</th>
+            <th>Description</th>
+            <th>Détectée le</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in alerts.alerts %}
+          <tr>
+            <td>
+              <span class="auth-alerts-level auth-alerts-level--{{ a.level }}">{{ a.level_label }}</span>
+            </td>
+            <td>
+              <span class="auth-alerts-type">
+                <span class="material-symbols-rounded">{{ a.type_icon }}</span>
+                {{ a.type }}
+              </span>
+            </td>
+            <td class="font-semibold">{{ a.zone }}</td>
+            <td class="auth-alerts-desc">{{ a.description }}</td>
+            <td class="auth-alerts-date">
+              <span>{{ a.detected_at|date:"d/m/Y" }}</span>
+              <small>{{ a.detected_at|date:"H:i" }}</small>
+            </td>
+            <td>
+              <span class="auth-alerts-status auth-alerts-status--{{ a.status }}">{{ a.status_label }}</span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-sm text-ink-muted py-8">Aucune alerte pour ce filtre.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-alerts-more">Voir toutes les alertes →</a>
+  </article>
+
+  <article class="auth-panel auth-alerts-map-panel">
+    <div class="flex items-center justify-between gap-2 mb-2">
+      <h3 class="!mb-0">Carte des alertes actives</h3>
+      <a href="{% url 'bo_authority_map' %}" class="auth-map-link text-xs">Voir la carte complète →</a>
+    </div>
+    <div class="auth-alerts-map-wrap">
+      <div id="auth-map-alerts" class="auth-map auth-map--alerts" role="img" aria-label="Carte des alertes au Gabon"></div>
+      <div class="auth-map-legend auth-map-legend--alerts">
+        <p class="auth-map-legend__title">Légende</p>
+        <ul>
+          <li><span class="auth-map-legend__swatch" style="background:#dc2626"></span> Élevée</li>
+          <li><span class="auth-map-legend__swatch" style="background:#ea580c"></span> Moyenne</li>
+          <li><span class="auth-map-legend__swatch" style="background:#2563eb"></span> Faible</li>
+        </ul>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="auth-alerts-bottom">
+  <article class="auth-panel">
+    <h3>Répartition des alertes par type</h3>
+    <div class="auth-alerts-donut">
+      <div class="auth-alerts-donut__ring" style="background: {{ alerts.donut_gradient }};">
+        <span class="auth-alerts-donut__center">{{ alerts.donut_total }}<small>Alertes totales</small></span>
+      </div>
+      <ul class="auth-alerts-donut__legend">
+        {% for t in alerts.donut_types %}
+        <li>
+          <span class="inline-flex items-center gap-2 min-w-0">
+            <span class="auth-dot" style="background:{{ t.color }}"></span>
+            <span class="truncate">{{ t.label }}</span>
+          </span>
+          <strong>{{ t.pct }}%</strong>
+        </li>
+        {% empty %}
+        <li class="text-sm text-ink-muted">Aucune alerte active.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Évolution des alertes (30 derniers jours)</h3>
+    <div class="auth-alerts-evo" role="img" aria-label="Évolution sur 30 jours">
+      <svg viewBox="0 0 280 72" preserveAspectRatio="none" class="auth-alerts-evo__svg">
+        <polyline class="auth-alerts-evo__line auth-alerts-evo__line--low" points="{{ alerts.evolution_lines.low }}" />
+        <polyline class="auth-alerts-evo__line auth-alerts-evo__line--medium" points="{{ alerts.evolution_lines.medium }}" />
+        <polyline class="auth-alerts-evo__line auth-alerts-evo__line--high" points="{{ alerts.evolution_lines.high }}" />
+        <polyline class="auth-alerts-evo__line auth-alerts-evo__line--total" points="{{ alerts.evolution_lines.total }}" />
+      </svg>
+      <div class="auth-alerts-evo__labels">
+        <span>{{ alerts.evolution.0.label }}</span>
+        <span>{{ alerts.evolution.14.label }}</span>
+        <span>{{ alerts.evolution.29.label }}</span>
+      </div>
+    </div>
+    <div class="auth-line-chart__legend mt-3">
+      <span><i class="auth-dot auth-dot--green"></i> Total</span>
+      <span><i class="auth-dot" style="background:#dc2626"></i> Élevées</span>
+      <span><i class="auth-dot auth-dot--amber"></i> Moyennes</span>
+      <span><i class="auth-dot" style="background:#2563eb"></i> Faibles</span>
+    </div>
+  </article>
+
+  <article class="auth-panel auth-alerts-urgent">
+    <h3>Alertes nécessitant une action rapide</h3>
+    <ul class="auth-alerts-urgent-list">
+      {% for a in alerts.urgent %}
+      <li class="auth-alerts-urgent-item">
+        <div class="min-w-0 flex-1">
+          <p class="auth-alerts-urgent-item__title">{{ a.type }}</p>
+          <p class="auth-alerts-urgent-item__meta">{{ a.zone }} · {{ a.time_ago }}</p>
+        </div>
+        <span class="auth-alerts-urgent-badge {% if a.level == 'high' %}auth-alerts-urgent-badge--danger{% else %}auth-alerts-urgent-badge--warn{% endif %}">
+          {% if a.level == 'high' %}Action immédiate{% else %}Priorité élevée{% endif %}
+        </span>
+      </li>
+      {% empty %}
+      <li class="text-sm text-ink-muted py-6 text-center">Aucune alerte urgente.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+
+<footer class="auth-national-footer auth-national-footer--info">
+  <p>
+    <span class="material-symbols-rounded text-sm align-middle text-sky-600">info</span>
+    Les données affichées sont mises à jour en temps réel à partir des pharmacies et établissements de santé.
+  </p>
+  <span class="flex items-center gap-1 text-[0.65rem]">
+    <span class="material-symbols-rounded text-sm">schedule</span>
+    Dernière mise à jour : {{ alerts.last_updated|date:"d/m/Y" }} à {{ alerts.last_updated|date:"H:i" }}
+    <button type="button" class="auth-alerts-refresh" onclick="location.reload()" aria-label="Actualiser">
+      <span class="material-symbols-rounded text-sm">refresh</span>
+    </button>
+  </span>
+</footer>
+
+{{ alerts.map_data|json_script:"authority-map-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=3"></script>
+<script>
+document.getElementById('auth-alerts-filter-toggle')?.addEventListener('click', function () {
+  document.getElementById('auth-alerts-filters')?.classList.toggle('hidden');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block body %}
+<div class="min-h-screen pb-24 md:pb-8 relative">
+  <!-- Desktop top nav -->
+  <header class="hidden md:block sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-100">
+    <div class="px-6 py-3 flex items-center justify-between gap-6">
+      <a href="{% url 'home' %}" class="flex items-center gap-2.5 shrink-0">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-white text-lg font-bold border-2 border-primary">+</span>
+        <span>
+          <span class="block text-primary font-semibold text-lg leading-tight">Gab'Pharma</span>
+          <span class="block text-[11px] text-ink-muted -mt-0.5">La santé à portée de main</span>
+        </span>
+      </a>
+      <nav class="flex items-center gap-1 text-sm font-medium">
+        <a href="{% url 'home' %}" class="px-3 py-2 rounded-lg {% if active_nav == 'home' %}text-secondary bg-secondary-50{% else %}text-ink-muted hover:text-ink{% endif %}">Accueil</a>
+        <a href="{% url 'search' %}" class="px-3 py-2 rounded-lg {% if active_nav == 'search' %}text-secondary bg-secondary-50{% else %}text-ink-muted hover:text-ink{% endif %}">Recherche</a>
+        <a href="{% url 'orders' %}" class="px-3 py-2 rounded-lg {% if active_nav == 'orders' %}text-secondary bg-secondary-50{% else %}text-ink-muted hover:text-ink{% endif %}">Commandes</a>
+        <a href="{% url 'favorites' %}" class="px-3 py-2 rounded-lg {% if active_nav == 'favorites' %}text-secondary bg-secondary-50{% else %}text-ink-muted hover:text-ink{% endif %}">Favoris</a>
+        <a href="{% url 'profile' %}" class="px-3 py-2 rounded-lg {% if active_nav == 'profile' %}text-secondary bg-secondary-50{% else %}text-ink-muted hover:text-ink{% endif %}">Profil</a>
+      </nav>
+      <div class="flex items-center gap-3">
+        <button type="button" class="relative p-2 rounded-full hover:bg-slate-100" aria-label="Notifications">
+          <svg class="w-5 h-5 text-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          {% if unread_count %}<span class="absolute -top-0.5 -right-0.5 h-4 min-w-4 px-1 rounded-full bg-primary text-white text-[10px] font-semibold flex items-center justify-center">{{ unread_count }}</span>{% endif %}
+        </button>
+        <div class="h-9 w-9 rounded-full bg-gradient-to-br from-primary to-secondary text-white text-sm font-semibold flex items-center justify-center">
+          {% if user.is_authenticated %}{{ user.first_name|default:user.username|slice:":1"|upper }}{% else %}G{% endif %}
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="px-4 md:px-6 lg:px-8 pt-3 md:pt-6">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Mobile bottom nav PWA -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white border-t border-slate-100 safe-bottom" aria-label="Navigation principale">
+    <div class="max-w-lg mx-auto grid grid-cols-5 h-16">
+      {% include "components/nav_item.html" with url_name="home" label="Accueil" nav="home" %}
+      {% include "components/nav_item.html" with url_name="search" label="Recherche" nav="search" %}
+      {% include "components/nav_item.html" with url_name="orders" label="Commandes" nav="orders" %}
+      {% include "components/nav_item.html" with url_name="favorites" label="Favoris" nav="favorites" %}
+      {% include "components/nav_item.html" with url_name="profile" label="Profil" nav="profile" %}
+    </div>
+  </nav>
+</div>
+{% endblock %}

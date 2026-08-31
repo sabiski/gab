@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Paiement confirmé{% endblock %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  .pay-ok { font-family: 'Poppins', 'Plus Jakarta Sans', sans-serif; background: #F3F4F6; }
+  .pay-ok .card { background: #fff; border: 1px solid #E5E7EB; border-radius: 1rem; }
+  .pay-code-digit { letter-spacing: 0.35em; }
+</style>
+<link rel="stylesheet" href="/static/css/order-tracking-live.css?v=1">
+{% endblock %}
+{% block content %}
+{% include "web/partials/payment_confirmed_inner.html" %}
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "web/profile_subpage.html" %}
+{% block profile_form %}
+<form method="post" class="profile-card p-4 mb-4 space-y-3 text-sm">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="save_channels">
+  <h2 class="font-bold text-[#374151]">Canaux de notification</h2>
+  <p class="text-xs text-[#6B7280]">Les mises à jour de commande et alertes urgentes sont toujours envoyées.</p>
+  <label class="flex items-center justify-between p-3 rounded-xl border border-[#E5E7EB]">
+    <span>Notifications push (PWA)</span>
+    <input type="checkbox" name="push_enabled" {% if notif_prefs.push_enabled %}checked{% endif %}>
+  </label>
+  <label class="flex items-center justify-between p-3 rounded-xl border border-[#E5E7EB]">
+    <span>SMS</span>
+    <input type="checkbox" name="sms_enabled" {% if notif_prefs.sms_enabled %}checked{% endif %}>
+  </label>
+  <label class="flex items-center justify-between p-3 rounded-xl border border-[#E5E7EB]">
+    <span>E-mail</span>
+    <input type="checkbox" name="email_enabled" {% if notif_prefs.email_enabled %}checked{% endif %}>
+  </label>
+  <label class="flex items-center justify-between p-3 rounded-xl border border-[#E5E7EB] opacity-80">
+    <span>WhatsApp <span class="text-[10px]">(bientôt)</span></span>
+    <input type="checkbox" name="whatsapp_enabled" {% if notif_prefs.whatsapp_enabled %}checked{% endif %}>
+  </label>
+  <label class="flex items-center justify-between p-3 rounded-xl border border-[#E5E7EB]">
+    <span>Promotions et infos</span>
+    <input type="checkbox" name="marketing_enabled" {% if notif_prefs.marketing_enabled %}checked{% endif %}>
+  </label>
+  <button class="w-full bg-[#6C3AED] hover:bg-[#5B21B6] text-white font-bold py-2.5 rounded-xl">Enregistrer</button>
+</form>
+
+{% if vapid_public_key and notif_prefs.push_enabled %}
+<button type="button" id="btn-enable-push" class="w-full mb-4 profile-card p-3 text-sm font-bold text-primary border border-primary/20 rounded-xl">
+  Activer les notifications push sur cet appareil
+</button>
+{% endif %}
+
+<div class="profile-card overflow-hidden mb-4">
+  <div class="p-4 border-b border-[#F3F4F6]">
+    <p class="text-sm text-[#6B7280]">{{ unread_count }} non lue{{ unread_count|pluralize }}</p>
+  </div>
+  <div class="divide-y divide-[#F3F4F6] max-h-[28rem] overflow-y-auto">
+    {% for n in notifications %}
+    <a href="{{ n.open_url }}" class="block p-4 hover:bg-[#F9FAFB] transition {% if not n.is_read %}bg-[#F5F3FF]{% endif %}">
+      <p class="font-bold text-sm text-[#374151]">{{ n.title }}</p>
+      <p class="text-xs text-[#6B7280] mt-1">{{ n.message }}</p>
+      <p class="text-[10px] text-[#9CA3AF] mt-2">{{ n.created_at|date:"d/m/Y H:i" }}</p>
+    </a>
+    {% empty %}
+    <p class="p-6 text-sm text-[#6B7280] text-center">Aucune notification pour le moment.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+{% block profile_scripts %}
+{% if vapid_public_key and notif_prefs.push_enabled %}
+<script>
+(function () {
+  var btn = document.getElementById('btn-enable-push');
+  if (!btn || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  btn.addEventListener('click', function () {
+    var vapidKey = '{{ vapid_public_key|escapejs }}';
+    function urlBase64ToUint8Array(base64String) {
+      var padding = '='.repeat((4 - base64String.length % 4) % 4);
+      var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+      var raw = window.atob(base64);
+      var arr = new Uint8Array(raw.length);
+      for (var i = 0; i < raw.length; ++i) arr[i] = raw.charCodeAt(i);
+      return arr;
+    }
+    Notification.requestPermission().then(function (perm) {
+      if (perm !== 'granted') { alert('Permission refusée'); return; }
+      navigator.serviceWorker.ready.then(function (reg) {
+        return reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidKey)
+        });
+      }).then(function (sub) {
+        return fetch('{% url "push_subscribe" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify(sub.toJSON())
+        });
+      }).then(function (r) { return r.json(); }).then(function (data) {
+        if (data.ok) { btn.textContent = 'Notifications push activées'; btn.disabled = true; }
+        else alert(data.error || 'Erreur');
+      }).catch(function () { alert('Impossible d’activer le push'); });
+    });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

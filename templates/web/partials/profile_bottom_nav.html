@@ -1,0 +1,24 @@
+<nav class="profile-bottom-nav fixed bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 md:hidden safe-area-pb" aria-label="Navigation principale">
+  <div class="flex items-stretch justify-around max-w-lg mx-auto">
+    <a href="{% url 'home' %}" class="flex flex-col items-center gap-0.5 py-2 px-3 min-w-0 flex-1 {% if active_nav == 'home' %}text-[#6C34ED]{% else %}text-[#6B7280]{% endif %}">
+      <span class="material-symbols-rounded {% if active_nav == 'home' %}filled{% endif %}">home</span>
+      <span class="text-[10px] font-semibold">Accueil</span>
+    </a>
+    <a href="{% url 'search' %}" class="flex flex-col items-center gap-0.5 py-2 px-3 min-w-0 flex-1 {% if active_nav == 'search' %}text-[#6C34ED]{% else %}text-[#6B7280]{% endif %}">
+      <span class="material-symbols-rounded {% if active_nav == 'search' %}filled{% endif %}">search</span>
+      <span class="text-[10px] font-semibold">Recherche</span>
+    </a>
+    <a href="{% url 'orders' %}" class="flex flex-col items-center gap-0.5 py-2 px-3 min-w-0 flex-1 {% if active_nav == 'orders' %}text-[#6C34ED]{% else %}text-[#6B7280]{% endif %}">
+      <span class="material-symbols-rounded {% if active_nav == 'orders' %}filled{% endif %}">receipt_long</span>
+      <span class="text-[10px] font-semibold">Commandes</span>
+    </a>
+    <a href="{% url 'favorites' %}" class="flex flex-col items-center gap-0.5 py-2 px-3 min-w-0 flex-1 {% if active_nav == 'favorites' %}text-[#6C34ED]{% else %}text-[#6B7280]{% endif %}">
+      <span class="material-symbols-rounded {% if active_nav == 'favorites' %}filled{% endif %}">favorite</span>
+      <span class="text-[10px] font-semibold">Favoris</span>
+    </a>
+    <a href="{% url 'profile' %}" class="flex flex-col items-center gap-0.5 py-2 px-3 min-w-0 flex-1 {% if active_nav == 'profile' %}text-[#6C34ED]{% else %}text-[#6B7280]{% endif %}">
+      <span class="material-symbols-rounded {% if active_nav == 'profile' %}filled{% endif %}">person</span>
+      <span class="text-[10px] font-semibold">Profil</span>
+    </a>
+  </div>
+</nav>

@@ -1,0 +1,50 @@
+{% if o.delivery_mode != "pickup" %}
+{% if o.status == "ready" or o.status == "delivering" %}
+<section class="po-handoff {% if o.pharmacy_handoff_at %}po-handoff--done{% endif %}" id="handoff-{{ o.id }}">
+  <div class="po-handoff__head">
+    <span class="material-symbols-rounded po-handoff__icon">qr_code_scanner</span>
+    <div>
+      <p class="po-handoff__title">Remise au livreur — traçabilité</p>
+      <p class="po-handoff__sub">QR : médicaments, pharmacie, client. Le livreur ne peut retirer qu'après validation.</p>
+    </div>
+  </div>
+
+  {% if o.pharmacy_handoff_at %}
+  <div class="po-handoff__done">
+    <span class="material-symbols-rounded">verified</span>
+    Remise validée le {{ o.pharmacy_handoff_at|date:"d/m/Y à H:i" }}
+    {% if o.pharmacy_handoff_by %}· {{ o.pharmacy_handoff_by.get_full_name|default:o.pharmacy_handoff_by.username }}{% endif %}
+  </div>
+  {% else %}
+  <div class="po-handoff__grid">
+    <div class="po-handoff__qr">
+      <img src="{% url 'bo_pharmacy_order_qr' o.pk %}?v={{ o.updated_at|date:'U' }}" width="160" height="160" alt="QR traçabilité commande {{ o.code }}" class="po-handoff__qr-img">
+      <p class="po-handoff__code-label">Code suivi pharmacie</p>
+      <p class="po-handoff__code">{{ o.pharmacy_handoff_code|default:"——" }}</p>
+    </div>
+    <div class="po-handoff__actions">
+      <button type="button" class="po-handoff__scan-btn" data-handoff-scan data-order-id="{{ o.id }}">
+        <span class="material-symbols-rounded sm">photo_camera</span> Scanner le QR
+      </button>
+      <form method="post" class="po-handoff__form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="validate_handoff">
+        <input type="hidden" name="order_id" value="{{ o.id }}">
+        <input type="hidden" name="qr_payload" value="" class="po-handoff-qr-input">
+        <label class="text-[11px] font-bold text-ink-muted">Ou saisir le code</label>
+        <div class="flex gap-2 mt-1">
+          <input name="handoff_code" maxlength="6" minlength="4" inputmode="numeric" placeholder="000000" class="po-handoff__code-input font-mono tracking-widest" autocomplete="one-time-code" title="4 à 6 chiffres">
+          <button type="submit" class="po-handoff__submit">Valider remise</button>
+        </div>
+      </form>
+      <p class="po-handoff__hint">Collez l'étiquette QR sur le colis ou imprimez-la depuis « Imprimer ».</p>
+    </div>
+  </div>
+  <div class="po-handoff__scanner hidden" data-scanner-panel="{{ o.id }}">
+    <div class="po-handoff__scanner-view" id="handoff-scanner-{{ o.id }}"></div>
+    <button type="button" class="po-handoff__scan-close" data-handoff-scan-close>Fermer le scanner</button>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endif %}

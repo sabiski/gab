@@ -1,0 +1,29 @@
+{% extends "patient/base_patient.html" %}
+{% block title %}{{ pharmacy.name }}{% endblock %}
+{% block content %}
+<a href="{% url 'pharmacy_list' %}" class="inline-flex items-center gap-1 text-sm text-primary mb-4">
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+  Retour
+</a>
+<div class="bg-white rounded-3xl p-5 shadow-card mb-6">
+  <div class="flex items-start gap-4">
+    <div class="h-16 w-16 rounded-2xl flex items-center justify-center {% if pharmacy.logo_color == 'blue' %}bg-sky-100 text-sky-600{% else %}bg-secondary-100 text-secondary{% endif %}">
+      <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M11 2h2v7h7v2h-7v7h-2v-7H4V9h7V2z"/></svg>
+    </div>
+    <div>
+      <h1 class="text-xl font-semibold text-ink">{{ pharmacy.name }}</h1>
+      <p class="text-sm text-ink-muted mt-1">{{ pharmacy.address }}, {{ pharmacy.city }}</p>
+      <p class="text-sm text-secondary mt-1">{{ pharmacy.status_label }}</p>
+      <p class="text-sm text-ink-muted mt-1">⭐ {{ pharmacy.rating }} ({{ pharmacy.review_count }} avis) · {{ pharmacy.phone }}</p>
+    </div>
+  </div>
+</div>
+<h2 class="text-base font-semibold text-ink mb-3">Catalogue</h2>
+<div class="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+  {% for stock in stocks %}
+  {% include "components/search_result_card.html" with stock=stock show_availability=False %}
+  {% empty %}
+  <p class="text-sm text-ink-muted">Aucun produit listé.</p>
+  {% endfor %}
+</div>
+{% endblock %}

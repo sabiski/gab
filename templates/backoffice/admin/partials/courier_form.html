@@ -1,0 +1,261 @@
+{% load l10n %}
+<div class="courier-portal admin-courier-form" data-cp-tabs data-cp-initial="{{ active_tab|default:'account' }}">
+  <div class="cp-tabs mb-4">
+    <a href="#" data-cp-tab="account" class="{% if active_tab == 'account' or not active_tab %}is-active{% endif %}"><span class="material-symbols-rounded text-sm">badge</span> Compte</a>
+    <a href="#" data-cp-tab="identity" class="{% if active_tab == 'identity' %}is-active{% endif %}"><span class="material-symbols-rounded text-sm">person</span> Identité</a>
+    <a href="#" data-cp-tab="vehicle" class="{% if active_tab == 'vehicle' %}is-active{% endif %}"><span class="material-symbols-rounded text-sm">two_wheeler</span> Véhicule</a>
+    <a href="#" data-cp-tab="documents" class="{% if active_tab == 'documents' %}is-active{% endif %}"><span class="material-symbols-rounded text-sm">folder</span> Documents</a>
+    <a href="#" data-cp-tab="location" class="{% if active_tab == 'location' %}is-active{% endif %}"><span class="material-symbols-rounded text-sm">location_on</span> Zone & GPS</a>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="text-sm" id="admin-courier-form-{{ map_suffix }}" action="{% url 'bo_admin_couriers' %}{% if is_edit %}?edit={{ user_obj.id }}{% endif %}">
+    {% csrf_token %}
+    <input type="hidden" name="active_tab" value="{{ active_tab|default:'account' }}" data-cp-active-tab>
+    {% if is_edit %}<input type="hidden" name="user_id" value="{{ user_obj.id }}">{% endif %}
+
+    <div data-cp-panel="account" class="cp-tab-panel cp-card {% if active_tab != 'account' and active_tab %}hidden{% endif %}">
+      <p class="font-extrabold mb-3">Compte et accès</p>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {% if not is_edit %}
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Identifiant *</label>
+          <input name="username" required placeholder="livreur.akanda" class="w-full border rounded-xl px-3 py-2 mt-1 font-mono">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Mot de passe</label>
+          <input name="password" type="password" placeholder="Vide = généré auto" class="w-full border rounded-xl px-3 py-2 mt-1">
+        </div>
+        <label class="flex items-center gap-2 text-xs font-semibold border rounded-xl px-3 py-2.5 mt-5 sm:mt-0">
+          <input type="checkbox" name="send_email" value="on" checked> Envoyer identifiants par e-mail
+        </label>
+        {% else %}
+        <div class="sm:col-span-2 lg:col-span-3 bg-canvas rounded-xl px-3 py-2 text-xs text-ink-muted">
+          Identifiant : <strong class="text-ink font-mono">@{{ user_obj.username }}</strong>
+          · Inscrit le {{ user_obj.date_joined|date:"d/m/Y" }}
+        </div>
+        {% endif %}
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Statut compte</label>
+          <select name="status" class="w-full border rounded-xl px-3 py-2 mt-1">
+            {% for val, label in statuses %}
+            <option value="{{ val }}" {% if user_obj.status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Statut opérationnel</label>
+          <select name="courier_status" class="w-full border rounded-xl px-3 py-2 mt-1">
+            {% for val, label in courier_statuses %}
+            <option value="{{ val }}" {% if courier_profile.courier_status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Niveau livreur</label>
+          <select name="level" class="w-full border rounded-xl px-3 py-2 mt-1">
+            {% for val, label in courier_levels %}
+            <option value="{{ val }}" {% if courier_profile.level == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="sm:col-span-2 lg:col-span-3">
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Pharmacie de rattachement</label>
+          <select name="pharmacy_id" class="w-full border rounded-xl px-3 py-2 mt-1">
+            <option value="">— Aucune (indépendant) —</option>
+            {% for ph in pharmacies %}
+            <option value="{{ ph.id }}" {% if courier_profile.pharmacy_id == ph.id %}selected{% endif %}>{{ ph.name }} ({{ ph.city }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% if is_edit %}
+        <div class="sm:col-span-2 lg:col-span-3 flex flex-wrap gap-2 items-center">
+          {% if eligibility.is_eligible %}
+          <span class="cp-badge cp-badge--ok">Éligible aux missions</span>
+          {% elif eligibility.documents_complete %}
+          <span class="cp-badge cp-badge--wait">Dossier complet — validation requise</span>
+          {% else %}
+          <span class="cp-badge cp-badge--wait">Documents incomplets ({{ eligibility.progress_label }})</span>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div data-cp-panel="identity" class="cp-tab-panel cp-card {% if active_tab != 'identity' %}hidden{% endif %}">
+      <p class="font-extrabold mb-3">Identité et coordonnées</p>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <div class="sm:col-span-2">{% include "backoffice/partials/image_field.html" with name="avatar" label="Photo du livreur" current=user_obj.avatar %}</div>
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Prénom</label>
+          <input name="first_name" value="{{ user_obj.first_name }}" class="w-full border rounded-xl px-3 py-2 mt-1">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Nom</label>
+          <input name="last_name" value="{{ user_obj.last_name }}" class="w-full border rounded-xl px-3 py-2 mt-1">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">E-mail *</label>
+          <input name="email" type="email" value="{{ user_obj.email }}" {% if not is_edit %}required{% endif %} class="w-full border rounded-xl px-3 py-2 mt-1">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Téléphone</label>
+          <input name="phone" value="{{ user_obj.phone }}" placeholder="+241 07 …" class="w-full border rounded-xl px-3 py-2 mt-1">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Ville</label>
+          <input name="city" value="{{ user_obj.city|default:'Libreville' }}" class="w-full border rounded-xl px-3 py-2 mt-1">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Quartier</label>
+          <input name="district" value="{{ user_obj.district }}" class="w-full border rounded-xl px-3 py-2 mt-1">
+        </div>
+      </div>
+    </div>
+
+    <div data-cp-panel="vehicle" class="cp-tab-panel cp-card {% if active_tab != 'vehicle' %}hidden{% endif %}">
+      <div class="flex flex-wrap justify-between gap-2 items-start mb-3">
+        <p class="font-extrabold">Véhicule principal</p>
+        {% if vehicle.active %}<span class="cp-badge cp-badge--ok">Véhicule renseigné</span>{% endif %}
+      </div>
+      <div class="cp-vehicle-hero">
+        <div class="cp-vehicle-hero__icon"><span class="material-symbols-rounded">two_wheeler</span></div>
+        <div class="flex-1 min-w-0 grid sm:grid-cols-2 gap-3">
+          <div class="sm:col-span-2">
+            <label class="text-[10px] font-bold text-ink-muted uppercase">Marque / modèle</label>
+            <input name="vehicle_label" value="{{ courier_profile.vehicle_label }}" placeholder="Yamaha XTZ 125" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-ink-muted uppercase">Type</label>
+            <input name="vehicle_type" value="{{ courier_profile.vehicle_type }}" placeholder="Moto" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-ink-muted uppercase">Immatriculation</label>
+            <input name="vehicle_plate" value="{{ courier_profile.vehicle_plate }}" placeholder="GA-123-AA" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 font-mono">
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-ink-muted uppercase">Année</label>
+            <input name="vehicle_year" value="{{ courier_profile.vehicle_year|default:'' }}" inputmode="numeric" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-ink-muted uppercase">Carburant</label>
+            <input name="vehicle_fuel" value="{{ courier_profile.vehicle_fuel }}" placeholder="Essence" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-ink-muted uppercase">Cylindrée (cc)</label>
+            <input name="vehicle_cc" value="{{ courier_profile.vehicle_cc|default:'' }}" inputmode="numeric" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-ink-muted uppercase">Couleur</label>
+            <input name="vehicle_color" value="{{ courier_profile.vehicle_color }}" class="w-full border rounded-lg px-3 py-2 text-sm mt-1">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="text-[10px] font-bold text-ink-muted uppercase">N° châssis</label>
+            <input name="vehicle_chassis" value="{{ courier_profile.vehicle_chassis }}" class="w-full border rounded-lg px-3 py-2 text-sm mt-1 font-mono">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div data-cp-panel="documents" class="cp-tab-panel cp-card {% if active_tab != 'documents' %}hidden{% endif %}">
+      <div class="flex flex-wrap justify-between gap-2 items-start mb-3">
+        <div>
+          <p class="font-extrabold">Documents réglementaires</p>
+          <p class="text-xs text-ink-muted mt-0.5">7 pièces obligatoires pour l'éligibilité (dont pièce d'identité)</p>
+        </div>
+        <span class="cp-badge {% if eligibility.is_eligible %}cp-badge--ok{% else %}cp-badge--wait{% endif %}">{{ eligibility.progress_label }}</span>
+      </div>
+      <div class="cp-doc-grid mb-4">
+        {% for doc in documents %}
+        <div class="cp-doc-card {% if doc.valid %}is-valid{% endif %}">
+          <div class="cp-doc-card__icon"><span class="material-symbols-rounded">{{ doc.icon }}</span></div>
+          <div class="min-w-0 flex-1">
+            <p class="font-extrabold text-sm">{{ doc.label }}</p>
+            <p class="text-[10px] text-ink-muted font-mono">{{ doc.ref }}</p>
+            <span class="cp-badge {% if doc.valid %}cp-badge--ok{% else %}cp-badge--wait{% endif %} mt-1 inline-block">{{ doc.status }}</span>
+            {% if doc.valid %}<a href="{{ doc.url }}" target="_blank" rel="noopener" class="text-[10px] font-bold text-primary block mt-1">Voir le fichier</a>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% if is_edit %}
+      <div class="rounded-xl border p-4 mb-4 {% if eligibility.is_eligible %}bg-emerald-50 border-emerald-200{% elif eligibility.documents_complete %}bg-amber-50 border-amber-200{% else %}bg-canvas{% endif %}">
+        <p class="font-extrabold text-sm mb-1">Validation admin</p>
+        <p class="text-xs text-ink-muted mb-3">{{ eligibility.status_label }}</p>
+        {% if eligibility.is_eligible %}
+        <p class="text-xs mb-3">
+          Validé le {{ courier_profile.eligibility_approved_at|date:"d/m/Y à H:i" }}
+          {% if courier_profile.eligibility_approved_by %}
+          par {{ courier_profile.eligibility_approved_by.get_full_name|default:courier_profile.eligibility_approved_by.username }}
+          {% endif %}
+        </p>
+        <button type="submit" name="action" value="revoke_eligibility" class="text-sm font-bold text-rose-700 border border-rose-200 bg-white rounded-xl px-4 py-2" onclick="return confirm('Retirer l\'éligibilité de ce livreur ?');">
+          Retirer l'éligibilité
+        </button>
+        {% elif eligibility.documents_complete %}
+        <button type="submit" name="action" value="approve_eligibility" class="cp-btn-primary max-w-none inline-flex w-auto px-5">
+          <span class="material-symbols-rounded">verified</span>
+          Rendre éligible aux missions
+        </button>
+        {% else %}
+        <p class="text-xs text-ink-muted">Le bouton de validation sera disponible quand les 7 documents seront fournis par le livreur.</p>
+        <button type="button" disabled class="mt-2 text-sm font-bold text-slate-400 border rounded-xl px-4 py-2 cursor-not-allowed">
+          Rendre éligible ({{ eligibility.progress_label }})
+        </button>
+        {% endif %}
+      </div>
+      {% endif %}
+      <p class="text-xs font-bold text-ink-muted mb-3">{% if is_edit %}Mettre à jour un document (admin){% else %}Joindre des documents (facultatif){% endif %}</p>
+      <div class="cp-upload-grid">
+        {% for doc in documents %}
+        {% include "backoffice/courier/partials/file_upload_field.html" with field_name=doc.field label=doc.label icon=doc.icon has_file=doc.valid file_url=doc.url %}
+        {% endfor %}
+      </div>
+      <div class="cp-info-banner mt-4">
+        <span class="material-symbols-rounded shrink-0">info</span>
+        <p>
+          {% if is_edit %}
+          Le livreur doit fournir les <strong>7 documents</strong>. Une fois le dossier complet, validez son éligibilité avec le bouton ci-dessus ({{ eligibility.progress_label }}).
+          {% else %}
+          À la création, seuls le compte et l'identité sont obligatoires. Le livreur complétera les 7 documents depuis son portail ; vous validerez ensuite son éligibilité.
+          {% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div data-cp-panel="location" class="cp-tab-panel cp-card {% if active_tab != 'location' %}hidden{% endif %}">
+      <p class="font-extrabold mb-3">Zone de livraison et position de base</p>
+      <div class="grid sm:grid-cols-2 gap-3 mb-4">
+        <div class="sm:col-span-2">
+          <label class="text-[10px] font-bold text-ink-muted uppercase">Zone principale</label>
+          <input name="zone" value="{{ courier_profile.zone }}" placeholder="Glass, Akanda, Owendo…" class="w-full border rounded-xl px-3 py-2 mt-1">
+        </div>
+      </div>
+      <p class="text-xs font-bold text-ink-muted mb-2">Position GPS de départ</p>
+      <div id="admin-courier-map-{{ map_suffix }}" class="h-56 w-full rounded-xl border mb-2 z-0"></div>
+      <div class="grid sm:grid-cols-3 gap-2">
+        <input id="admin-courier-lat-{{ map_suffix }}" name="latitude" value="{% localize off %}{{ user_obj.latitude|default:'' }}{% endlocalize %}" placeholder="Latitude" class="border rounded-xl px-3 py-2">
+        <input id="admin-courier-lng-{{ map_suffix }}" name="longitude" value="{% localize off %}{{ user_obj.longitude|default:'' }}{% endlocalize %}" placeholder="Longitude" class="border rounded-xl px-3 py-2">
+        <button type="button" class="border border-primary text-primary font-bold rounded-xl admin-courier-geolocate" data-map-suffix="{{ map_suffix }}">Ma position</button>
+      </div>
+    </div>
+
+    <div class="mt-4 flex flex-wrap gap-2">
+      <button type="submit" name="action" value="{% if is_edit %}update{% else %}create{% endif %}" class="cp-btn-primary max-w-xs">
+        <span class="material-symbols-rounded">save</span>
+        {% if is_edit %}Enregistrer le livreur{% else %}Créer le livreur{% endif %}
+      </button>
+      <a href="{% url 'bo_admin_couriers' %}" class="inline-flex items-center justify-center px-4 py-3 rounded-xl border font-bold text-ink-muted text-sm">Annuler</a>
+    </div>
+  </form>
+
+  {% if is_edit %}
+  <form method="post" class="mt-3">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="resend_credentials">
+    <input type="hidden" name="user_id" value="{{ user_obj.id }}">
+    <button type="submit" class="text-sm font-bold text-primary border border-primary/30 rounded-xl px-4 py-2 hover:bg-primary-50">
+      Régénérer et renvoyer identifiants (e-mail + console)
+    </button>
+  </form>
+  {% endif %}
+</div>

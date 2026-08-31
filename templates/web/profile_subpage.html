@@ -1,0 +1,14 @@
+{% extends "web/profile_base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block profile_content %}
+<div class="max-w-lg mx-auto px-4 py-6">
+  <header class="flex items-center gap-3 mb-5">
+    <a href="{% url 'profile' %}" class="h-10 w-10 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#6C3AED]">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </a>
+    <h1 class="text-xl font-bold text-[#374151]">{{ page_title }}</h1>
+  </header>
+  {% block profile_form %}{% endblock %}
+</div>
+{% endblock %}
+{% block scripts %}{% block profile_scripts %}{% endblock %}{% endblock %}

@@ -1,0 +1,110 @@
+{% load humanize %}
+{# Carte & suivi GPS — étape en route vers le client #}
+{% with track=d.tracking_payload %}
+<div class="cm-route-panel">
+  <div class="cm-route-banner">
+    <span class="material-symbols-rounded cm-route-banner__icon">local_shipping</span>
+    <div class="min-w-0">
+      <p class="text-xs font-extrabold text-emerald-800">Livraison en cours</p>
+      <p class="text-sm font-extrabold truncate">#{{ d.order.code }}</p>
+      <p class="text-xs text-emerald-900/80 truncate">{{ d.order.pharmacy.name }} → {{ d.order.client.get_full_name|default:d.order.client.username }}</p>
+    </div>
+  </div>
+
+  <div class="cm-map-wrap">
+    <div class="cm-map" data-courier-map="{{ d.id }}" data-tracking-script="{{ d.track_script_id }}" data-share-form="gps-{{ d.id }}"></div>
+    <div class="cm-map-controls">
+      <button type="button" class="cm-map-ctrl courier-map-center" data-map-id="{{ d.id }}" title="Centrer la carte">
+        <span class="material-symbols-rounded">my_location</span>
+      </button>
+      <button type="button" class="cm-map-ctrl courier-map-gps-share gps-btn" data-form="gps-{{ d.id }}" title="Mettre à jour ma position">
+        <span class="material-symbols-rounded">gps_fixed</span>
+      </button>
+    </div>
+  </div>
+
+  {% if track %}
+  {{ track|json_script:d.track_script_id }}
+  <div class="cm-route-stats">
+    <div class="cm-route-stat">
+      <span class="material-symbols-rounded text-sm text-primary">route</span>
+      <div>
+        <p class="cm-route-stat__label">Distance</p>
+        <p class="cm-route-stat__value">{{ track.metrics.distance_remaining_label|default:track.metrics.distance_total_label|default:"—" }}</p>
+      </div>
+    </div>
+    <div class="cm-route-stat">
+      <span class="material-symbols-rounded text-sm text-primary">schedule</span>
+      <div>
+        <p class="cm-route-stat__label">Temps estimé</p>
+        <p class="cm-route-stat__value">{% if track.metrics.eta_minutes %}≈ {{ track.metrics.eta_minutes }} min{% else %}—{% endif %}</p>
+      </div>
+    </div>
+    <div class="cm-route-stat">
+      <span class="material-symbols-rounded text-sm text-primary">speed</span>
+      <div>
+        <p class="cm-route-stat__label">Progression</p>
+        <p class="cm-route-stat__value">{{ track.metrics.progress_percent }} %</p>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="cm-card cm-route-details">
+    <div class="flex justify-between items-center mb-3">
+      <p class="font-extrabold text-sm">Détails de la livraison</p>
+      <span class="text-xs font-bold text-primary">#{{ d.order.code }}</span>
+    </div>
+    <div class="cm-route-point">
+      <span class="cm-route-point__dot cm-route-point__dot--pickup"></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-[10px] font-bold text-ink-muted uppercase">Point de retrait</p>
+        <p class="font-bold text-sm">{{ d.order.pharmacy.name }}</p>
+        <p class="text-xs text-ink-muted">{{ d.order.pharmacy.city }}{% if d.order.pharmacy.district %}, {{ d.order.pharmacy.district }}{% endif %}</p>
+        <p class="text-xs text-ink-muted">{{ d.order.pharmacy.address }}</p>
+      </div>
+      {% if d.order.pharmacy.phone %}
+      <div class="cm-route-point__actions">
+        <a href="tel:{{ d.order.pharmacy.phone }}" class="cm-route-action" aria-label="Appeler la pharmacie"><span class="material-symbols-rounded">call</span></a>
+      </div>
+      {% endif %}
+    </div>
+    <div class="cm-route-point">
+      <span class="cm-route-point__dot cm-route-point__dot--drop"></span>
+      <div class="min-w-0 flex-1">
+        <p class="text-[10px] font-bold text-ink-muted uppercase">Point de livraison</p>
+        <p class="font-bold text-sm">{{ d.order.client.get_full_name|default:d.order.client.username }}</p>
+        <p class="text-xs text-ink-muted">{{ d.order.delivery_address|default:"—" }}</p>
+      </div>
+      {% if d.order.client.phone %}
+      <div class="cm-route-point__actions">
+        <a href="tel:{{ d.order.client.phone }}" class="cm-route-action" aria-label="Appeler le client"><span class="material-symbols-rounded">call</span></a>
+        <a href="sms:{{ d.order.client.phone }}" class="cm-route-action" aria-label="SMS client"><span class="material-symbols-rounded">chat</span></a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if d.order.notes %}
+  <div class="cm-client-notes">
+    <span class="material-symbols-rounded shrink-0">info</span>
+    <p><strong>Instructions du client :</strong> « {{ d.order.notes }} »</p>
+  </div>
+  {% endif %}
+
+  <div class="cm-actions">
+    <button type="button" class="cm-btn-outline" onclick="window.location.href='{% url 'bo_courier_incident' d.id %}'">
+      <span class="material-symbols-rounded text-sm">flag</span> Signaler un problème
+    </button>
+    <form method="post" class="courier-gps-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="advance">
+      <input type="hidden" name="delivery_id" value="{{ d.id }}">
+      <button type="submit" class="cm-btn-primary">
+        Arrivée chez le client
+        <span class="material-symbols-rounded">chevron_right</span>
+      </button>
+    </form>
+  </div>
+</div>
+{% endwith %}

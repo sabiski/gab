@@ -1,0 +1,33 @@
+<div class="bo-prof-upload bo-prof-span-2" data-image-field>
+  <p class="text-xs font-extrabold text-ink mb-2">{{ label|default:"Image" }}</p>
+  <div class="bo-prof-upload__row">
+    <div class="bo-prof-upload__preview {% if round %}bo-prof-upload__preview--round{% endif %}">
+      <img
+        data-preview-for="{{ name }}"
+        src="{% if current %}{{ current.url }}{% endif %}"
+        alt=""
+        class="{% if not current %}hidden{% endif %}"
+      >
+      <span data-preview-placeholder="{{ name }}" class="material-symbols-rounded {% if current %}hidden{% endif %}">{% if round %}person{% else %}storefront{% endif %}</span>
+    </div>
+    <div class="min-w-0 flex-1">
+      <input
+        type="file"
+        name="{{ name }}"
+        accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+        {% if required %}required{% endif %}
+        data-image-preview="{{ name }}"
+        {% if rule %}data-image-rule="{{ rule }}"{% endif %}
+        {% if min_w %}data-min-w="{{ min_w }}"{% endif %}
+        {% if max_w %}data-max-w="{{ max_w }}"{% endif %}
+        {% if min_h %}data-min-h="{{ min_h }}"{% endif %}
+        {% if max_h %}data-max-h="{{ max_h }}"{% endif %}
+        {% if max_bytes %}data-max-bytes="{{ max_bytes }}"{% endif %}
+      >
+      <p class="bo-prof-upload__hint" data-image-hint>
+        {% if hint %}{{ hint }}{% else %}JPG, PNG ou WebP — aperçu avant enregistrement{% endif %}
+      </p>
+      <p class="text-[11px] text-rose-600 font-semibold mt-1 hidden" data-image-error="{{ name }}"></p>
+    </div>
+  </div>
+</div>

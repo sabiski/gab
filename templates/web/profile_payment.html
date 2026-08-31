@@ -1,0 +1,18 @@
+{% extends "web/profile_subpage.html" %}
+{% block profile_form %}
+<form method="post" class="profile-card p-5 space-y-4 text-sm">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="payment">
+  <p class="text-[#6B7280]">Choisissez votre mode de paiement par défaut pour les commandes.</p>
+  <div class="space-y-2">
+    {% for code, label, kind in payment_methods %}
+    <label class="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition {% if payment_method == code %}border-[#6C3AED] bg-[#F5F3FF]{% else %}border-[#E5E7EB] hover:border-[#6C3AED]/40{% endif %}">
+      <input type="radio" name="payment_method" value="{{ code }}" {% if payment_method == code %}checked{% endif %} class="text-[#6C3AED]">
+      <span class="material-symbols-rounded text-[#6C3AED]">{% if kind == 'mobile' %}smartphone{% elif kind == 'card' %}credit_card{% elif kind == 'cod' %}local_shipping{% else %}store{% endif %}</span>
+      <span class="font-semibold text-[#374151]">{{ label }}</span>
+    </label>
+    {% endfor %}
+  </div>
+  <button class="w-full bg-[#6C3AED] hover:bg-[#5B21B6] text-white font-bold py-3 rounded-xl transition">Enregistrer</button>
+</form>
+{% endblock %}

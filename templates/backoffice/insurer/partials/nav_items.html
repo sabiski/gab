@@ -1,0 +1,79 @@
+{% load bo_extras %}
+{% if nav_variant != "admin" %}
+<p class="ins-side-space">
+  <span class="material-symbols-rounded sm">health_and_safety</span>
+  Compagnie d'assurance
+</p>
+{% endif %}
+{% if portal_permissions.dashboard %}
+{% insurer_nav_link_class "dashboard" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_dashboard' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">dashboard</span> Tableau de bord
+</a>
+{% endif %}
+{% if portal_permissions.claims %}
+{% insurer_nav_link_class "claims" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_claims' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">description</span> Demandes de prise en charge
+</a>
+{% endif %}
+{% if portal_permissions.members %}
+{% insurer_nav_link_class "members" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_members' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">groups</span> Assurés
+</a>
+{% endif %}
+{% if portal_permissions.pharmacies %}
+{% insurer_nav_link_class "pharmacies" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_pharmacies' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">local_pharmacy</span> Pharmacies partenaires
+</a>
+{% endif %}
+{% if portal_permissions.payments %}
+{% insurer_nav_link_class "payments" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_payments' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">payments</span> Paiements et remboursements
+</a>
+{% endif %}
+{% if portal_permissions.contracts %}
+{% insurer_nav_link_class "contracts" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_contracts' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">contract</span> Contrats et polices
+</a>
+{% endif %}
+{% if portal_permissions.subscription %}
+{% insurer_nav_link_class "subscription" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_subscription' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">card_membership</span> Abonnements
+</a>
+{% endif %}
+{% if portal_permissions.reports %}
+{% insurer_nav_link_class "reports" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_reports' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">analytics</span> Statistiques et rapports
+</a>
+{% endif %}
+{% if portal_permissions.fraud %}
+{% insurer_nav_link_class "fraud" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_fraud' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">gpp_maybe</span> Fraudes et alertes
+</a>
+{% endif %}
+{% if portal_permissions.notifications %}
+{% insurer_nav_link_class "notifications" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_notifications' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">notifications</span> Notifications
+</a>
+{% endif %}
+{% if portal_permissions.settings %}
+{% insurer_nav_link_class "settings" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_settings' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">settings</span> Paramètres
+</a>
+{% endif %}
+{% if portal_permissions.support %}
+{% insurer_nav_link_class "support" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_support' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">support_agent</span> Support et assistance
+</a>
+{% endif %}

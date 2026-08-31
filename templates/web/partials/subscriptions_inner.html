@@ -1,0 +1,117 @@
+{% load portal_urls %}
+{% if client_portal %}<div class="space-y-5">{% else %}<div class="forfait-page max-w-site mx-auto px-4 py-8">{% endif %}
+  <nav class="portal-hide-in-espace text-xs text-ink-muted mb-4 flex items-center gap-1.5">
+    <a href="{% portal_url 'home' %}" class="hover:text-primary">Accueil</a><span>/</span>
+    <span class="text-ink font-semibold">Souscription &amp; Forfaits</span>
+  </nav>
+
+  {% if access_status %}
+  <div class="mb-6 bg-emerald-50 border border-emerald-200 rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+    <p class="text-sm font-semibold text-emerald-900"><span class="material-symbols-rounded sm align-middle">verified</span> Forfait actif : <strong>{{ active_access.get_plan_display }}</strong> — {{ access_status }}</p>
+    <a href="{% portal_url 'search' %}" class="text-xs font-bold text-emerald-800 underline">Continuer ma recherche</a>
+  </div>
+  {% endif %}
+
+  <div class="grid lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-2 space-y-6">
+      <header class="portal-hide-in-espace">
+        <p class="text-xs font-bold uppercase tracking-wider text-[#6C3AED]">Recherche médicament</p>
+        <h1 class="text-2xl lg:text-3xl font-extrabold text-ink mt-1">Souscription &amp; Forfaits</h1>
+        <p class="text-sm text-ink-muted mt-2 max-w-xl">Consultez en quelques secondes quelles pharmacies ont votre médicament, à quel prix et en quelle quantité — avec un forfait actif.</p>
+      </header>
+      {% if client_portal %}
+      <p class="text-sm text-[#6B7280] font-medium">Choisissez un pass pour débloquer la recherche, les stocks et les prix en pharmacie.</p>
+      {% endif %}
+
+      <div class="bg-[#F5F3FF] border border-[#6C3AED]/20 rounded-2xl p-4 flex gap-3">
+        <span class="material-symbols-rounded text-[#6C3AED]">info</span>
+        <p class="text-sm text-ink-muted"><strong class="text-ink">Pass 1 h :</strong> le décompte démarre à votre <em>première</em> recherche, pas à l’achat.</p>
+      </div>
+
+      <section>
+        <h2 class="font-extrabold text-lg mb-4">Nos forfaits de recherche</h2>
+        <div class="grid md:grid-cols-3 gap-4">
+          {% for p in plans %}
+          <article class="rounded-2xl border-2 p-5 flex flex-col card-{{ p.card_style }}">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="h-10 w-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-ink">
+                <span class="material-symbols-rounded">{{ p.icon }}</span>
+              </span>
+              <div>
+                <p class="font-extrabold text-sm">{{ p.label }}</p>
+                <p class="text-[11px] text-ink-muted">{{ p.tagline }}</p>
+              </div>
+            </div>
+            <p class="text-2xl font-extrabold text-ink">{{ p.amount }} <span class="text-sm font-bold text-ink-muted">FCFA</span></p>
+            <p class="text-xs text-ink-muted mt-2 mb-3 flex-1">{{ p.description }}</p>
+            <ul class="text-[11px] space-y-1 mb-4 text-ink-muted">
+              {% for f in p.features %}<li class="flex gap-1"><span class="text-emerald-600">✓</span> {{ f }}</li>{% endfor %}
+            </ul>
+            <form method="post" class="space-y-2 mt-auto">
+              {% csrf_token %}
+              <input type="hidden" name="plan" value="{{ p.key }}">
+              <input type="hidden" name="next" value="{{ next_url }}">
+              <select name="payment_method" class="w-full border rounded-xl text-xs px-2 py-2 bg-white">
+                {% for val, label in mobile_methods %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+              </select>
+              <button type="submit" class="w-full text-white text-sm font-bold py-2.5 rounded-full flex items-center justify-center gap-1 btn-{{ p.card_style }} hover:opacity-90 transition">
+                Choisir <span class="material-symbols-rounded sm">chevron_right</span>
+              </button>
+            </form>
+          </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="bg-white border rounded-2xl p-5">
+        <h2 class="font-extrabold mb-3 flex items-center gap-2"><span class="material-symbols-rounded text-emerald-600">lock</span> Paiement 100 % sécurisé</h2>
+        <p class="text-xs text-ink-muted mb-3">Moov Money · Airtel Money · Carte bancaire (simulation dev)</p>
+        <div class="flex flex-wrap gap-3 text-xs font-bold text-ink-muted">
+          <span class="px-3 py-1.5 rounded-lg bg-canvas">Moov Money</span>
+          <span class="px-3 py-1.5 rounded-lg bg-canvas">Airtel Money</span>
+          <span class="px-3 py-1.5 rounded-lg bg-canvas">Visa / Mastercard</span>
+        </div>
+      </section>
+
+      <section class="bg-white border rounded-2xl p-5">
+        <h2 class="font-extrabold mb-4">Historique des forfaits</h2>
+        {% for h in history %}
+        <div class="flex flex-wrap justify-between gap-2 text-sm py-2.5 border-b border-slate-50">
+          <div>
+            <p class="font-bold">{{ h.get_plan_display }} · {{ h.get_payment_method_display }}</p>
+            <p class="text-xs text-ink-muted">{{ h.purchased_at|date:"d/m/Y H:i" }}{% if h.reference %} · {{ h.reference }}{% endif %}</p>
+          </div>
+          <p class="font-extrabold text-primary">{{ h.amount }} F</p>
+        </div>
+        {% empty %}
+        <p class="text-sm text-ink-muted">Aucun forfait acheté pour le moment.</p>
+        {% endfor %}
+      </section>
+    </div>
+
+    <aside class="space-y-5">
+      <section class="bg-white border rounded-2xl p-5">
+        <h2 class="font-extrabold mb-4">Comment ça fonctionne ?</h2>
+        <ol class="space-y-4 text-sm">
+          <li class="flex gap-3"><span class="h-7 w-7 rounded-full bg-[#6C3AED] text-white text-xs font-bold flex items-center justify-center shrink-0">1</span> Choisissez un forfait</li>
+          <li class="flex gap-3"><span class="h-7 w-7 rounded-full bg-[#6C3AED] text-white text-xs font-bold flex items-center justify-center shrink-0">2</span> Payez via mobile money ou carte</li>
+          <li class="flex gap-3"><span class="h-7 w-7 rounded-full bg-[#6C3AED] text-white text-xs font-bold flex items-center justify-center shrink-0">3</span> Accédez immédiatement à la recherche</li>
+          <li class="flex gap-3"><span class="h-7 w-7 rounded-full bg-[#6C3AED] text-white text-xs font-bold flex items-center justify-center shrink-0">4</span> Trouvez votre médicament en pharmacie</li>
+        </ol>
+      </section>
+
+      <section class="bg-[#EFF6FF] border border-[#2563EB]/20 rounded-2xl p-5 text-sm">
+        <h2 class="font-extrabold mb-2">Besoin d'aide ?</h2>
+        <p class="text-ink-muted text-xs">Support 7j/7 · 7h–22h</p>
+        <a href="{% url 'bo_client_support' %}" class="inline-block mt-2 text-xs font-bold text-[#2563EB]">Contacter le support →</a>
+      </section>
+
+      <section class="bg-white border rounded-2xl p-5 text-sm space-y-3">
+        <h2 class="font-extrabold">FAQ</h2>
+        <details class="border-b pb-2"><summary class="font-bold cursor-pointer">Pourquoi payer pour rechercher ?</summary><p class="text-xs text-ink-muted mt-2">Gab'Pharma rémunère les officines et garantit des données stock fiables — le forfait finance ce service.</p></details>
+        <details class="border-b pb-2"><summary class="font-bold cursor-pointer">Quand démarre le Pass 1 h ?</summary><p class="text-xs text-ink-muted mt-2">À la première recherche avec un mot-clé, pas au moment du paiement.</p></details>
+        <details class="pb-2"><summary class="font-bold cursor-pointer">Premium : quels avantages ?</summary><p class="text-xs text-ink-muted mt-2">Recherche 30 jours, commandes marquées prioritaires et livraison express offerte.</p></details>
+      </section>
+    </aside>
+  </div>
+</div>

@@ -1,0 +1,9 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Favoris{% endblock %}
+{% block portal_heading %}Mes favoris{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Retrouvez rapidement les médicaments que vous consultez le plus souvent.</p>
+{% endblock %}
+{% block portal_body %}
+{% include "backoffice/client/partials/favorites_body.html" %}
+{% endblock %}

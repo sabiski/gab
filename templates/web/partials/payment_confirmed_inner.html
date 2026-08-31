@@ -1,0 +1,318 @@
+{% load portal_urls %}
+<link rel="stylesheet" href="/static/css/order-tracking-live.css?v=1">
+{% if client_portal %}
+<div class="space-y-5">
+{% else %}
+<div class="pay-ok min-h-[calc(100vh-6rem)] pb-28">
+{% endif %}
+  <div class="{% if client_portal %}max-w-3xl{% else %}max-w-lg mx-auto px-4 py-6{% endif %}">
+    <header class="portal-hide-in-espace relative flex items-center justify-center mb-6">
+      <a href="{% portal_url 'orders' %}" class="absolute left-0 h-10 w-10 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#6C3AED]">
+        <span class="material-symbols-rounded">arrow_back</span>
+      </a>
+      <h1 class="text-base font-bold text-[#374151] text-center px-12">{% if insurance_pending %}Commande en attente{% else %}Code de retrait / livraison{% endif %}</h1>
+    </header>
+
+    <div class="text-center mb-6 otl-animate-in">
+      {% if insurance_pending %}
+      <div class="relative inline-flex items-center justify-center mb-4 otl-success-icon">
+        <div class="h-24 w-24 rounded-full bg-amber-50 flex items-center justify-center">
+          <span class="material-symbols-rounded text-amber-600 text-5xl">hourglass_top</span>
+        </div>
+      </div>
+      <h2 class="text-xl font-extrabold text-[#374151]">En attente de validation assurance</h2>
+      <p class="text-sm text-[#6B7280] mt-2 max-w-sm mx-auto">
+        Votre commande est enregistrée. Votre assureur
+        {% if order.insurance_provider %}<strong>{{ order.insurance_provider.name }}</strong>{% endif %}
+        doit valider la prise en charge avant l'envoi à la pharmacie et la délivrance de votre code.
+      </p>
+      {% else %}
+      <div class="relative inline-flex items-center justify-center mb-4 otl-success-icon">
+        <div class="h-24 w-24 rounded-full bg-[#EDE9FE] flex items-center justify-center">
+          <span class="material-symbols-rounded text-[#6C3AED] text-5xl filled">verified_user</span>
+        </div>
+        <span class="absolute -bottom-1 -right-1 h-9 w-9 rounded-full bg-[#16A34A] text-white flex items-center justify-center shadow">
+          <span class="material-symbols-rounded text-lg filled">lock</span>
+        </span>
+      </div>
+      <h2 class="text-xl font-extrabold text-[#374151]">Paiement confirmé !</h2>
+      <p class="text-sm text-[#6B7280] mt-2 max-w-sm mx-auto">Votre commande a été validée avec succès. Présentez ce code à la pharmacie ou au livreur.</p>
+      {% endif %}
+    </div>
+
+    {% if courier_info and not is_pickup %}
+    <section id="track-courier-card" class="otl-courier-card mb-4 otl-animate-in otl-animate-in-delay-1">
+      <div class="flex items-center gap-3">
+        <div class="otl-courier-avatar {% if tracking_metrics.phase == 'transit' %}otl-courier-avatar--transit{% endif %}">{{ courier_info.initials }}</div>
+        <div class="flex-1 min-w-0">
+          <p class="text-[10px] font-bold uppercase text-[#6C3AED] tracking-wide">Votre livreur</p>
+          <p class="font-extrabold text-[#374151] truncate" data-courier-name>{{ courier_info.name }}</p>
+          <p class="text-xs text-[#6B7280] mt-0.5" data-courier-meta>
+            {% if courier_info.rating %}★ {{ courier_info.rating|floatformat:1 }}{% endif %}
+            {% if courier_info.total_deliveries %} · {{ courier_info.total_deliveries }} courses{% endif %}
+            {% if courier_info.vehicle_type %} · {{ courier_info.vehicle_type }}{% endif %}
+          </p>
+          <p class="text-xs font-bold text-amber-700 mt-1" data-courier-status>{{ courier_info.status_label }}</p>
+        </div>
+        {% if courier_info.phone %}
+        <a href="tel:{{ courier_info.phone }}" data-courier-phone class="h-10 w-10 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#6C3AED] shrink-0 hover:bg-[#F5F3FF]">
+          <span class="material-symbols-rounded">call</span>
+        </a>
+        {% else %}
+        <a href="#" data-courier-phone class="hidden"></a>
+        {% endif %}
+      </div>
+      {% if tracking_metrics %}
+      <div class="mt-3">
+        <div class="flex justify-between text-[10px] font-bold text-[#6B7280] mb-1">
+          <span>Progression</span>
+          <span>{{ tracking_metrics.progress_percent }}%</span>
+        </div>
+        <div class="otl-progress"><div id="track-progress-bar" class="otl-progress__bar" style="width: {{ tracking_metrics.progress_percent }}%"></div></div>
+      </div>
+      {% endif %}
+    </section>
+    {% else %}
+    <section id="track-courier-card" class="otl-courier-card mb-4 hidden"></section>
+    {% endif %}
+
+    {% if not insurance_pending %}
+    <section class="card p-5 mb-4 otl-animate-in otl-animate-in-delay-1">
+      <p class="text-sm font-bold text-[#374151] mb-3">Votre code de retrait / livraison</p>
+      <p id="pickup-code" class="pay-code-digit text-center text-3xl sm:text-4xl font-extrabold text-[#6C3AED] py-2 tracking-widest" data-code="{{ code_raw }}">{{ code_spaced }}</p>
+      <div class="flex items-start gap-2 mt-3">
+        <span class="material-symbols-rounded text-[#16A34A] text-lg shrink-0">schedule</span>
+        <div>
+          <p class="text-sm font-semibold text-[#16A34A]">Valable pendant 30 min</p>
+          <p class="text-xs text-[#6B7280]">Expire le {{ expires_label }}</p>
+        </div>
+      </div>
+      <div class="mt-4 rounded-xl bg-[#F5F3FF] border border-[#6C3AED]/15 px-3 py-2.5 flex gap-2 text-xs text-[#374151]">
+        <span class="material-symbols-rounded text-[#2563EB] text-base shrink-0">info</span>
+        <p>Présentez ce code au pharmacien ou au livreur pour récupérer votre commande.</p>
+      </div>
+    </section>
+
+    {% include "web/partials/client_delivery_qr.html" %}
+    {% else %}
+    <section class="card p-5 mb-4 otl-animate-in otl-animate-in-delay-1 border-amber-200 bg-amber-50/50">
+      <div class="flex items-start gap-3">
+        <span class="material-symbols-rounded text-amber-600 shrink-0">health_and_safety</span>
+        <div>
+          <p class="text-sm font-bold text-[#374151]">Validation assurance en cours</p>
+          <p class="text-xs text-[#6B7280] mt-1">
+            Montant demandé :
+            <strong>{% if insurance_claim %}{{ insurance_claim.amount }}{% else %}{{ order.insurance_coverage }}{% endif %} FCFA</strong>.
+            Vous serez notifié dès que votre assureur aura statué. Le code de retrait sera alors disponible ici.
+          </p>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="card p-5 mb-4 otl-animate-in otl-animate-in-delay-2" id="order-live-track" data-api-url="{{ tracking_api_url }}" data-terminal="{% if tracking_is_terminal %}1{% else %}0{% endif %}" data-auto-open="{% if tracking_auto_open %}1{% else %}0{% endif %}">
+      <button type="button" id="track-toggle" class="w-full flex items-center justify-between gap-3 text-left group" aria-expanded="{% if tracking_auto_open %}true{% else %}false{% endif %}" aria-controls="track-panel">
+
+        <div class="flex items-center gap-3 min-w-0">
+          <span class="h-11 w-11 rounded-xl bg-[#EDE9FE] text-[#6C3AED] flex items-center justify-center shrink-0">
+            <span class="material-symbols-rounded">route</span>
+          </span>
+          <div class="min-w-0">
+            <p class="font-bold text-[#374151]">Suivre ma commande en direct</p>
+            <p id="track-status-hint" class="text-xs text-[#6B7280] truncate">{{ order.get_status_display }}</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          {% if not tracking_is_terminal %}
+          <span class="track-live-badge inline-flex items-center gap-1 text-[10px] font-bold uppercase text-[#16A34A] bg-[#F0FDF4] px-2 py-0.5 rounded-full">
+            <span class="h-1.5 w-1.5 rounded-full bg-[#16A34A] animate-pulse"></span> Live
+          </span>
+          {% endif %}
+          <span class="material-symbols-rounded text-[#6B7280] group-aria-expanded:rotate-180 transition-transform" id="track-chevron">expand_more</span>
+        </div>
+      </button>
+
+      <div id="track-panel" class="{% if not tracking_auto_open %}hidden {% endif %}mt-5 pt-5 border-t border-[#F3F4F6]" aria-live="polite">
+        {% if not is_pickup %}
+        <div class="otl-map-stats">
+          <div class="otl-map-stat"><strong id="track-stat-eta">{% if tracking_metrics and tracking_metrics.eta_minutes %}~{{ tracking_metrics.eta_minutes }} min{% else %}—{% endif %}</strong><span>Arrivée</span></div>
+          <div class="otl-map-stat"><strong id="track-stat-dist">{% if tracking_metrics %}{{ tracking_metrics.distance_remaining_label|default:"—" }}{% else %}—{% endif %}</strong><span>Restant</span></div>
+          <div class="otl-map-stat"><strong id="track-stat-phase">{% if tracking_metrics.phase == 'transit' %}En route{% elif tracking_metrics.phase == 'pickup' %}Retrait{% elif tracking_metrics.phase == 'delivered' %}Livré{% else %}Suivi{% endif %}</strong><span>Étape</span></div>
+        </div>
+        {% endif %}
+        <ol id="track-timeline" class="space-y-3 mb-4">
+          {% for step in tracking_timeline %}
+          <li class="flex gap-3 items-start track-step" data-step-id="{{ step.id }}">
+            <span class="track-step-dot h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0
+              {% if step.state == 'done' %}bg-[#6C3AED] text-white
+              {% elif step.state == 'active' %}bg-amber-500 text-white ring-4 ring-amber-100
+              {% else %}bg-[#F3F4F6] text-[#9CA3AF]{% endif %}">
+              {% if step.state == 'done' %}<span class="material-symbols-rounded text-sm">check</span>{% else %}{{ forloop.counter }}{% endif %}
+            </span>
+            <div class="flex-1 min-w-0 pt-0.5">
+              <p class="font-bold text-sm text-[#374151] track-step-label">{{ step.label }}</p>
+              {% if step.detail %}<p class="text-xs text-[#6B7280] mt-0.5 track-step-detail">{{ step.detail }}</p>{% else %}<p class="text-xs text-[#6B7280] mt-0.5 track-step-detail hidden"></p>{% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ol>
+
+        <div id="track-map-wrap" class="{% if not delivery %}hidden {% endif %}mb-3">
+          <p class="text-xs font-bold text-[#6B7280] uppercase mb-2">Carte & progression</p>
+          <div id="track-map" class="h-52 rounded-xl border border-[#E5E7EB] z-0"></div>
+        </div>
+
+        <p id="track-updated" class="text-[10px] text-[#9CA3AF] text-center">Mise à jour automatique toutes les 10 s</p>
+        {% if client_portal %}
+        <a href="{% url 'bo_client_order_detail' order.pk %}" class="mt-3 flex items-center justify-center gap-1 text-xs font-bold text-[#6C3AED]">
+          Voir le détail complet <span class="material-symbols-rounded text-sm">arrow_forward</span>
+        </a>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card p-5 mb-4 space-y-4">
+      <h3 class="font-bold text-[#374151]">Détails de la commande</h3>
+
+      {% for item in items %}
+      <div class="flex gap-3 items-start">
+        <div class="h-14 w-14 rounded-xl bg-[#F3F4F6] overflow-hidden shrink-0 flex items-center justify-center">
+          {% if item.medicine.image %}
+          <img src="{{ item.medicine.image.url }}" alt="" class="h-full w-full object-cover">
+          {% else %}
+          <span class="material-symbols-rounded text-[#6C3AED]">medication</span>
+          {% endif %}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-sm text-[#374151] truncate">{{ item.medicine_name }}</p>
+          <p class="text-xs text-[#6B7280]">Qté : {{ item.quantity }}</p>
+        </div>
+        <p class="font-bold text-sm text-[#6C3AED] shrink-0">{{ item.line_total }} FCFA</p>
+      </div>
+      {% endfor %}
+
+      {% if pharmacy %}
+      <div class="flex gap-3 items-start pt-2 border-t border-[#F3F4F6]">
+        <span class="material-symbols-rounded text-[#16A34A] shrink-0">local_pharmacy</span>
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="font-bold text-sm text-[#374151]">{{ pharmacy.name }}</p>
+            {% if pharmacy_open %}
+            <span class="text-[10px] font-bold uppercase bg-[#F0FDF4] text-[#16A34A] px-2 py-0.5 rounded-full">Ouverte</span>
+            {% endif %}
+          </div>
+          <p class="text-xs text-[#6B7280] mt-0.5">
+            {% if distance_km %}{{ distance_km }} km · {% endif %}{{ pharmacy_location }}
+          </p>
+          <p class="text-xs text-[#6B7280] mt-1 inline-flex items-center gap-1">
+            <span class="material-symbols-rounded text-sm">{% if is_pickup %}storefront{% else %}local_shipping{% endif %}</span>
+            {{ delivery_label }}
+          </p>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="flex gap-3 items-start pt-2 border-t border-[#F3F4F6]">
+        <span class="material-symbols-rounded text-[#6B7280] shrink-0">calendar_today</span>
+        <div>
+          <p class="text-xs text-[#6B7280]">Commande passée le</p>
+          <p class="text-sm font-semibold text-[#374151]">{{ created_label }}</p>
+        </div>
+      </div>
+
+      <div class="rounded-xl bg-[#F0FDF4] border border-[#16A34A]/20 px-3 py-2.5 flex gap-2 text-xs text-[#166534]">
+        <span class="material-symbols-rounded text-[#16A34A] text-base shrink-0">verified_user</span>
+        <p><strong>Conseil :</strong> {% if insurance_pending %}Ne partagez pas vos informations de commande tant que l'assurance n'a pas validé la prise en charge.{% else %}Ne partagez pas ce code avec une autre personne. Il est strictement personnel et sécurisé.{% endif %}</p>
+      </div>
+    </section>
+
+    {% if order.insurance_coverage or insurance_pending %}
+    <section class="card p-5 mb-4 text-sm">
+      <h3 class="font-bold text-[#374151] mb-2">Assurance maladie</h3>
+      {% if order.insurance_provider %}
+      {% if insurance_pending %}
+      <p class="text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs">
+        <strong>{{ order.insurance_provider.name }}</strong> — prise en charge de
+        <strong>{% if insurance_claim %}{{ insurance_claim.amount }}{% else %}{{ order.insurance_coverage }}{% endif %} F</strong>
+        en attente de validation.
+      </p>
+      {% else %}
+      <p class="text-[#6B7280]">{{ order.insurance_provider.name }} — <strong class="text-emerald-700">{{ order.insurance_coverage }} F</strong> pris en charge</p>
+      {% endif %}
+      {% endif %}
+      <p class="text-[#374151] font-bold mt-1">{% if insurance_pending %}Reste à charge (si validé) :{% else %}Reste payé :{% endif %} {{ order.total }} F</p>
+    </section>
+    {% endif %}
+
+    {% if not insurance_pending %}
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <button type="button" id="btn-download" class="inline-flex items-center justify-center gap-1.5 border-2 border-[#6C3AED] text-[#6C3AED] font-bold text-sm py-3 rounded-full hover:bg-[#F5F3FF]">
+        <span class="material-symbols-rounded sm">download</span> Télécharger
+      </button>
+      <button type="button" id="btn-share" class="inline-flex items-center justify-center gap-1.5 bg-[#6C3AED] text-white font-bold text-sm py-3 rounded-full hover:bg-[#5B21B6]">
+        <span class="material-symbols-rounded sm">share</span> Partager
+      </button>
+    </div>
+    {% endif %}
+
+    <a href="{% url 'bo_client_support' %}" class="flex items-center justify-center gap-2 text-sm font-bold text-[#6C3AED] mb-4">
+      <span class="material-symbols-rounded sm">headset_mic</span> Besoin d'aide ? Contacter le support
+    </a>
+
+    <a href="{% portal_url 'emergency' %}" class="flex items-center justify-center gap-2 w-full bg-[#EF4444] hover:bg-rose-600 text-white font-extrabold text-sm py-3.5 rounded-full shadow-lg">
+      <span class="material-symbols-rounded">e911_emergency</span> URGENCE
+    </a>
+  </div>
+</div>
+
+<nav class="portal-hide-in-espace fixed bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 md:hidden" aria-label="Navigation">
+  <div class="flex items-stretch justify-around max-w-lg mx-auto">
+    <a href="{% portal_url 'home' %}" class="flex flex-col items-center gap-0.5 py-2 px-3 flex-1 text-[#6B7280]">
+      <span class="material-symbols-rounded">home</span>
+      <span class="text-[10px] font-semibold">Accueil</span>
+    </a>
+    <a href="{% portal_url 'search' %}" class="flex flex-col items-center gap-0.5 py-2 px-3 flex-1 text-[#6B7280]">
+      <span class="material-symbols-rounded">search</span>
+      <span class="text-[10px] font-semibold">Recherche</span>
+    </a>
+    <a href="{% portal_url 'orders' %}" class="flex flex-col items-center gap-0.5 py-2 px-3 flex-1 text-[#6C3AED]">
+      <span class="material-symbols-rounded filled">receipt_long</span>
+      <span class="text-[10px] font-semibold">Commandes</span>
+    </a>
+    <a href="{% portal_url 'profile' %}" class="flex flex-col items-center gap-0.5 py-2 px-3 flex-1 text-[#6B7280]">
+      <span class="material-symbols-rounded">person</span>
+      <span class="text-[10px] font-semibold">Profil</span>
+    </a>
+  </div>
+</nav>
+<script>
+(function () {
+  var el = document.getElementById('pickup-code');
+  var code = el ? (el.getAttribute('data-code') || '') : '';
+  var text = 'Gab\'Pharma — Code de retrait / livraison : ' + code + '\nCommande {{ order.code }}\nPrésentez ce code à la pharmacie ou au livreur.';
+
+  var btnDl = document.getElementById('btn-download');
+  if (btnDl) btnDl.addEventListener('click', function () {
+    var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'gabpharma-code-{{ order.code }}.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  var btnShare = document.getElementById('btn-share');
+  if (btnShare) btnShare.addEventListener('click', function () {
+    if (navigator.share) {
+      navigator.share({ title: 'Code Gab\'Pharma', text: text }).catch(function () {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function () {
+        alert('Code copié dans le presse-papiers.');
+      });
+    } else {
+      prompt('Copiez ce code :', code);
+    }
+  });
+})();
+</script>
+<script src="/static/js/order-live-tracking.js?v=1"></script>

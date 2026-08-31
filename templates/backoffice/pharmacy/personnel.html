@@ -1,0 +1,472 @@
+{% extends "backoffice/base_bo.html" %}
+{% load bo_extras %}
+{% block title %}Personnel & RH{% endblock %}
+{% block bo_label %}Portail Pharmacie{% endblock %}
+{% block bo_title %}Personnel &amp; ressources humaines{% endblock %}
+{% block bo_content %}
+
+{% if not pharmacy %}
+<div class="bg-white border rounded-2xl p-8 text-center max-w-lg">
+  <p class="text-ink-muted">Aucune pharmacie rattachée. Contactez l'administrateur plateforme.</p>
+</div>
+{% else %}
+
+{% if pharmacies|length > 1 %}
+<form method="get" class="mb-4 flex flex-wrap gap-2 items-center">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <label class="text-sm font-bold">Officine</label>
+  <select name="pharmacy_id" class="border rounded-xl px-3 py-2 text-sm" onchange="this.form.submit()">
+    {% for p in pharmacies %}
+    <option value="{{ p.id }}" {% if p.id == pharmacy.id %}selected{% endif %}>{{ p.name }}</option>
+    {% endfor %}
+  </select>
+</form>
+{% endif %}
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6 max-w-5xl">
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Effectif actif</p><p class="text-2xl font-extrabold text-primary mt-1">{{ kpis.active_count }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">En poste aujourd'hui</p><p class="text-2xl font-extrabold mt-1">{{ kpis.on_shift_today }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Absences en attente</p><p class="text-2xl font-extrabold text-amber-600 mt-1">{{ kpis.pending_absences }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Masse salariale (mois)</p><p class="text-xl font-extrabold mt-1">{{ kpis.payroll_month }} F</p></div>
+</div>
+
+<div class="flex flex-wrap gap-2 mb-3 text-xs font-bold">
+  <a href="?tab=team{% if search_q %}&q={{ search_q|urlencode }}{% endif %}{% if search_role %}&role={{ search_role }}{% endif %}{% if search_active %}&active={{ search_active }}{% endif %}{% if search_contract %}&contract={{ search_contract }}{% endif %}" class="px-3 py-1.5 rounded-full {% if tab == 'team' %}bg-primary text-white{% else %}bg-white border{% endif %}">Équipe</a>
+  <a href="?tab=shifts&week={{ week_start|date:'Y-m-d' }}{% if search_q %}&q={{ search_q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full {% if tab == 'shifts' %}bg-primary text-white{% else %}bg-white border{% endif %}">Planning</a>
+  <a href="?tab=absences{% if search_q %}&q={{ search_q|urlencode }}{% endif %}{% if search_absence_status %}&absence_status={{ search_absence_status }}{% endif %}" class="px-3 py-1.5 rounded-full {% if tab == 'absences' %}bg-amber-500 text-white{% else %}bg-white border{% endif %}">Absences{% if kpis.pending_absences %} ({{ kpis.pending_absences }}){% endif %}</a>
+  <a href="?tab=payroll{% if search_q %}&q={{ search_q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full {% if tab == 'payroll' %}bg-emerald-600 text-white{% else %}bg-white border{% endif %}">Paie</a>
+  {% if can_manage %}
+  <a href="?tab=roles" class="px-3 py-1.5 rounded-full {% if tab == 'roles' %}bg-indigo-600 text-white{% else %}bg-white border{% endif %}">Rôles &amp; permissions</a>
+  {% endif %}
+</div>
+
+{% if tab != 'roles' %}
+<form method="get" class="bg-white border rounded-2xl p-3 mb-5 max-w-5xl flex flex-wrap gap-2 items-end text-sm">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  {% if tab == 'shifts' %}<input type="hidden" name="week" value="{{ week_start|date:'Y-m-d' }}">{% endif %}
+  <div class="relative flex-1 min-w-[180px]">
+    <span class="material-symbols-rounded sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
+    <input name="q" value="{{ search_q }}" placeholder="Nom, matricule, e-mail, téléphone…" class="w-full border rounded-xl pl-9 pr-3 py-2 text-sm">
+  </div>
+  {% if tab == 'team' or tab == 'shifts' %}
+  <select name="role" class="border rounded-xl px-2 py-2 text-xs">
+    <option value="">Tous rôles</option>
+    {% for val, label in job_roles %}<option value="{{ val }}" {% if search_role == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="active" class="border rounded-xl px-2 py-2 text-xs">
+    <option value="">Actifs + inactifs</option>
+    <option value="active" {% if search_active == 'active' %}selected{% endif %}>Actifs seulement</option>
+    <option value="inactive" {% if search_active == 'inactive' %}selected{% endif %}>Inactifs</option>
+  </select>
+  <select name="contract" class="border rounded-xl px-2 py-2 text-xs">
+    <option value="">Tous contrats</option>
+    {% for val, label in contract_types %}<option value="{{ val }}" {% if search_contract == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  {% elif tab == 'absences' %}
+  <select name="absence_status" class="border rounded-xl px-2 py-2 text-xs">
+    <option value="">Tous statuts</option>
+    {% for val, label in absence_statuses %}<option value="{{ val }}" {% if search_absence_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <select name="absence_type" class="border rounded-xl px-2 py-2 text-xs">
+    <option value="">Tous types</option>
+    {% for val, label in absence_types %}<option value="{{ val }}" {% if search_absence_type == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  {% elif tab == 'payroll' %}
+  <select name="payslip_status" class="border rounded-xl px-2 py-2 text-xs">
+    <option value="">Tous statuts</option>
+    {% for val, label in payslip_statuses %}<option value="{{ val }}" {% if search_payslip_status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <input type="number" name="period_month" value="{{ search_period_month }}" min="1" max="12" placeholder="Mois" class="border rounded-xl px-2 py-2 text-xs w-20">
+  <input type="number" name="period_year" value="{{ search_period_year }}" placeholder="Année" class="border rounded-xl px-2 py-2 text-xs w-24">
+  {% endif %}
+  <button class="bg-primary text-white font-bold px-4 py-2 rounded-xl text-xs">Filtrer</button>
+  <a href="?tab={{ tab }}{% if tab == 'shifts' %}&week={{ week_start|date:'Y-m-d' }}{% endif %}" class="text-xs font-bold text-ink-muted px-2 py-2">Réinitialiser</a>
+</form>
+<p class="text-xs text-ink-muted font-medium mb-4 -mt-2">
+  {% if tab == 'team' %}{{ employees_count }} employé{{ employees_count|pluralize }}
+  {% elif tab == 'absences' %}{{ absences_count }} absence{{ absences_count|pluralize }}
+  {% elif tab == 'payroll' %}{{ payslips_count }} bulletin{{ payslips_count|pluralize }}
+  {% else %}{{ active_employees|length }} collaborateur{{ active_employees|length|pluralize }} au planning
+  {% endif %}
+</p>
+{% endif %}
+
+{% if tab == 'team' %}
+
+{% if can_manage %}
+<section class="bg-white border rounded-2xl p-5 mb-6 max-w-4xl">
+  <details>
+    <summary class="font-extrabold cursor-pointer list-none flex items-center gap-2">
+      <span class="material-symbols-rounded text-primary">person_add</span> Recruter un collaborateur
+    </summary>
+    <form method="post" class="grid sm:grid-cols-2 gap-3 mt-4 text-sm">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_employee">
+      <input type="hidden" name="tab" value="team">
+      <input name="first_name" required placeholder="Prénom *" class="border rounded-xl px-3 py-2">
+      <input name="last_name" required placeholder="Nom *" class="border rounded-xl px-3 py-2">
+      <input name="email" type="email" placeholder="E-mail" class="border rounded-xl px-3 py-2">
+      <input name="phone" placeholder="Téléphone" class="border rounded-xl px-3 py-2">
+      <input name="username" placeholder="Identifiant connexion" class="border rounded-xl px-3 py-2">
+      <input name="employee_code" placeholder="Matricule (auto si vide)" class="border rounded-xl px-3 py-2">
+      <select name="job_role" class="border rounded-xl px-3 py-2">
+        {% for val, label in job_roles %}{% if val != 'owner' %}<option value="{{ val }}">{{ label }}</option>{% endif %}{% endfor %}
+      </select>
+      <select name="contract_type" class="border rounded-xl px-3 py-2">
+        {% for val, label in contract_types %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+      </select>
+      <input name="job_title" placeholder="Intitulé poste" class="border rounded-xl px-3 py-2">
+      <input type="number" name="base_salary" min="0" placeholder="Salaire base FCFA" class="border rounded-xl px-3 py-2">
+      <input name="national_id" placeholder="N° CNI" class="border rounded-xl px-3 py-2">
+      <input name="professional_license" placeholder="N° ordre / RPPS" class="border rounded-xl px-3 py-2">
+      <input name="emergency_contact" placeholder="Contact urgence" class="border rounded-xl px-3 py-2 sm:col-span-2">
+      <input name="emergency_phone" placeholder="Tél. urgence" class="border rounded-xl px-3 py-2">
+      <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="send_email" value="on" checked> Envoyer identifiants par e-mail</label>
+      <p class="text-xs text-ink-muted sm:col-span-2">
+        <a href="{% url 'bo_preview_credentials_email' %}" target="_blank" rel="noopener" class="font-bold text-[#6C2AED] underline">Aperçu du mail identifiants</a>
+        — en dev, le même contenu s'affiche aussi dans la console du serveur.
+      </p>
+      <button class="bg-primary text-white font-bold rounded-xl py-2.5 sm:col-span-2">Créer la fiche employé</button>
+    </form>
+  </details>
+</section>
+{% endif %}
+
+<div class="space-y-4 max-w-5xl">
+  {% for e in employees %}
+  <article class="bg-white rounded-2xl border p-4 {% if not e.is_active %}opacity-60{% endif %}">
+    <div class="flex flex-wrap justify-between gap-2 mb-3">
+      <div>
+        <p class="font-extrabold text-base">{{ e.display_name }} <span class="text-xs font-bold text-primary">{{ e.employee_code }}</span></p>
+        <p class="text-xs text-ink-muted">{{ e.get_job_role_display }}{% if e.job_title %} · {{ e.job_title }}{% endif %} · {{ e.get_contract_type_display }} · depuis {{ e.hired_at|date:"d/m/Y" }}</p>
+        <p class="text-xs text-ink-muted">{{ e.user.email }} · {{ e.user.phone|default:"—" }}</p>
+        {% if e.professional_license %}<p class="text-xs text-ink-muted">Ordre : {{ e.professional_license }}</p>{% endif %}
+        <div class="flex flex-wrap gap-1 mt-2">
+          {% for plabel in employee_perm_by_id|dict_get:e.id %}
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-canvas text-ink-muted">{{ plabel }}</span>
+          {% empty %}
+          <span class="text-[10px] text-ink-muted">Aucun droit ERP</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="text-right">
+        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full {% if e.is_active %}bg-primary-50 text-primary{% else %}bg-rose-100 text-rose-700{% endif %}">{% if e.is_active %}Actif{% else %}Inactif{% endif %}</span>
+        <p class="text-sm font-extrabold text-primary mt-1">{{ e.base_salary }} F / mois</p>
+      </div>
+    </div>
+    {% if can_manage %}
+    <details class="text-sm">
+      <summary class="font-bold text-primary cursor-pointer">Modifier la fiche &amp; les droits</summary>
+      <form method="post" class="grid sm:grid-cols-2 gap-2 mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_employee">
+        <input type="hidden" name="tab" value="team">
+        <input type="hidden" name="employee_id" value="{{ e.id }}">
+        <input name="first_name" value="{{ e.user.first_name }}" class="border rounded-lg px-2 py-1.5">
+        <input name="last_name" value="{{ e.user.last_name }}" class="border rounded-lg px-2 py-1.5">
+        <input name="email" value="{{ e.user.email }}" class="border rounded-lg px-2 py-1.5">
+        <input name="phone" value="{{ e.user.phone }}" class="border rounded-lg px-2 py-1.5">
+        <input name="employee_code" value="{{ e.employee_code }}" class="border rounded-lg px-2 py-1.5" placeholder="Matricule">
+        <select name="job_role" class="border rounded-lg px-2 py-1.5 sm:col-span-2" title="Le rôle détermine les menus et actions accessibles">
+          <option value="" disabled>Rôle &amp; droits d'accès</option>
+          {% for val, label in job_roles %}
+          <option value="{{ val }}" {% if e.job_role == val %}selected{% endif %} {% if val == 'owner' and membership.job_role != 'owner' %}disabled{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <select name="contract_type" class="border rounded-lg px-2 py-1.5">
+          {% for val, label in contract_types %}<option value="{{ val }}" {% if e.contract_type == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+        <input name="job_title" value="{{ e.job_title }}" class="border rounded-lg px-2 py-1.5">
+        <input type="number" name="base_salary" value="{{ e.base_salary }}" class="border rounded-lg px-2 py-1.5">
+        <input name="national_id" value="{{ e.national_id }}" placeholder="CNI" class="border rounded-lg px-2 py-1.5">
+        <input name="professional_license" value="{{ e.professional_license }}" class="border rounded-lg px-2 py-1.5">
+        <input name="emergency_contact" value="{{ e.emergency_contact }}" class="border rounded-lg px-2 py-1.5 sm:col-span-2">
+        <input name="emergency_phone" value="{{ e.emergency_phone }}" class="border rounded-lg px-2 py-1.5">
+        <label class="flex items-center gap-1 text-xs"><input type="checkbox" name="is_active" {% if e.is_active %}checked{% endif %}> Actif</label>
+        <textarea name="notes" rows="2" class="border rounded-lg px-2 py-1.5 sm:col-span-2" placeholder="Notes RH">{{ e.notes }}</textarea>
+        <button class="bg-primary text-white font-bold rounded-lg py-2 sm:col-span-2">Enregistrer les modifications</button>
+      </form>
+      {% if e.user.email %}
+      <form method="post" class="mt-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="resend_credentials">
+        <input type="hidden" name="tab" value="team">
+        <input type="hidden" name="employee_id" value="{{ e.id }}">
+        <button class="text-xs font-bold text-indigo-700">Renvoyer les identifiants par e-mail</button>
+      </form>
+      {% endif %}
+      {% if e.is_active and e.job_role != 'owner' %}
+      <form method="post" class="mt-2" onsubmit="return confirm('Désactiver cet employé ?')">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="deactivate_employee">
+        <input type="hidden" name="tab" value="team">
+        <input type="hidden" name="employee_id" value="{{ e.id }}">
+        <button class="text-xs font-bold text-rose-600">Désactiver</button>
+      </form>
+      {% endif %}
+    </details>
+    {% endif %}
+  </article>
+  {% empty %}
+  <p class="text-ink-muted text-sm">Aucun employé enregistré.</p>
+  {% endfor %}
+</div>
+
+{% elif tab == 'shifts' %}
+
+<div class="flex flex-wrap items-center justify-between gap-2 mb-4 max-w-5xl">
+  <div class="flex items-center gap-2 text-sm font-bold">
+    <a href="?tab=shifts&week={{ prev_week }}" class="px-2 py-1 border rounded-lg">←</a>
+    <span>Semaine du {{ week_start|date:"d/m/Y" }} au {{ week_end|date:"d/m/Y" }}</span>
+    <a href="?tab=shifts&week={{ next_week }}" class="px-2 py-1 border rounded-lg">→</a>
+  </div>
+</div>
+
+{% if can_manage %}
+<section class="bg-white border rounded-2xl p-4 mb-5 max-w-3xl text-sm">
+  <p class="font-extrabold mb-3">Ajouter un créneau</p>
+  <form method="post" class="grid sm:grid-cols-3 gap-2">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_shift">
+    <input type="hidden" name="tab" value="shifts">
+    <input type="hidden" name="week" value="{{ week_start|date:'Y-m-d' }}">
+    <select name="employee_id" required class="border rounded-xl px-2 py-2 sm:col-span-3">
+      {% for e in active_employees %}<option value="{{ e.id }}">{{ e.display_name }} ({{ e.employee_code }})</option>{% endfor %}
+    </select>
+    <input type="date" name="shift_date" required class="border rounded-xl px-2 py-2">
+    <input type="time" name="start_time" value="08:00" required class="border rounded-xl px-2 py-2">
+    <input type="time" name="end_time" value="17:00" required class="border rounded-xl px-2 py-2">
+    <input type="number" name="break_minutes" value="60" min="0" placeholder="Pause (min)" class="border rounded-xl px-2 py-2">
+    <input name="notes" placeholder="Notes" class="border rounded-xl px-2 py-2 sm:col-span-2">
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Planifier</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="overflow-x-auto max-w-6xl">
+  <table class="w-full text-xs bg-white border rounded-2xl overflow-hidden">
+    <thead class="bg-canvas text-ink-muted uppercase">
+      <tr>
+        <th class="text-left p-3 font-bold">Employé</th>
+        {% for d in week_days %}<th class="p-2 font-bold text-center">{{ d|date:"D d/m" }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in shift_grid %}
+      <tr class="border-t">
+        <td class="p-3 font-bold whitespace-nowrap">{{ row.employee.display_name }}</td>
+        {% for shift in row.days %}
+        <td class="p-2 text-center align-top min-w-[5rem]">
+          {% if shift %}
+          <div class="bg-primary-50 border border-primary/20 rounded-lg p-1 mb-1">
+            <p class="font-bold text-primary">{{ shift.start_time|time:"H:i" }}-{{ shift.end_time|time:"H:i" }}</p>
+            <p class="text-[10px] text-ink-muted">{{ shift.duration_hours }}h</p>
+            {% if can_manage %}
+            <form method="post" class="mt-1">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="delete_shift">
+              <input type="hidden" name="tab" value="shifts">
+              <input type="hidden" name="week" value="{{ week_start|date:'Y-m-d' }}">
+              <input type="hidden" name="shift_id" value="{{ shift.id }}">
+              <button class="text-[10px] text-rose-600 font-bold">×</button>
+            </form>
+            {% endif %}
+          </div>
+          {% else %}<span class="text-ink-muted">—</span>{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="p-4 text-center text-ink-muted">Aucun employé actif.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% elif tab == 'absences' %}
+
+{% if membership %}
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-4 mb-5 max-w-3xl text-sm">
+  <p class="font-extrabold mb-2">Demander une absence</p>
+  <form method="post" class="grid sm:grid-cols-2 gap-2">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="request_absence">
+    <input type="hidden" name="tab" value="absences">
+    <select name="absence_type" class="border rounded-xl px-2 py-2">
+      {% for val, label in absence_types %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+    </select>
+    <input type="date" name="start_date" required class="border rounded-xl px-2 py-2">
+    <input type="date" name="end_date" required class="border rounded-xl px-2 py-2">
+    <textarea name="reason" rows="2" placeholder="Motif" class="border rounded-xl px-2 py-2 sm:col-span-2"></textarea>
+    <button class="bg-primary text-white font-bold rounded-xl py-2 sm:col-span-2">Envoyer la demande</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="space-y-3 max-w-4xl">
+  {% for a in absences %}
+  <div class="bg-white border rounded-2xl p-4 text-sm flex flex-wrap justify-between gap-2">
+    <div>
+      <p class="font-extrabold">{{ a.employee.display_name }} — {{ a.get_absence_type_display }}</p>
+      <p class="text-xs text-ink-muted">{{ a.start_date|date:"d/m/Y" }} → {{ a.end_date|date:"d/m/Y" }} ({{ a.days_count }} j)</p>
+      {% if a.reason %}<p class="text-xs mt-1">{{ a.reason }}</p>{% endif %}
+    </div>
+    <div class="text-right">
+      <span class="text-[11px] font-bold px-2 py-0.5 rounded-full {% if a.status == 'pending' %}bg-amber-100 text-amber-800{% elif a.status == 'approved' %}bg-emerald-100 text-emerald-800{% else %}bg-rose-100 text-rose-800{% endif %}">{{ a.get_status_display }}</span>
+      {% if can_manage and a.status == 'pending' %}
+      <div class="flex gap-1 mt-2 justify-end">
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="review_absence"><input type="hidden" name="tab" value="absences"><input type="hidden" name="absence_id" value="{{ a.id }}"><input type="hidden" name="decision" value="approved"><button class="text-xs font-bold bg-emerald-600 text-white px-2 py-1 rounded-lg">Approuver</button></form>
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="review_absence"><input type="hidden" name="tab" value="absences"><input type="hidden" name="absence_id" value="{{ a.id }}"><input type="hidden" name="decision" value="rejected"><button class="text-xs font-bold bg-rose-600 text-white px-2 py-1 rounded-lg">Refuser</button></form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}<p class="text-ink-muted text-sm">Aucune absence enregistrée.</p>{% endfor %}
+</div>
+
+{% elif tab == 'payroll' %}
+
+{% if can_payroll %}
+<div class="flex flex-wrap gap-2 mb-4">
+  <a href="?tab=payroll&export=payroll_csv" class="inline-flex items-center gap-1 border font-bold text-sm px-4 py-2 rounded-xl hover:bg-canvas">
+    <span class="material-symbols-rounded sm">download</span> Export paie (CSV)
+  </a>
+</div>
+<section class="bg-white border rounded-2xl p-4 mb-5 max-w-3xl text-sm">
+  <p class="font-extrabold mb-3">Générer un bulletin</p>
+  <form method="post" class="grid sm:grid-cols-3 gap-2">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="generate_payslip">
+    <input type="hidden" name="tab" value="payroll">
+    <select name="employee_id" required class="border rounded-xl px-2 py-2 sm:col-span-3">
+      {% for e in active_employees %}<option value="{{ e.id }}">{{ e.display_name }} — {{ e.base_salary }} F</option>{% endfor %}
+    </select>
+    <input type="number" name="period_year" value="{{ today.year }}" class="border rounded-xl px-2 py-2">
+    <input type="number" name="period_month" value="{{ today.month }}" min="1" max="12" class="border rounded-xl px-2 py-2">
+    <input type="number" name="bonus" value="0" min="0" placeholder="Primes F" class="border rounded-xl px-2 py-2">
+    <input type="number" name="deductions" value="0" min="0" placeholder="Retenues F" class="border rounded-xl px-2 py-2">
+    <input type="number" name="hours_worked" step="0.5" placeholder="Heures travaillées" class="border rounded-xl px-2 py-2">
+    <button class="bg-primary text-white font-bold rounded-xl py-2 sm:col-span-3">Calculer le bulletin</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="space-y-3 max-w-4xl">
+  {% for p in payslips %}
+  <div class="bg-white border rounded-2xl p-4 text-sm flex flex-wrap justify-between gap-2">
+    <div>
+      <p class="font-extrabold">{{ p.employee.display_name }} — {{ p.period_month|stringformat:"02d" }}/{{ p.period_year }}</p>
+      <p class="text-xs text-ink-muted">Base {{ p.base_salary }} F · Primes {{ p.bonus }} F · Retenues {{ p.deductions }} F · {{ p.hours_worked }} h</p>
+    </div>
+    <div class="text-right">
+      <p class="text-lg font-extrabold text-primary">{{ p.net_salary }} F net</p>
+      <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-canvas">{{ p.get_status_display }}</span>
+      {% if can_payroll %}
+      <div class="flex gap-1 mt-2 justify-end">
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="validate_payslip"><input type="hidden" name="tab" value="payroll"><input type="hidden" name="payslip_id" value="{{ p.id }}"><input type="hidden" name="status" value="validated"><button class="text-[10px] font-bold border px-2 py-1 rounded">Valider</button></form>
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="validate_payslip"><input type="hidden" name="tab" value="payroll"><input type="hidden" name="payslip_id" value="{{ p.id }}"><input type="hidden" name="status" value="paid"><button class="text-[10px] font-bold bg-emerald-600 text-white px-2 py-1 rounded">Marquer payé</button></form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}<p class="text-ink-muted text-sm">Aucun bulletin généré.</p>{% endfor %}
+</div>
+
+{% elif tab == 'roles' %}
+
+<section class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-6 max-w-5xl text-sm">
+  <p class="font-bold text-indigo-900 flex items-center gap-2">
+    <span class="material-symbols-rounded text-lg">info</span> Référentiel des accès ERP
+  </p>
+  <p class="text-ink-muted mt-2">
+    Cette matrice décrit les droits de chaque rôle métier dans le portail pharmacie (menus, actions).
+    Pour attribuer un rôle à un collaborateur, modifiez sa fiche dans l'onglet
+    <a href="?tab=team" class="font-bold text-primary underline">Équipe</a>.
+    Les ajustements globaux sont gérés par l'administrateur plateforme.
+  </p>
+</section>
+
+{% if membership %}
+<section class="bg-white border rounded-2xl p-4 mb-6 max-w-5xl">
+  <p class="text-xs font-bold text-ink-muted uppercase mb-2">Votre accès actuel</p>
+  <p class="font-extrabold">{{ membership.get_job_role_display }}{% if membership.job_title %} — {{ membership.job_title }}{% endif %}</p>
+  <div class="flex flex-wrap gap-1.5 mt-2">
+    {% for label in my_permission_labels %}
+    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{{ label }}</span>
+    {% empty %}
+    <span class="text-xs text-ink-muted">Aucune permission ERP</span>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6 max-w-5xl">
+  {% for row in pharmacy_matrix %}
+  <div class="bg-white border rounded-2xl p-4">
+    <p class="font-extrabold text-sm">{{ row.label }}</p>
+    <p class="text-xs text-ink-muted mt-1 leading-relaxed">{{ row.description }}</p>
+  </div>
+  {% endfor %}
+</div>
+
+<section class="bg-white border rounded-2xl overflow-hidden mb-8 max-w-5xl">
+  <div class="px-4 py-3 border-b bg-canvas/50">
+    <h2 class="font-extrabold">Matrice rôles × permissions</h2>
+    <p class="text-xs text-ink-muted mt-0.5">Lecture seule — configuration plateforme</p>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm min-w-[640px]">
+      <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase">
+        <tr>
+          <th class="px-4 py-3 text-left">Rôle métier</th>
+          {% for key, label in perm_labels.items %}
+          <th class="px-3 py-3 text-center">{{ label }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in pharmacy_matrix %}
+        <tr class="border-t">
+          <td class="px-4 py-3 font-bold whitespace-nowrap">{{ row.label }}</td>
+          {% for key, label in perm_labels.items %}
+          <td class="px-3 py-3 text-center">
+            {% if key in row.perms_active %}
+            <span class="material-symbols-rounded text-emerald-600 text-lg" title="Autorisé">check_circle</span>
+            {% else %}
+            <span class="material-symbols-rounded text-ink-muted/30 text-lg" title="Non autorisé">remove</span>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="max-w-5xl">
+  <h2 class="font-extrabold text-lg mb-3">Équipe — permissions effectives</h2>
+  <div class="space-y-3">
+    {% for item in team_perm_rows %}
+    <div class="bg-white border rounded-2xl p-4 flex flex-wrap justify-between gap-3 items-start">
+      <div>
+        <p class="font-extrabold">{{ item.employee.display_name }}</p>
+        <p class="text-xs text-ink-muted">{{ item.employee.employee_code }} · {{ item.employee.get_job_role_display }}</p>
+      </div>
+      <div class="flex flex-wrap gap-1.5 justify-end max-w-xl">
+        {% for plabel in item.permission_labels %}
+        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-canvas">{{ plabel }}</span>
+        {% empty %}
+        <span class="text-xs text-ink-muted">Aucune permission ERP</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-sm text-ink-muted">Aucun collaborateur actif.</p>
+    {% endfor %}
+  </div>
+</section>
+
+{% endif %}
+{% endif %}
+{% endblock %}

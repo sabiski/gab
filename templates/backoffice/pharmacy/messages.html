@@ -1,0 +1,149 @@
+{% extends "backoffice/base_bo.html" %}
+
+{% block title %}Messages{% endblock %}
+
+{% block bo_label %}Pharmacie{% endblock %}
+
+{% block bo_title %}Messagerie patients{% endblock %}
+
+{% block bo_content %}
+
+
+
+<form method="get" class="bg-white border rounded-2xl p-3 mb-4 max-w-5xl flex flex-wrap gap-2 items-end text-sm">
+
+  {% if active_conv %}<input type="hidden" name="conv" value="{{ active_conv.id }}">{% endif %}
+
+  <div class="relative flex-1 min-w-[200px]">
+
+    <span class="material-symbols-rounded sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
+
+    <input name="q" value="{{ search_q }}" placeholder="Patient, téléphone, contenu du message…" class="w-full border rounded-xl pl-9 pr-3 py-2 text-sm">
+
+  </div>
+
+  <select name="period" class="border rounded-xl px-2 py-2 text-xs">
+
+    <option value="">Toute période</option>
+
+    <option value="7" {% if search_period == '7' %}selected{% endif %}>7 derniers jours</option>
+
+    <option value="30" {% if search_period == '30' %}selected{% endif %}>30 jours</option>
+
+    <option value="90" {% if search_period == '90' %}selected{% endif %}>90 jours</option>
+
+  </select>
+
+  <label class="flex items-center gap-1.5 text-xs font-bold px-1 whitespace-nowrap">
+
+    <input type="checkbox" name="unread" value="1" {% if search_unread %}checked{% endif %}> Non lus
+
+  </label>
+
+  <button class="bg-primary text-white font-bold px-4 py-2 rounded-xl text-xs">Filtrer</button>
+
+  <a href="{% url 'bo_pharmacy_messages' %}" class="text-xs font-bold text-ink-muted px-2 py-2">Réinitialiser</a>
+
+</form>
+
+<p class="text-xs text-ink-muted font-medium mb-3 -mt-1">{{ conversations_count }} conversation{{ conversations_count|pluralize }}</p>
+
+
+
+<div class="grid lg:grid-cols-3 gap-4 max-w-5xl">
+
+  <aside class="bg-white border rounded-2xl overflow-hidden max-h-[520px] flex flex-col">
+
+    <p class="px-4 py-3 text-xs font-bold text-ink-muted uppercase border-b shrink-0">Conversations</p>
+
+    <div class="overflow-y-auto flex-1">
+
+      {% for c in conversations %}
+
+      <a href="?conv={{ c.id }}{% if search_q %}&q={{ search_q|urlencode }}{% endif %}{% if search_unread %}&unread=1{% endif %}{% if search_period %}&period={{ search_period }}{% endif %}" class="block px-4 py-3 border-b border-slate-50 text-sm hover:bg-canvas/60 {% if active_conv and active_conv.id == c.id %}bg-primary-50{% endif %}">
+
+        <div class="flex justify-between gap-2 items-start">
+
+          <p class="font-bold">{{ c.client.get_full_name|default:c.client.username }}</p>
+
+          {% if c.has_unread %}<span class="shrink-0 h-2 w-2 rounded-full bg-rose-500 mt-1.5" title="Non lu"></span>{% endif %}
+
+        </div>
+
+        <p class="text-xs text-ink-muted">{{ c.client.phone|default:c.client.email|default:"—" }}</p>
+
+        <p class="text-[10px] text-ink-muted mt-0.5">{{ c.updated_at|date:"d/m/Y H:i" }}</p>
+
+      </a>
+
+      {% empty %}
+
+      <p class="p-4 text-sm text-ink-muted">Aucune conversation{% if search_q %} pour cette recherche{% endif %}.</p>
+
+      {% endfor %}
+
+    </div>
+
+  </aside>
+
+  <section class="lg:col-span-2 bg-white border rounded-2xl flex flex-col min-h-[420px]">
+
+    {% if active_conv %}
+
+    <div class="px-4 py-3 border-b">
+
+      <p class="font-extrabold">{{ active_conv.client.get_full_name|default:active_conv.client.username }}</p>
+
+      <p class="text-xs text-ink-muted">Patient · {{ active_conv.client.phone|default:"—" }} · {{ active_conv.client.email|default:"—" }}</p>
+
+    </div>
+
+    <div class="flex-1 p-4 overflow-y-auto space-y-2 bg-canvas/50">
+
+      {% for m in chat_messages %}
+
+      <div class="flex {% if m.sender_id == user.id %}justify-end{% else %}justify-start{% endif %}">
+
+        <div class="max-w-[80%] text-sm rounded-xl px-3 py-2 {% if m.sender_id == user.id %}bg-primary text-white{% else %}bg-white border{% endif %}">
+
+          {{ m.body }}
+
+          <p class="text-[10px] opacity-70 mt-1">{{ m.created_at|date:"d/m H:i" }}</p>
+
+        </div>
+
+      </div>
+
+      {% empty %}
+
+      <p class="text-sm text-ink-muted text-center py-8">Le patient n'a pas encore écrit.</p>
+
+      {% endfor %}
+
+    </div>
+
+    <form method="post" class="p-4 border-t flex gap-2">
+
+      {% csrf_token %}
+
+      <input type="hidden" name="conversation_id" value="{{ active_conv.id }}">
+
+      <textarea name="body" required rows="2" placeholder="Votre réponse…" class="flex-1 border rounded-xl px-3 py-2 text-sm"></textarea>
+
+      <button class="bg-primary text-white font-bold px-4 rounded-xl shrink-0">Envoyer</button>
+
+    </form>
+
+    {% else %}
+
+    <p class="p-8 text-sm text-ink-muted text-center">Sélectionnez une conversation.</p>
+
+    {% endif %}
+
+  </section>
+
+</div>
+
+{% endblock %}
+
+

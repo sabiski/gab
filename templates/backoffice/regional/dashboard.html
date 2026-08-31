@@ -1,0 +1,44 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Supervision régionale{% endblock %}
+{% block bo_label %}Superviseur régional{% endblock %}
+{% block bo_title %}Tableau de bord — {{ region }}{% endblock %}
+{% block bo_content %}
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8 max-w-5xl">
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Pharmacies</p><p class="text-2xl font-extrabold mt-1">{{ kpis.pharmacies }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Commandes</p><p class="text-2xl font-extrabold mt-1">{{ kpis.orders }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">CA régional</p><p class="text-2xl font-extrabold text-primary mt-1">{{ kpis.ca }} F</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Ruptures</p><p class="text-2xl font-extrabold text-rose-600 mt-1">{{ kpis.out_of_stock }}</p></div>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-6 max-w-5xl mb-8">
+  <section class="bg-white rounded-2xl border p-5">
+    <h2 class="font-extrabold mb-3">Pharmacies par ville</h2>
+    <ul class="text-sm space-y-2">
+      {% for row in by_city %}
+      <li class="flex justify-between border-b pb-2"><span>{{ row.city }}</span><strong>{{ row.c }}</strong></li>
+      {% empty %}<li class="text-ink-muted">Aucune donnée.</li>{% endfor %}
+    </ul>
+  </section>
+  <section class="bg-white rounded-2xl border p-5">
+    <h2 class="font-extrabold mb-3">Officines actives</h2>
+    <ul class="text-sm space-y-2 max-h-64 overflow-y-auto">
+      {% for p in pharmacies %}
+      <li class="flex justify-between gap-2 border-b pb-2"><span class="font-bold truncate">{{ p.name }}</span><span class="text-xs text-ink-muted shrink-0">{{ p.city }}</span></li>
+      {% empty %}<li class="text-ink-muted">Aucune pharmacie dans cette région.</li>{% endfor %}
+    </ul>
+  </section>
+</div>
+
+<section class="bg-white rounded-2xl border p-5 max-w-5xl">
+  <h2 class="font-extrabold mb-3">Commandes récentes (région)</h2>
+  <table class="w-full text-sm">
+    <thead class="text-xs text-ink-muted uppercase"><tr><th class="text-left py-2">Code</th><th class="text-left py-2">Pharmacie</th><th class="text-right py-2">Montant</th></tr></thead>
+    <tbody>
+      {% for o in recent_orders %}
+      <tr class="border-t"><td class="py-2 font-bold">{{ o.code }}</td><td class="py-2">{{ o.pharmacy.name }}</td><td class="py-2 text-right">{{ o.total }} F</td></tr>
+      {% empty %}<tr><td colspan="3" class="py-4 text-ink-muted">Aucune commande.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

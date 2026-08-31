@@ -1,0 +1,8 @@
+<nav class="ins-claims-tabs ins-notif-tabs">
+  <a href="?tab=all{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="{% if tab == 'all' %}is-active{% endif %}">Toutes <span class="ins-tab-count">{{ tab_counts.all }}</span></a>
+  <a href="?tab=unread{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="{% if tab == 'unread' %}is-active{% endif %}">Non lues <span class="ins-tab-count ins-tab-count--badge">{{ tab_counts.unread }}</span></a>
+  <a href="?tab=system" class="{% if tab == 'system' %}is-active{% endif %}">Messages système</a>
+  <a href="?tab=alert" class="{% if tab == 'alert' %}is-active{% endif %}">Alertes</a>
+  <a href="?tab=reminder" class="{% if tab == 'reminder' %}is-active{% endif %}">Rappels</a>
+  <a href="?tab=info" class="{% if tab == 'info' %}is-active{% endif %}">Information</a>
+</nav>

@@ -1,0 +1,43 @@
+<article class="bg-white rounded-2xl p-3 shadow-card flex gap-3 hover:shadow-soft transition">
+  <div class="h-20 w-16 shrink-0 rounded-xl bg-slate-50 flex items-center justify-center overflow-hidden">
+    {% if stock.medicine.image %}
+    <img src="{{ stock.medicine.image.url }}" alt="" class="object-contain h-full w-full p-1">
+    {% else %}
+    <div class="h-14 w-10 rounded bg-gradient-to-b from-red-400 to-red-600 relative">
+      <div class="absolute inset-x-1 top-2 h-3 bg-white/90 rounded-sm"></div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="flex-1 min-w-0">
+    <div class="flex items-start justify-between gap-2">
+      <div class="min-w-0">
+        <h3 class="text-sm font-semibold text-ink truncate">
+          {{ stock.medicine.name }}{% if stock.medicine.dosage %} {{ stock.medicine.dosage }}{% endif %}
+          {% if stock.medicine.is_top %}<span class="ml-1 inline-flex align-middle text-[9px] font-bold uppercase tracking-wide bg-primary text-white px-1.5 py-0.5 rounded">TOP</span>{% endif %}
+        </h3>
+        <p class="text-[11px] text-ink-muted mt-0.5">{{ stock.medicine.form_label }}{% if stock.medicine.dci %} · {{ stock.medicine.dci }}{% endif %}</p>
+      </div>
+      <button type="button" class="text-ink-muted hover:text-rose-500 p-1" aria-label="Favori">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364 4.318 12.682a4.5 4.5 0 010-6.364z"/></svg>
+      </button>
+    </div>
+    {% if show_availability %}
+      {% if stock.availability == "available" %}
+      <p class="text-[11px] text-secondary font-medium mt-1">Disponible</p>
+      {% elif stock.availability == "low" %}
+      <p class="text-[11px] text-amber-600 font-medium mt-1">Stock faible</p>
+      {% else %}
+      <p class="text-[11px] text-rose-600 font-medium mt-1">Rupture</p>
+      {% endif %}
+    {% else %}
+      <p class="text-[11px] text-ink-muted mt-1">Vérifiez la disponibilité</p>
+    {% endif %}
+    <p class="text-[11px] text-ink-muted truncate">{{ stock.pharmacy.name }} · À 1,2 km · {% if stock.pharmacy.is_24h %}24h/24{% else %}{{ stock.pharmacy.opening_hours }}{% endif %}</p>
+    <div class="flex items-center justify-between mt-2">
+      <span class="text-sm font-semibold text-primary">{{ stock.formatted_price }}</span>
+      <button type="button" class="h-9 w-9 rounded-xl bg-primary text-white flex items-center justify-center hover:bg-primary-600 transition" aria-label="Ajouter au panier">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 2.3c-.4.4-.1 1.1.4 1.1H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg>
+      </button>
+    </div>
+  </div>
+</article>

@@ -1,0 +1,255 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Suivi des livraisons de médicaments{% endblock %}
+{% block auth_extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Suivi des livraisons de médicaments <span class="material-symbols-rounded text-base text-ink-muted align-middle">info</span></h1>
+    <p>Supervisez en temps réel les demandes de livraison et la performance logistique nationale.</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <div class="auth-date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{{ delivery.period_start|date:"d/m/Y" }} – {{ delivery.period_end|date:"d/m/Y" }}</span>
+    </div>
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline" id="auth-delivery-filter-toggle">
+      <span class="material-symbols-rounded text-sm">tune</span> Filtres
+    </button>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-icon-btn relative" aria-label="Alertes sanitaires">
+      <span class="material-symbols-rounded">notifications</span>
+    </a>
+    {% if bo_role != "admin" %}{% include "backoffice/authority/partials/user_chip.html" %}{% endif %}
+  </div>
+</header>
+
+<form method="get" id="auth-delivery-filters" class="auth-stocks-filters auth-pharma-filters {% if filter_status or filter_search %}{% else %}hidden{% endif %}">
+  <div>
+    <label>Statut</label>
+    <select name="status" class="auth-stocks-filters__input">
+      <option value="">Tous</option>
+      {% for val, label in delivery.status_choices %}
+      <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="flex-1 min-w-[10rem]">
+    <label>Recherche</label>
+    <input type="search" name="q" value="{{ filter_search }}" placeholder="Code, client, pharmacie…" class="auth-stocks-filters__input w-full">
+  </div>
+  <button type="submit" class="auth-filter-btn">Appliquer</button>
+  <a href="{% url 'bo_authority_deliveries' %}" class="auth-map-link text-xs">Réinitialiser</a>
+</form>
+
+<section class="auth-kpi-grid auth-kpi-grid--6 auth-kpi-grid--national auth-delivery-kpis">
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-sky">
+    <span class="auth-kpi__icon material-symbols-rounded">assignment</span>
+    <p class="auth-kpi__label">Demandes totales</p>
+    <p class="auth-kpi__value">{{ delivery.kpis.total_requests|intcomma }}</p>
+    <p class="auth-kpi__trend {% if delivery.kpis.total_requests_trend >= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      {% if delivery.kpis.total_requests_trend >= 0 %}+{% endif %}{{ delivery.kpis.total_requests_trend }}% vs période précédente
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-green">
+    <span class="auth-kpi__icon material-symbols-rounded">moped</span>
+    <p class="auth-kpi__label">Livraisons effectuées</p>
+    <p class="auth-kpi__value">{{ delivery.kpis.completed|intcomma }}</p>
+    <p class="auth-kpi__trend is-up">
+      {% if delivery.kpis.completed_trend >= 0 %}+{% endif %}{{ delivery.kpis.completed_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-amber">
+    <span class="auth-kpi__icon material-symbols-rounded">schedule</span>
+    <p class="auth-kpi__label">En cours</p>
+    <p class="auth-kpi__value text-amber-700">{{ delivery.kpis.in_progress|intcomma }}</p>
+    <p class="auth-kpi__hint">Missions actives</p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-violet">
+    <span class="auth-kpi__icon material-symbols-rounded">task_alt</span>
+    <p class="auth-kpi__label">Livraisons réussies</p>
+    <p class="auth-kpi__value text-violet-700">{{ delivery.kpis.success_rate }}%</p>
+    <p class="auth-kpi__trend {% if delivery.kpis.success_rate_trend >= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      {% if delivery.kpis.success_rate_trend >= 0 %}+{% endif %}{{ delivery.kpis.success_rate_trend }} pts
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-rose">
+    <span class="auth-kpi__icon material-symbols-rounded">cancel</span>
+    <p class="auth-kpi__label">Livraisons annulées</p>
+    <p class="auth-kpi__value text-rose-700">{{ delivery.kpis.cancelled|intcomma }}</p>
+    <p class="auth-kpi__trend text-rose-600">
+      {% if delivery.kpis.cancelled_trend >= 0 %}+{% endif %}{{ delivery.kpis.cancelled_trend }}%
+    </p>
+  </article>
+  <article class="auth-kpi auth-kpi--national auth-kpi--icon auth-kpi--tint-blue">
+    <span class="auth-kpi__icon material-symbols-rounded">timer</span>
+    <p class="auth-kpi__label">Délai moyen</p>
+    <p class="auth-kpi__value">
+      {% if delivery.kpis.avg_delay_minutes is not None %}{{ delivery.kpis.avg_delay_minutes }} min{% else %}—{% endif %}
+    </p>
+    {% if delivery.kpis.avg_delay_minutes is not None %}
+    <p class="auth-kpi__trend {% if delivery.kpis.avg_delay_trend <= 0 %}is-up{% else %}text-rose-600{% endif %}">
+      {% if delivery.kpis.avg_delay_trend > 0 %}+{% endif %}{{ delivery.kpis.avg_delay_trend }}% vs période précédente
+    </p>
+    {% else %}
+    <p class="auth-kpi__hint">Pas assez de livraisons clôturées</p>
+    {% endif %}
+  </article>
+</section>
+
+{% if not delivery.has_data %}
+<div class="auth-portal__banner !bg-sky-50 !text-sky-900 border border-sky-200 mb-3">
+  Aucune livraison enregistrée sur la plateforme pour cette période.
+</div>
+{% endif %}
+
+<section class="auth-delivery-mid">
+  <article class="auth-panel auth-delivery-table-panel">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h3 class="!mb-0">Demandes de livraison</h3>
+      <a href="{% url 'bo_authority_reports' %}?type=deliveries&export=csv" class="auth-filter-btn auth-filter-btn--outline text-xs">Exporter</a>
+    </div>
+    <div class="auth-pharma-table-wrap">
+      <table class="auth-pharma-table auth-delivery-table">
+        <thead>
+          <tr>
+            <th>Commande</th>
+            <th>Client</th>
+            <th>Pharmacie</th>
+            <th>Adresse</th>
+            <th>Statut</th>
+            <th>Mise à jour</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in delivery.table_rows %}
+          <tr>
+            <td class="font-bold">{{ row.code }}</td>
+            <td>{{ row.client }}</td>
+            <td>{{ row.pharmacy }}</td>
+            <td class="max-w-[8rem] truncate">{{ row.address }}</td>
+            <td>
+              <span class="auth-delivery-status auth-delivery-status--{{ row.status_bucket }}">{{ row.status_label }}</span>
+            </td>
+            <td>{{ row.updated_at|date:"d/m/Y H:i" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-sm text-ink-muted py-8">Aucune demande pour ces filtres.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if delivery.table_total > delivery.table_rows|length %}
+    <p class="auth-trends-detail-link mt-2">{{ delivery.table_rows|length }} sur {{ delivery.table_total }} — affinez avec les filtres.</p>
+    {% endif %}
+  </article>
+
+  <article class="auth-panel auth-delivery-map-panel">
+    <div class="flex items-center justify-between gap-2 mb-2">
+      <h3 class="!mb-0">Carte des livraisons en temps réel</h3>
+      <a href="{% url 'bo_authority_map' %}" class="auth-map-link text-xs">Carte nationale →</a>
+    </div>
+    <div id="auth-map-deliveries" class="auth-map auth-map--deliveries" role="img" aria-label="Carte livraisons"></div>
+    <ul class="auth-delivery-map-legend">
+      <li><span class="auth-delivery-pin auth-delivery-pin--active"></span> En cours</li>
+      <li><span class="auth-delivery-pin auth-delivery-pin--done"></span> Terminée</li>
+      <li><span class="auth-delivery-pin auth-delivery-pin--pharmacy"></span> Pharmacie</li>
+    </ul>
+  </article>
+</section>
+
+<section class="auth-delivery-bottom">
+  <article class="auth-panel">
+    <h3>Statut des livraisons</h3>
+    <div class="auth-trends-donut auth-trends-donut--compact">
+      <div class="auth-trends-donut__ring" style="background: {{ delivery.donut_gradient }};">
+        <span class="auth-trends-donut__center">{{ delivery.donut_total|intcomma }}<small>Total</small></span>
+      </div>
+      <ul class="auth-trends-donut__legend">
+        {% for s in delivery.donut_slices %}
+        <li>
+          <span class="inline-flex items-center gap-2"><span class="auth-dot" style="background:{{ s.color }}"></span>{{ s.label }}</span>
+          <strong>{{ s.pct }}%</strong>
+        </li>
+        {% empty %}
+        <li class="text-sm text-ink-muted">Aucune donnée sur la période.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Délai moyen de livraison <small class="text-ink-muted font-normal">(30 jours)</small></h3>
+    <div class="auth-delivery-line-chart">
+      <svg viewBox="0 0 320 72" preserveAspectRatio="none" class="auth-delivery-line-chart__svg">
+        <polyline class="auth-delivery-line-chart__line" points="{{ delivery.delay_polyline }}" />
+      </svg>
+      <div class="auth-delivery-line-chart__labels">
+        <span>{{ delivery.delay_series.0.label }}</span>
+        {% with last_day=delivery.delay_series|last %}
+        <span>{{ last_day.label }}</span>
+        {% endwith %}
+      </div>
+    </div>
+    <p class="auth-kpi__hint mt-2">
+      {% if delivery.kpis.avg_delay_minutes is not None %}
+      Moyenne actuelle : <strong>{{ delivery.kpis.avg_delay_minutes }} min</strong>
+      {% else %}—{% endif %}
+    </p>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Livraisons par zone</h3>
+    <div class="auth-pharma-nc-bars">
+      {% for z in delivery.zone_bars %}
+      <div class="auth-pharma-nc-row">
+        <span class="auth-pharma-nc-row__label">{{ z.label }}</span>
+        <span class="auth-pharma-nc-row__bar"><span style="width:{{ z.bar_pct }}%;background:#228545"></span></span>
+        <span class="auth-pharma-nc-row__pct">{{ z.count }}</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ink-muted py-4">Aucune zone renseignée.</p>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="auth-panel auth-delivery-alerts-panel">
+    <h3>Alertes livraison</h3>
+    <ul class="auth-delivery-alerts">
+      {% for a in delivery.delivery_alerts %}
+      <li class="auth-delivery-alerts__item auth-delivery-alerts__item--{{ a.level }}">
+        <span class="material-symbols-rounded">{% if a.level == 'high' %}error{% else %}warning{% endif %}</span>
+        <div>
+          <p class="auth-delivery-alerts__title">{{ a.title }}</p>
+          <p class="auth-delivery-alerts__meta">{{ a.detail }} · {{ a.time_ago|timesince }}</p>
+        </div>
+      </li>
+      {% empty %}
+      <li class="text-sm text-ink-muted py-4">Aucune alerte logistique ouverte.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+
+<footer class="auth-national-footer auth-national-footer--info">
+  <p>
+    <span class="material-symbols-rounded text-sm align-middle">info</span>
+    Données issues des commandes avec livraison à domicile ou express et des courses livreurs sur Gab'Pharma.
+  </p>
+  <span class="text-[0.65rem]">
+    Dernière mise à jour : {{ delivery.last_updated|date:"d/m/Y" }} à {{ delivery.last_updated|date:"H:i" }}
+  </span>
+</footer>
+
+{{ delivery.map_data|json_script:"authority-map-data" }}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=7"></script>
+<script>
+document.getElementById('auth-delivery-filter-toggle')?.addEventListener('click', function () {
+  document.getElementById('auth-delivery-filters')?.classList.toggle('hidden');
+});
+</script>
+{% endblock %}

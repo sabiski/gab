@@ -1,0 +1,5 @@
+{% extends "base.html" %}
+{% block title %}{% if q %}Recherche : {{ q }}{% elif category %}{{ category.name }}{% else %}Catalogue{% endif %}{% endblock %}
+{% block content %}
+{% include "web/partials/catalog_inner.html" %}
+{% endblock %}

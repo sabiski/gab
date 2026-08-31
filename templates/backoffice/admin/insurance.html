@@ -1,0 +1,180 @@
+{% extends "backoffice/base_bo.html" %}
+
+{% block title %}Assurances{% endblock %}
+
+{% block bo_label %}Administration{% endblock %}
+
+{% block bo_title %}Assureurs & demandes{% endblock %}
+
+{% block bo_content %}
+
+<div class="mb-4 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+
+  <div class="text-sm">
+
+    <p class="font-extrabold text-violet-900">Pilotage administrateur</p>
+
+    <p class="text-ink-muted text-xs mt-0.5">Validation des <strong>inscriptions de toutes les compagnies d'assurance</strong> (après vérification) et des remboursements. Inscription publique : <a href="{% url 'insurer_register' %}" class="text-primary font-bold underline">/auth/inscription-assurance/</a>.</p>
+
+  </div>
+
+  <a href="{% url 'bo_insurer_dashboard' %}" class="inline-flex items-center gap-1.5 bg-[#5B47FB] text-white font-bold text-sm px-4 py-2 rounded-full shrink-0">
+
+    <span class="material-symbols-rounded sm">dashboard</span> Ouvrir le portail assurance
+
+  </a>
+
+  <a href="{% url 'bo_admin_subscriptions' %}?tab=insurers" class="inline-flex items-center gap-1.5 bg-white border border-violet-300 text-violet-900 font-bold text-sm px-4 py-2 rounded-full shrink-0">
+
+    <span class="material-symbols-rounded sm">payments</span> Abonnements &amp; encaissements
+
+  </a>
+
+</div>
+
+<div class="grid lg:grid-cols-3 gap-6">
+
+  <section class="bg-white rounded-2xl border p-5 h-fit space-y-6">
+
+    <div>
+
+      <h2 class="font-extrabold mb-1 flex items-center gap-2">
+
+        <span class="material-symbols-rounded sm text-amber-600">pending_actions</span>
+
+        Inscriptions en attente
+
+      </h2>
+
+      <p class="text-xs text-ink-muted mb-3">Toute compagnie d'assurance (CNAMGS, NSIA, ASSINCO, mutuelle…) qui s'inscrit via le formulaire public apparaît ici. Ouvrez chaque dossier pour vérifier avant validation ou refus.</p>
+
+      {% if pending_insurers %}
+
+      <div class="space-y-2">
+
+        {% for p in pending_insurers %}
+
+        <article class="border border-amber-100 bg-amber-50/50 rounded-xl p-3 text-sm flex flex-wrap items-center justify-between gap-2">
+
+          <div class="min-w-0">
+
+            <p class="font-extrabold truncate">{{ p.organization_name }}{% if p.acronym %} <span class="text-ink-muted font-semibold">({{ p.acronym }})</span>{% endif %}</p>
+
+            <p class="text-xs text-ink-muted mt-0.5">{{ p.user.email }} · {{ p.user.date_joined|date:"d/m/Y H:i" }}</p>
+
+          </div>
+
+          <a href="{% url 'bo_admin_insurance_review' p.id %}" class="shrink-0 inline-flex items-center gap-1 bg-primary text-white font-bold text-xs px-3 py-2 rounded-lg">
+
+            <span class="material-symbols-rounded sm">folder_open</span> Examiner le dossier
+
+          </a>
+
+        </article>
+
+        {% endfor %}
+
+      </div>
+
+      {% else %}
+
+      <p class="text-sm text-ink-muted bg-canvas rounded-xl px-3 py-4 text-center">Aucune demande d'inscription en cours.</p>
+
+      {% endif %}
+
+    </div>
+
+
+
+    <div>
+
+      <h3 class="font-extrabold mb-2 text-sm">Assureurs actifs</h3>
+
+      <ul class="text-sm space-y-1">
+
+        {% for p in providers %}
+
+        <li class="flex justify-between border-b border-slate-50 py-2">
+
+          <span class="font-bold">{{ p.name }} <span class="text-ink-muted font-medium">({{ p.code }})</span></span>
+
+          <span class="text-primary font-bold">{{ p.coverage_rate }}%</span>
+
+        </li>
+
+        {% empty %}<li class="text-ink-muted">Aucun assureur validé.</li>{% endfor %}
+
+      </ul>
+
+      <p class="text-[11px] text-ink-muted mt-2">Le taux de prise en charge est défini par la compagnie dans son espace après validation.</p>
+
+    </div>
+
+  </section>
+
+
+
+  <section class="lg:col-span-2 bg-white rounded-2xl border overflow-x-auto">
+
+    <div class="p-4 border-b"><h2 class="font-extrabold">Demandes de remboursement</h2></div>
+
+    <table class="w-full text-sm">
+
+      <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+
+        <tr><th class="px-4 py-3">Client</th><th class="px-4 py-3">Assureur</th><th class="px-4 py-3">Commande</th><th class="px-4 py-3">Montant</th><th class="px-4 py-3">Décision</th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for c in claims %}
+
+        <tr class="border-t align-top">
+
+          <td class="px-4 py-3 font-bold">{{ c.client }}</td>
+
+          <td class="px-4 py-3">{{ c.provider.name }}</td>
+
+          <td class="px-4 py-3 text-ink-muted">{{ c.order.code }}</td>
+
+          <td class="px-4 py-3 font-bold text-primary">{{ c.amount }} F</td>
+
+          <td class="px-4 py-3">
+
+            <form method="post" class="space-y-1">
+
+              {% csrf_token %}
+
+              <input type="hidden" name="action" value="claim_status">
+
+              <input type="hidden" name="claim_id" value="{{ c.id }}">
+
+              <select name="status" class="border rounded text-xs px-1 py-1 w-full">
+
+                {% for val, label in claim_statuses %}<option value="{{ val }}" {% if c.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+
+              </select>
+
+              <input name="review_notes" value="{{ c.review_notes }}" placeholder="Notes" class="border rounded text-xs px-2 py-1 w-full">
+
+              <button class="text-xs font-bold text-primary">OK</button>
+
+            </form>
+
+          </td>
+
+        </tr>
+
+        {% empty %}<tr><td colspan="5" class="px-4 py-10 text-center text-ink-muted">Aucune demande</td></tr>{% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </section>
+
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,25 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Notifications{% endblock %}
+{% block portal_heading %}Notifications{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Suivez vos commandes, messages et alertes santé. Ouvrez une notification pour la consulter.</p>
+{% endblock %}
+{% block portal_body %}
+<div class="space-y-2 max-w-3xl">
+  {% for n in notifs %}
+  <a href="{{ n.open_url }}" class="block c-card p-4 transition hover:border-[#6C3AED]/40 {% if not n.is_read %}border-[#6C3AED]/30 bg-[#FAF8FF]{% endif %}">
+    <div class="flex items-center gap-2 flex-wrap">
+      <p class="font-extrabold text-sm text-[#374151]">{{ n.title }}</p>
+      {% if not n.is_read %}<span class="c-pill">Nouveau</span>{% endif %}
+    </div>
+    <p class="text-sm text-[#6B7280] mt-1">{{ n.message }}</p>
+    <p class="text-[11px] text-[#9CA3AF] mt-2 font-semibold">{{ n.created_at|date:"d/m/Y H:i" }} · {{ n.get_notification_type_display }}</p>
+  </a>
+  {% empty %}
+  <div class="c-card c-empty">
+    <div class="c-empty__icon"><span class="material-symbols-rounded">notifications</span></div>
+    <p class="text-sm text-[#6B7280]">Aucune notification.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

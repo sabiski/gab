@@ -1,0 +1,20 @@
+{% extends "backoffice/client/profile_form_base.html" %}
+{% block profile_back_href %}{% url 'bo_client_parametres' %}{% endblock %}
+{% block profile_back_label %}Retour aux paramètres{% endblock %}
+{% block profile_lead %}
+<p class="c-lead">Conditions générales d'utilisation du service Gab'Pharma.</p>
+{% endblock %}
+{% block profile_form %}
+<div class="space-y-4 text-sm text-[#374151] leading-relaxed">
+  <p class="font-bold">1. Objet</p>
+  <p class="text-[#6B7280]">Les présentes conditions régissent l'utilisation de la plateforme Gab'Pharma par les patients pour la recherche, la commande et le suivi de médicaments auprès de pharmacies partenaires.</p>
+  <p class="font-bold">2. Compte utilisateur</p>
+  <p class="text-[#6B7280]">Vous êtes responsable de la confidentialité de vos identifiants. Les informations fournies doivent être exactes et à jour.</p>
+  <p class="font-bold">3. Commandes et ordonnances</p>
+  <p class="text-[#6B7280]">Les médicaments sur ordonnance nécessitent une prescription valide. La pharmacie peut refuser une commande non conforme à la réglementation.</p>
+  <p class="font-bold">4. Paiement et livraison</p>
+  <p class="text-[#6B7280]">Les tarifs affichés sont ceux de la pharmacie sélectionnée. Les délais de livraison sont indicatifs.</p>
+  <p class="font-bold">5. Contact</p>
+  <p class="text-[#6B7280]">Questions : <a href="tel:+24111223344" class="text-[#6C3AED] font-bold">+241 11 22 33 44</a> ou via <a href="{% url 'bo_client_support' %}" class="text-[#6C3AED] font-bold">Réclamations</a>.</p>
+</div>
+{% endblock %}

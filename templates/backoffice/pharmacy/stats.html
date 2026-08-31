@@ -1,0 +1,196 @@
+{% extends "backoffice/base_bo.html" %}
+{% load humanize %}
+{% block title %}Statistiques{% endblock %}
+{% block bo_title %}Statistiques{% endblock %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/stats-mobile.css?v=1">
+{% endblock %}
+{% block bo_content %}
+
+<div class="stats-portal max-w-5xl pharmacy-stats-mobile" id="stats-root">
+  <form method="get" class="stats-toolbar">
+    <select name="period" aria-label="Période" onchange="this.form.submit()">
+      <option value="7" {% if period == 7 %}selected{% endif %}>7 derniers jours</option>
+      <option value="30" {% if period == 30 %}selected{% endif %}>30 derniers jours</option>
+      <option value="90" {% if period == 90 %}selected{% endif %}>90 jours</option>
+      <option value="365" {% if period == 365 %}selected{% endif %}>1 an</option>
+    </select>
+    <div class="stats-export-menu">
+      <a href="?period={{ period }}&export=xlsx" class="stats-export-btn stats-export-btn--primary">
+        <span class="material-symbols-rounded sm">download</span> Exporter
+      </a>
+      <a href="?period={{ period }}&export=pdf" class="stats-export-btn hidden sm:inline-flex">
+        <span class="material-symbols-rounded sm">picture_as_pdf</span> PDF
+      </a>
+      <a href="?period={{ period }}&export=csv" class="stats-export-btn hidden sm:inline-flex">
+        <span class="material-symbols-rounded sm">table</span> CSV
+      </a>
+    </div>
+  </form>
+
+  <div class="stats-kpi-scroll">
+    <div class="stats-kpi-card">
+      <p class="stats-kpi-card__label">Chiffre d'affaires</p>
+      <p class="stats-kpi-card__value">{{ kpis.ca_period|intcomma }} F</p>
+      <p class="stats-kpi-card__sub">{{ period }} jours</p>
+    </div>
+    <div class="stats-kpi-card">
+      <p class="stats-kpi-card__label">Commandes</p>
+      <p class="stats-kpi-card__value stats-kpi-card__value--neutral">{{ kpis.orders_period|intcomma }}</p>
+      <p class="stats-kpi-card__sub">sur la période</p>
+    </div>
+    <div class="stats-kpi-card">
+      <p class="stats-kpi-card__label">Clients servis</p>
+      <p class="stats-kpi-card__value stats-kpi-card__value--neutral">{{ kpis.clients_served|intcomma }}</p>
+      <p class="stats-kpi-card__sub">uniques</p>
+    </div>
+    <div class="stats-kpi-card">
+      <p class="stats-kpi-card__label">Panier moyen</p>
+      <p class="stats-kpi-card__value">{{ kpis.avg_basket|intcomma }} F</p>
+      <p class="stats-kpi-card__sub">par commande</p>
+    </div>
+  </div>
+
+  <details class="stats-kpi-more lg:hidden">
+    <summary>+ Indicateurs financiers &amp; livraison</summary>
+    <div class="stats-kpi-scroll stats-kpi-scroll--dense mt-2">
+      <div class="stats-kpi-card">
+        <p class="stats-kpi-card__label">Marge estimée</p>
+        <p class="stats-kpi-card__value">{{ kpis.margin|intcomma }} F</p>
+        <p class="stats-kpi-card__sub">{{ kpis.margin_pct }} %</p>
+      </div>
+      <div class="stats-kpi-card">
+        <p class="stats-kpi-card__label">Net pharmacie</p>
+        <p class="stats-kpi-card__value">{{ kpis.settlement_net|intcomma }} F</p>
+      </div>
+      <div class="stats-kpi-card">
+        <p class="stats-kpi-card__label">Commission</p>
+        <p class="stats-kpi-card__value" style="color:#EF4444">{{ kpis.settlement_commission|intcomma }} F</p>
+      </div>
+      <div class="stats-kpi-card">
+        <p class="stats-kpi-card__label">Versements attente</p>
+        <p class="stats-kpi-card__value" style="color:#F59E0B">{{ kpis.settlement_pending|intcomma }} F</p>
+      </div>
+      <div class="stats-kpi-card">
+        <p class="stats-kpi-card__label">Livraisons OK</p>
+        <p class="stats-kpi-card__value--neutral stats-kpi-card__value">{{ kpis.deliveries_done|intcomma }}</p>
+      </div>
+      <div class="stats-kpi-card">
+        <p class="stats-kpi-card__label">Délai moyen</p>
+        <p class="stats-kpi-card__value--neutral stats-kpi-card__value">{% if deliv.deliv_avg_min %}{{ deliv.deliv_avg_min }} min{% else %}—{% endif %}</p>
+      </div>
+    </div>
+  </details>
+
+  <div class="hidden lg:grid lg:grid-cols-3 gap-3 mb-6">
+    <div class="stats-kpi-card"><p class="stats-kpi-card__label">Marge estimée</p><p class="stats-kpi-card__value">{{ kpis.margin|intcomma }} F ({{ kpis.margin_pct }}%)</p></div>
+    <div class="stats-kpi-card"><p class="stats-kpi-card__label">Net pharmacie</p><p class="stats-kpi-card__value">{{ kpis.settlement_net|intcomma }} F</p></div>
+    <div class="stats-kpi-card"><p class="stats-kpi-card__label">CA total</p><p class="stats-kpi-card__value--neutral stats-kpi-card__value">{{ kpis.ca_total|intcomma }} F</p></div>
+  </div>
+
+  <section class="stats-chart-card">
+    <h2>Évolution du chiffre d'affaires</h2>
+    <div class="chart-box"><canvas id="chartCa"></canvas></div>
+  </section>
+
+  {% if status_cards %}
+  <section>
+    <h2 class="font-extrabold text-sm mb-2">Commandes par statut</h2>
+    <div class="stats-status-grid">
+      {% for s in status_cards %}
+      <div class="stats-status-pill stats-status-pill--{{ s.tone }}">
+        <p class="stats-status-pill__count">{{ s.count }}</p>
+        <p class="stats-status-pill__label">{{ s.label }}</p>
+        <p class="stats-status-pill__pct">{{ s.pct }} %</p>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="stats-grid-2">
+    <section class="stats-chart-card">
+      <h2>Ventes par catégorie</h2>
+      <div class="chart-box"><canvas id="chartCat"></canvas></div>
+    </section>
+    <section class="stats-chart-card">
+      <h2>CA par mode de paiement</h2>
+      <div class="chart-box"><canvas id="chartPay"></canvas></div>
+    </section>
+  </div>
+
+  <section class="stats-top-list">
+    <h2>Top 5 produits vendus</h2>
+    {% for m in top_meds %}
+    <div class="stats-top-row">
+      <span class="font-bold min-w-0 truncate"><span class="stats-top-rank">{{ forloop.counter }}</span>{{ m.medicine_name }}</span>
+      <span class="font-extrabold text-[#6C2AED] shrink-0">{{ m.qty }}</span>
+    </div>
+    {% empty %}
+    <p class="text-sm text-ink-muted">Pas de vente sur la période.</p>
+    {% endfor %}
+  </section>
+
+  <section class="stats-chart-card hidden sm:block">
+    <h2>Détail commandes par statut</h2>
+    <div class="chart-box"><canvas id="chartStatus"></canvas></div>
+  </section>
+</div>
+
+{% include "backoffice/partials/pharmacy_bottom_nav.html" %}
+
+<script>document.body.classList.add('pharmacy-stats-mobile');</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  const charts = {{ charts_json|safe }};
+  const accent = '#6C2AED';
+  const palette = ['#6C2AED','#8B5CF6','#16A34A','#F59E0B','#EF4444','#2563EB','#0EA5E9'];
+
+  new Chart(document.getElementById('chartCa'), {
+    type: 'line',
+    data: {
+      labels: charts.ca.labels,
+      datasets: [{
+        data: charts.ca.data,
+        borderColor: accent,
+        backgroundColor: 'rgba(108,42,237,0.15)',
+        fill: true,
+        tension: 0.35,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } } },
+        y: { ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+
+  const statusEl = document.getElementById('chartStatus');
+  if (statusEl) {
+    new Chart(statusEl, {
+      type: 'doughnut',
+      data: { labels: charts.statuses.labels, datasets: [{ data: charts.statuses.data, backgroundColor: palette }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+    });
+  }
+
+  new Chart(document.getElementById('chartPay'), {
+    type: 'doughnut',
+    data: { labels: charts.payments.labels, datasets: [{ data: charts.payments.data, backgroundColor: palette }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+
+  new Chart(document.getElementById('chartCat'), {
+    type: 'doughnut',
+    data: { labels: charts.categories.labels, datasets: [{ data: charts.categories.data, backgroundColor: palette }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } } }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% block portal_title %}Urgence{% endblock %}
+{% block portal_heading %}Urgence SOS{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">En cas d'urgence médicale, nous assignons automatiquement la pharmacie la plus proche et ouvrons un fil de discussion.</p>
+{% endblock %}
+{% block portal_body %}
+{% include "backoffice/client/partials/emergency_body.html" %}
+{% endblock %}

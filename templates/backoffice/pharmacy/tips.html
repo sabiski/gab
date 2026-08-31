@@ -1,0 +1,78 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Conseils{% endblock %}
+{% block bo_label %}Espace pharmacie{% endblock %}
+{% block bo_title %}Conseils pharmacien{% endblock %}
+{% block bo_content %}
+{% if not pharmacy %}
+<p class="text-sm text-ink-muted">Aucune pharmacie associée à votre compte.</p>
+{% else %}
+
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-4 mb-5 text-sm max-w-3xl">
+  <p class="font-extrabold text-ink mb-1">Comment publier un conseil ?</p>
+  <ol class="list-decimal pl-5 text-ink-muted font-medium space-y-1">
+    <li>Cliquez sur <strong class="text-ink">Nouveau conseil</strong>.</li>
+    <li>Renseignez titre, catégorie (ex. Santé, Voyage), résumé et texte.</li>
+    <li>Ajoutez une image (optionnel) et cochez <strong class="text-ink">Publier sur le site</strong>.</li>
+    <li>Le conseil apparaît dans la section « Conseils pharmacien » de la page d’accueil.</li>
+  </ol>
+</section>
+
+<div class="mb-4 flex justify-end"><a href="?new=1" class="bg-primary text-white font-bold text-sm px-4 py-2 rounded-xl inline-flex items-center gap-1"><span class="material-symbols-rounded sm">add</span> Nouveau conseil</a></div>
+
+{% if show_create %}
+<section class="bg-white rounded-2xl border p-5 mb-4">
+  <div class="flex justify-between mb-3"><h2 class="font-extrabold">Nouveau conseil</h2><a href="{% url 'bo_pharmacy_tips' %}" class="text-xs font-bold text-ink-muted">Fermer</a></div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-2 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="create">
+    <input name="title" required placeholder="Titre * (ex. Prévenir le paludisme)" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <input name="category" value="Santé" class="border rounded-xl px-3 py-2">
+    <input name="icon" value="health_and_safety" class="border rounded-xl px-3 py-2" placeholder="Icône Material">
+    <input name="excerpt" placeholder="Résumé court (affiché sur l’accueil)" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <textarea name="body" rows="4" placeholder="Contenu du conseil" class="border rounded-xl px-3 py-2 sm:col-span-2"></textarea>
+    {% include "backoffice/partials/image_field.html" with name="cover_image" label="Image de couverture (optionnel)" %}
+    <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="is_published" checked> Publier sur le site</label>
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if edit_obj %}
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-5 mb-4">
+  <div class="flex justify-between mb-3"><h2 class="font-extrabold">Modifier</h2><a href="{% url 'bo_pharmacy_tips' %}" class="text-xs font-bold text-ink-muted">Fermer</a></div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-2 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="update"><input type="hidden" name="tip_id" value="{{ edit_obj.id }}">
+    <input name="title" value="{{ edit_obj.title }}" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <input name="category" value="{{ edit_obj.category }}" class="border rounded-xl px-3 py-2">
+    <input name="icon" value="{{ edit_obj.icon }}" class="border rounded-xl px-3 py-2">
+    <input name="excerpt" value="{{ edit_obj.excerpt }}" class="border rounded-xl px-3 py-2 sm:col-span-2">
+    <textarea name="body" rows="4" class="border rounded-xl px-3 py-2 sm:col-span-2">{{ edit_obj.body }}</textarea>
+    {% include "backoffice/partials/image_field.html" with name="cover_image" label="Image" current=edit_obj.cover_image %}
+    <label class="flex items-center gap-2 text-xs"><input type="checkbox" name="is_published" {% if edit_obj.is_published %}checked{% endif %}> Publié</label>
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="bg-white rounded-2xl border overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+      <tr><th class="px-4 py-3">Titre</th><th class="px-4 py-3">Catégorie</th><th class="px-4 py-3">Statut</th><th class="px-4 py-3 text-right">Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for tip in page_obj %}
+      <tr class="border-t">
+        <td class="px-4 py-3 font-bold">{{ tip.title }}</td>
+        <td class="px-4 py-3 text-ink-muted">{{ tip.category }}</td>
+        <td class="px-4 py-3">{% if tip.is_published %}<span class="text-xs font-bold text-primary">Publié</span>{% else %}Brouillon{% endif %}</td>
+        <td class="px-4 py-3 text-right">
+          <a href="?edit={{ tip.id }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-50 text-primary"><span class="material-symbols-rounded sm">edit</span></a>
+          <form method="post" class="inline" onsubmit="return confirm('Supprimer ?')">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="tip_id" value="{{ tip.id }}"><button class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-rose-50 text-rose-600"><span class="material-symbols-rounded sm">delete</span></button></form>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="4" class="px-4 py-10 text-center text-ink-muted">Aucun conseil — cliquez sur « Nouveau conseil »</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endif %}
+{% endblock %}

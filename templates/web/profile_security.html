@@ -1,0 +1,26 @@
+{% extends "web/profile_subpage.html" %}
+{% block profile_form %}
+<form method="post" class="profile-card p-5 space-y-4 text-sm">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="change_password">
+  <p class="text-[#6B7280]">Modifiez votre mot de passe régulièrement pour protéger votre compte.</p>
+  <div>
+    <label class="text-xs font-bold text-[#6B7280]">Mot de passe actuel</label>
+    <input type="password" name="current_password" required autocomplete="current-password" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-[#6B7280]">Nouveau mot de passe (8 car. min.)</label>
+    <input type="password" name="new_password" required minlength="8" autocomplete="new-password" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-[#6B7280]">Confirmer</label>
+    <input type="password" name="new_password2" required minlength="8" autocomplete="new-password" class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5">
+  </div>
+  <button class="w-full bg-[#6C3AED] hover:bg-[#5B21B6] text-white font-bold py-3 rounded-xl transition">Mettre à jour le mot de passe</button>
+</form>
+<div class="profile-card p-5 mt-4 text-sm space-y-2">
+  <p class="font-bold text-[#374151]">Connexion</p>
+  <p class="text-xs text-[#6B7280]">Compte : <strong>{{ user.username }}</strong></p>
+  <p class="text-xs text-[#6B7280]">Statut : {% if user.is_email_verified %}E-mail vérifié{% else %}E-mail non vérifié{% endif %}</p>
+</div>
+{% endblock %}

@@ -1,0 +1,226 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}{{ page_title|default:"Paiements et remboursements" }}{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claims-page-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-claims-back" aria-label="Retour">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </a>
+    <div>
+      <h1>{{ page_title|default:"Paiements et remboursements" }}</h1>
+      <p>Suivez les transactions, paiements aux pharmacies et remboursements.</p>
+    </div>
+  </div>
+  <div class="ins-header__actions">
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--sm">Déconnexion</a>
+  </div>
+</header>
+
+<section class="ins-claims-kpi">
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--purple">
+    <span class="material-symbols-rounded">account_balance_wallet</span>
+    <div>
+      <p class="ins-claims-kpi__label">Total des paiements</p>
+      <p class="ins-claims-kpi__value">{{ payment_stats.total_payments|intcomma }} <span class="text-xs font-semibold">FCFA</span></p>
+      {% if payment_stats.payment_trend %}<p class="ins-claims-kpi__pct">↑ {{ payment_stats.payment_trend }} % vs mois dernier</p>{% endif %}
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--green">
+    <span class="material-symbols-rounded">savings</span>
+    <div>
+      <p class="ins-claims-kpi__label">Total des remboursements</p>
+      <p class="ins-claims-kpi__value">{{ payment_stats.total_reimbursements|intcomma }} <span class="text-xs font-semibold">FCFA</span></p>
+      {% if payment_stats.reimb_trend %}<p class="ins-claims-kpi__pct">↑ {{ payment_stats.reimb_trend }} % vs mois dernier</p>{% endif %}
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--amber">
+    <span class="material-symbols-rounded">today</span>
+    <div>
+      <p class="ins-claims-kpi__label">Transactions aujourd'hui</p>
+      <p class="ins-claims-kpi__value">{{ payment_stats.today_count|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ payment_stats.today_amount|intcomma }} FCFA</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--red">
+    <span class="material-symbols-rounded">pending_actions</span>
+    <div>
+      <p class="ins-claims-kpi__label">En attente de règlement</p>
+      <p class="ins-claims-kpi__value">{{ payment_stats.pending_settlement|intcomma }} <span class="text-xs font-semibold">FCFA</span></p>
+      <p class="ins-claims-kpi__pct">{{ payment_stats.pending_count }} transaction{{ payment_stats.pending_count|pluralize }}</p>
+    </div>
+  </article>
+</section>
+
+<form method="get" class="ins-payments-toolbar">
+  <div class="ins-claims-search ins-payments-search">
+    <span class="material-symbols-rounded">search</span>
+    <input name="q" value="{{ q }}" placeholder="Rechercher une transaction, assuré, pharmacie…">
+  </div>
+  <label class="ins-payments-date">
+    <span class="sr-only">Du</span>
+    <input type="date" name="date_from" value="{{ date_from }}">
+  </label>
+  <label class="ins-payments-date">
+    <span class="sr-only">Au</span>
+    <input type="date" name="date_to" value="{{ date_to }}">
+  </label>
+  <select name="tx_type" class="ins-filters__input ins-payments-select">
+    <option value="">Type</option>
+    <option value="payment" {% if tx_type == 'payment' %}selected{% endif %}>Paiement</option>
+    <option value="reimbursement" {% if tx_type == 'reimbursement' %}selected{% endif %}>Remboursement</option>
+  </select>
+  <select name="tx_status" class="ins-filters__input ins-payments-select">
+    <option value="">Statut</option>
+    <option value="paid" {% if tx_status == 'paid' %}selected{% endif %}>Remboursé</option>
+    <option value="processing" {% if tx_status == 'processing' %}selected{% endif %}>En traitement</option>
+    <option value="pending" {% if tx_status == 'pending' %}selected{% endif %}>En attente</option>
+  </select>
+  {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+  <button type="submit" class="ins-btn-outline ins-payments-filter-btn">Filtrer</button>
+  <a href="?export=csv{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if date_from %}&amp;date_from={{ date_from }}{% endif %}{% if date_to %}&amp;date_to={{ date_to }}{% endif %}{% if tx_type %}&amp;tx_type={{ tx_type }}{% endif %}{% if tx_status %}&amp;tx_status={{ tx_status }}{% endif %}" class="ins-btn-outline ins-members-export">
+    <span class="material-symbols-rounded sm">download</span> Exporter
+  </a>
+</form>
+
+<p class="ins-pharmacies-list-title">Liste des transactions</p>
+
+<div class="ins-claims-table-wrap">
+  <table class="ins-claims-table ins-payments-table">
+    <thead>
+      <tr>
+        <th>Référence</th>
+        <th>Type</th>
+        <th>Assuré / Bénéficiaire</th>
+        <th>Pharmacie</th>
+        <th>Montant</th>
+        <th>Date</th>
+        <th>Statut</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tx in page_obj %}
+      <tr>
+        <td class="font-mono text-xs font-bold">{{ tx.tx_reference }}</td>
+        <td>
+          <span class="ins-tx-type ins-tx-type--{{ tx.tx_type.tone }}">{{ tx.tx_type.label }}</span>
+        </td>
+        <td>
+          <p class="font-bold text-sm">{{ tx.tx_client_name }}</p>
+          <p class="text-xs text-ink-muted">N° {{ tx.tx_insured_number }}</p>
+        </td>
+        <td>
+          <p class="font-semibold text-sm">{{ tx.tx_pharmacy_name }}</p>
+          <p class="text-xs text-ink-muted">{{ tx.tx_pharmacy_location }}</p>
+        </td>
+        <td class="font-bold">{{ tx.amount|intcomma }} F</td>
+        <td class="text-xs">{{ tx.created_at|date:"d/m/Y H:i" }}</td>
+        <td>
+          <span class="ins-tx-status ins-tx-status--{{ tx.tx_status.tone }}">
+            <span class="material-symbols-rounded sm">{{ tx.tx_status.icon }}</span>{{ tx.tx_status.label }}
+          </span>
+        </td>
+        <td>
+          <a href="{% url 'bo_insurer_claim_detail' tx.id %}" class="ins-pharmacy-view">Voir</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" class="ins-claims-empty">
+          <span class="material-symbols-rounded">payments</span>
+          Aucune transaction pour cette période.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "backoffice/insurer/partials/payments_pagination.html" %}
+
+<section class="ins-payments-charts">
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Répartition par type</h3>
+    <div class="ins-doughnut-wrap">
+      <div class="ins-chart-wrap ins-chart-wrap--short"><canvas id="chartPayType"></canvas></div>
+      <div class="ins-doughnut-center">
+        <span id="chartPayTotal">—</span>
+        <small>FCFA</small>
+      </div>
+    </div>
+    <p class="ins-payments-chart-legend text-xs text-center text-ink-muted mt-2" id="chartPayLegend"></p>
+  </article>
+  <article class="ins-panel ins-panel--wide">
+    <h3 class="ins-claim-section-title">Évolution mensuelle</h3>
+    <div class="ins-chart-wrap"><canvas id="chartPayMonthly"></canvas></div>
+  </article>
+  <article class="ins-panel">
+    <h3 class="ins-claim-section-title">Top 5 pharmacies (par montant)</h3>
+    <ol class="ins-payments-top-list" id="topPharmaciesList"></ol>
+    <a href="{% url 'bo_insurer_pharmacies' %}" class="ins-claim-link mt-2 inline-block">Voir toutes les pharmacies →</a>
+  </article>
+</section>
+
+<div class="ins-claims-info-banner ins-payments-info">
+  <span class="material-symbols-rounded">info</span>
+  <div>
+    <p class="font-bold">Informations importantes</p>
+    <ul class="text-sm mt-1 space-y-1">
+      <li><strong>Délai de remboursement :</strong> 72 h après validation de la prise en charge.</li>
+      <li><strong>Heures de traitement :</strong> lun.–ven. 08h–17h, sam. 08h–12h.</li>
+      <li><strong>Méthodes :</strong> virement bancaire, Mobile Money, chèque.</li>
+    </ul>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const charts = {{ charts_json|safe }};
+  if (typeof Chart !== "undefined" && charts) {
+    const totalEl = document.getElementById("chartPayTotal");
+    const legendEl = document.getElementById("chartPayLegend");
+    if (charts.type_split && totalEl) {
+      totalEl.textContent = new Intl.NumberFormat("fr-FR").format(charts.type_split.total);
+      if (legendEl) {
+        legendEl.textContent = charts.type_split.pct_payment + " % Paiements · " + charts.type_split.pct_reimb + " % Remboursements";
+      }
+      new Chart(document.getElementById("chartPayType"), {
+        type: "doughnut",
+        data: {
+          labels: charts.type_split.labels,
+          datasets: [{ data: charts.type_split.data, backgroundColor: charts.type_split.colors, borderWidth: 0 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: "72%", plugins: { legend: { position: "bottom" } } }
+      });
+    }
+    if (charts.monthly) {
+      new Chart(document.getElementById("chartPayMonthly"), {
+        type: "bar",
+        data: {
+          labels: charts.monthly.labels,
+          datasets: [
+            { label: "Paiements", data: charts.monthly.payments, backgroundColor: "#10b981", borderRadius: 4, maxBarThickness: 8 },
+            { label: "Remboursements", data: charts.monthly.reimbursements, backgroundColor: "#3b82f6", borderRadius: 4, maxBarThickness: 8 }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } }, scales: { x: { stacked: false }, y: { beginAtZero: true } } }
+      });
+    }
+    const topList = document.getElementById("topPharmaciesList");
+    if (topList && charts.top_pharmacies) {
+      topList.innerHTML = charts.top_pharmacies.map(function (ph, i) {
+        return '<li><span class="ins-payments-top-rank">' + (i + 1) + '</span><div><p class="font-bold text-sm">' + ph.name + '</p><p class="text-xs text-ink-muted">' + ph.city + '</p></div><strong class="text-sm text-primary">' + new Intl.NumberFormat("fr-FR").format(ph.total) + ' F</strong></li>';
+      }).join("") || '<li class="text-ink-muted text-sm">Aucune donnée</li>';
+    }
+  }
+})();
+</script>
+{% endblock %}

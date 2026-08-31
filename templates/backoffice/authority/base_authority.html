@@ -1,0 +1,19 @@
+{% extends "backoffice/base_bo.html" %}
+{% load humanize %}
+{% block title %}{% block auth_page_title %}Espace Autorités{% endblock %}{% endblock %}
+{% block bo_label %}Espace Autorités sanitaires{% endblock %}
+{% block bo_title %}{% endblock %}
+{% block bo_subtitle %}{% endblock %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/authority-portal.css?v=13">
+{% block auth_extra_head %}{% endblock %}
+{% endblock %}
+{% block bo_content %}
+<div class="auth-portal">
+  {% if bo_role == "admin" %}
+  {% include "backoffice/authority/partials/admin_pilot_bar.html" %}
+  {% endif %}
+  {% block auth_content %}{% endblock %}
+</div>
+{% endblock %}

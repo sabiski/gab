@@ -1,0 +1,225 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+
+{% block ins_page_title %}{{ page_title|default:"Gestion des assurés" }}{% endblock %}
+
+{% block ins_content %}
+<header class="ins-claims-page-header">
+  <div class="ins-claims-page-header__title">
+    <a href="{% url 'bo_insurer_dashboard' %}" class="ins-claims-back" aria-label="Retour">
+      <span class="material-symbols-rounded">arrow_back</span>
+    </a>
+    <div>
+      <h1>{{ page_title|default:"Gestion des assurés" }}</h1>
+      <p>Consultez et gérez les informations des assurés.</p>
+    </div>
+  </div>
+  <div class="ins-header__actions">
+    <a href="{% url 'bo_insurer_notifications' %}" class="ins-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if insurer_notif_count %}<span class="ins-icon-btn__badge">{{ insurer_notif_count }}</span>{% endif %}
+    </a>
+    <a href="{% url 'logout' %}" class="ins-btn-outline ins-btn-outline--sm">Déconnexion</a>
+  </div>
+</header>
+
+<form method="get" class="ins-claims-toolbar">
+  <div class="ins-claims-search">
+    <span class="material-symbols-rounded">search</span>
+    <input name="q" value="{{ q }}" placeholder="Rechercher par nom, numéro d'assuré, téléphone…">
+    {% if tab and tab != 'all' %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+    {% if city %}<input type="hidden" name="city" value="{{ city }}">{% endif %}
+    {% if member_status %}<input type="hidden" name="member_status" value="{{ member_status }}">{% endif %}
+    {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+  </div>
+  <button type="button" class="ins-claims-filter-btn{% if show_filters %} is-open{% endif %}" data-toggle-filters aria-expanded="{% if show_filters %}true{% else %}false{% endif %}">
+    <span class="material-symbols-rounded sm">tune</span> Filtres
+    {% if active_filters %}<span class="ins-claims-filter-btn__badge">{{ active_filters }}</span>{% endif %}
+  </button>
+  <button type="button" class="ins-btn-primary ins-members-add-btn" data-open-add-member>
+    <span class="material-symbols-rounded sm">person_add</span> Ajouter un assuré
+  </button>
+</form>
+
+{% if show_filters %}
+<form method="get" class="ins-claims-filters-panel"{% if show_filters %} data-open{% endif %}>
+  <input type="hidden" name="q" value="{{ q }}">
+  <input type="hidden" name="filters" value="1">
+  {% if tab and tab != 'all' %}<input type="hidden" name="tab" value="{{ tab }}">{% endif %}
+  {% if per_page %}<input type="hidden" name="per_page" value="{{ per_page }}">{% endif %}
+  <label class="ins-claims-filters-panel__field">
+    <span>Ville</span>
+    <select name="city">
+      <option value="">Toutes</option>
+      {% for c in filter_cities %}
+      <option value="{{ c }}" {% if city == c %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="ins-claims-filters-panel__field">
+    <span>Statut</span>
+    <select name="member_status">
+      <option value="">Tous</option>
+      <option value="active" {% if member_status == 'active' %}selected{% endif %}>Actif</option>
+      <option value="inactive" {% if member_status == 'inactive' %}selected{% endif %}>Inactif</option>
+      <option value="deregistered" {% if member_status == 'deregistered' %}selected{% endif %}>Radié</option>
+    </select>
+  </label>
+  <button type="submit" class="ins-btn-primary">Appliquer</button>
+  <a href="{{ members_reset_url }}" class="ins-btn-outline">Réinitialiser</a>
+</form>
+{% endif %}
+
+<section class="ins-claims-kpi">
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--purple">
+    <span class="material-symbols-rounded">groups</span>
+    <div>
+      <p class="ins-claims-kpi__label">Total des assurés</p>
+      <p class="ins-claims-kpi__value">{{ member_stats.total|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ member_stats.pct_total }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--green">
+    <span class="material-symbols-rounded">check_circle</span>
+    <div>
+      <p class="ins-claims-kpi__label">Assurés actifs</p>
+      <p class="ins-claims-kpi__value">{{ member_stats.active|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ member_stats.pct_active }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--amber">
+    <span class="material-symbols-rounded">pause_circle</span>
+    <div>
+      <p class="ins-claims-kpi__label">Assurés inactifs</p>
+      <p class="ins-claims-kpi__value">{{ member_stats.inactive|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ member_stats.pct_inactive }} %</p>
+    </div>
+  </article>
+  <article class="ins-claims-kpi__card ins-claims-kpi__card--red">
+    <span class="material-symbols-rounded">block</span>
+    <div>
+      <p class="ins-claims-kpi__label">Radiés</p>
+      <p class="ins-claims-kpi__value">{{ member_stats.deregistered|intcomma }}</p>
+      <p class="ins-claims-kpi__pct">{{ member_stats.pct_deregistered }} %</p>
+    </div>
+  </article>
+</section>
+
+{% include "backoffice/insurer/partials/members_tabs.html" %}
+
+<div class="ins-claims-table-wrap">
+  <table class="ins-claims-table ins-members-table">
+    <thead>
+      <tr>
+        <th>Assuré</th>
+        <th>N° assuré</th>
+        <th>Date de naissance</th>
+        <th>Statut</th>
+        <th>Date d'adhésion</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in page_obj %}
+      <tr>
+        <td>
+          <div class="ins-member-cell">
+            <span class="ins-member-avatar ins-member-avatar--{{ m.ui_status.tone }}">{{ m.ui_initials }}</span>
+            <div>
+              <p class="ins-member-name">{{ m.ui_name }}</p>
+              <p class="ins-member-phone">{{ m.ui_phone }}</p>
+            </div>
+          </div>
+        </td>
+        <td class="font-mono text-xs font-bold">{{ m.insurance_number|default:"—" }}</td>
+        <td>{% if m.date_of_birth %}{{ m.date_of_birth|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+        <td>
+          <span class="ins-members-status ins-members-status--{{ m.ui_status.tone }}">
+            <span class="material-symbols-rounded sm">{{ m.ui_status.icon }}</span>{{ m.ui_status.label }}
+          </span>
+        </td>
+        <td>{{ m.ui_adhesion|date:"d/m/Y" }}</td>
+        <td>
+          <details class="ins-claims-actions">
+            <summary aria-label="Actions"><span class="material-symbols-rounded">more_vert</span></summary>
+            <div class="ins-claims-actions__menu">
+              <a href="{% url 'bo_insurer_members' %}?q={{ m.user.email|urlencode }}">Voir le profil</a>
+              <a href="{% url 'bo_insurer_claims' %}?q={{ m.insurance_number|default:m.user.email|urlencode }}">Voir les demandes</a>
+              {% if m.user.status == 'suspended' %}
+              <span class="text-ink-muted text-xs px-2">Compte radié</span>
+              {% elif m.user.status != 'active' %}
+              <span class="text-ink-muted text-xs px-2">Compte inactif</span>
+              {% endif %}
+            </div>
+          </details>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="ins-claims-empty">
+          <span class="material-symbols-rounded">person_off</span>
+          Aucun assuré rattaché à votre organisme pour le moment.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "backoffice/insurer/partials/members_pagination.html" %}
+
+<div class="ins-members-footer">
+  <div class="ins-claims-info-banner">
+    <span class="material-symbols-rounded">info</span>
+    <p>Les informations des assurés sont mises à jour automatiquement lorsque les patients renseignent leur assurance ou lorsque les pharmacies soumettent des demandes de prise en charge.</p>
+  </div>
+  <a href="?export=csv{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if tab and tab != 'all' %}&amp;tab={{ tab }}{% endif %}{% if city %}&amp;city={{ city|urlencode }}{% endif %}{% if member_status %}&amp;member_status={{ member_status }}{% endif %}" class="ins-btn-outline ins-members-export">
+    <span class="material-symbols-rounded sm">download</span> Exporter la liste
+  </a>
+</div>
+
+<dialog id="add-member-dialog" class="ins-members-dialog">
+  <form method="dialog" class="ins-members-dialog__inner">
+    <h2 class="font-extrabold text-lg">Ajouter un assuré</h2>
+    <p class="text-sm text-ink-muted mt-2">Les assurés s'inscrivent via l'application patient Gab'Pharma en renseignant leur numéro d'assuré et en sélectionnant votre organisme.</p>
+    <p class="text-sm mt-2">Pour un rattachement manuel ou une correction, contactez le support Gab'Pharma.</p>
+    <div class="flex gap-2 mt-4 justify-end">
+      <button type="submit" class="ins-btn-primary">Compris</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  const filterBtn = document.querySelector("[data-toggle-filters]");
+  const panel = document.querySelector(".ins-claims-filters-panel");
+  if (filterBtn && panel) {
+    filterBtn.addEventListener("click", () => {
+      const open = panel.style.display === "grid" || panel.classList.contains("is-visible");
+      panel.style.display = open ? "none" : "grid";
+      panel.classList.toggle("is-visible", !open);
+      filterBtn.setAttribute("aria-expanded", open ? "false" : "true");
+    });
+    const initiallyOpen = panel.hasAttribute("data-open");
+    if (!initiallyOpen) {
+      panel.style.display = "none";
+    } else {
+      panel.style.display = "grid";
+      panel.classList.add("is-visible");
+    }
+  }
+
+  const addBtn = document.querySelector("[data-open-add-member]");
+  const dialog = document.getElementById("add-member-dialog");
+  addBtn?.addEventListener("click", () => dialog?.showModal());
+
+  const searchInput = document.querySelector(".ins-claims-search input[name='q']");
+  const toolbarForm = document.querySelector(".ins-claims-toolbar");
+  let searchTimer;
+  searchInput?.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => toolbarForm?.submit(), 450);
+  });
+})();
+</script>
+{% endblock %}

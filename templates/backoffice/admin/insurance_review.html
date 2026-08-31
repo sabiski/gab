@@ -1,0 +1,176 @@
+{% extends "backoffice/base_bo.html" %}
+
+{% block title %}Dossier inscription assureur{% endblock %}
+
+{% block bo_label %}Administration{% endblock %}
+
+{% block bo_title %}Examen du dossier{% endblock %}
+
+{% block bo_content %}
+
+<div class="mb-4">
+
+  <a href="{% url 'bo_admin_insurance' %}" class="inline-flex items-center gap-1 text-sm font-bold text-primary">
+
+    <span class="material-symbols-rounded sm">arrow_back</span> Retour aux inscriptions
+
+  </a>
+
+</div>
+
+
+
+<div class="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-5 text-sm">
+
+  <p class="font-extrabold text-amber-900">Vérification obligatoire avant décision</p>
+
+  <p class="text-ink-muted text-xs mt-1">Ce dossier concerne <strong>{{ review_profile.organization_name }}</strong>. Même procédure pour chaque nouvelle compagnie : contrôlez RCCM, NIF, coordonnées et conformité. Le taux de prise en charge sera configuré par l'assureur dans son espace après validation.</p>
+
+</div>
+
+
+
+<div class="grid lg:grid-cols-3 gap-6">
+
+  <div class="lg:col-span-2 space-y-4">
+
+    <section class="bg-white rounded-2xl border p-5">
+
+      <h2 class="font-extrabold mb-3 flex items-center gap-2">
+
+        <span class="material-symbols-rounded sm text-primary">apartment</span> Compagnie d'assurance
+
+      </h2>
+
+      <dl class="grid sm:grid-cols-2 gap-x-4 gap-y-3 text-sm">
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">Raison sociale</dt><dd class="font-bold">{{ review_profile.organization_name }}</dd></div>
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">Sigle</dt><dd>{{ review_profile.acronym|default:"—" }}</dd></div>
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">N° RCCM</dt><dd class="font-mono">{{ review_profile.registration_number|default:"—" }}</dd></div>
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">NIF</dt><dd class="font-mono">{{ review_profile.tax_id|default:"—" }}</dd></div>
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">Pays</dt><dd>{{ review_profile.country|default:"Gabon" }}</dd></div>
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">Code plateforme</dt><dd class="font-mono font-bold">{% if review_provider %}{{ review_provider.code }}{% else %}—{% endif %}</dd></div>
+
+        <div class="sm:col-span-2"><dt class="text-[11px] font-bold text-ink-muted uppercase">Adresse du siège</dt><dd>{{ review_profile.headquarters_address|default:"—" }}</dd></div>
+
+      </dl>
+
+    </section>
+
+
+
+    <section class="bg-white rounded-2xl border p-5">
+
+      <h2 class="font-extrabold mb-3 flex items-center gap-2">
+
+        <span class="material-symbols-rounded sm text-primary">badge</span> Responsable du compte
+
+      </h2>
+
+      <dl class="grid sm:grid-cols-2 gap-x-4 gap-y-3 text-sm">
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">Nom complet</dt><dd class="font-bold">{{ review_user.get_full_name|default:review_user.username }}</dd></div>
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">Fonction</dt><dd>{{ review_profile.rep_job_title|default:"—" }}</dd></div>
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">E-mail</dt><dd>{{ review_user.email }}</dd></div>
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">Téléphone</dt><dd>{{ review_user.phone|default:"—" }}</dd></div>
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">Identifiant</dt><dd class="font-mono text-xs">{{ review_user.username }}</dd></div>
+
+        <div><dt class="text-[11px] font-bold text-ink-muted uppercase">Date de demande</dt><dd>{{ review_user.date_joined|date:"d/m/Y à H:i" }}</dd></div>
+
+      </dl>
+
+    </section>
+
+
+
+    <section class="bg-white rounded-2xl border p-5">
+
+      <h2 class="font-extrabold mb-3 flex items-center gap-2">
+
+        <span class="material-symbols-rounded sm text-primary">fact_check</span> Points de contrôle
+
+      </h2>
+
+      <ul class="text-sm space-y-2 text-ink-muted">
+
+        <li class="flex gap-2"><span class="material-symbols-rounded sm text-amber-600">check_box_outline_blank</span> RCCM et NIF cohérents avec le registre du commerce</li>
+
+        <li class="flex gap-2"><span class="material-symbols-rounded sm text-amber-600">check_box_outline_blank</span> E-mail et téléphone professionnels vérifiables</li>
+
+        <li class="flex gap-2"><span class="material-symbols-rounded sm text-amber-600">check_box_outline_blank</span> Agrément / autorisation d'exercer en assurance (si applicable)</li>
+
+        <li class="flex gap-2"><span class="material-symbols-rounded sm text-amber-600">check_box_outline_blank</span> Absence de doublon ou fraude sur les identifiants</li>
+
+      </ul>
+
+    </section>
+
+  </div>
+
+
+
+  <aside class="space-y-4 h-fit lg:sticky lg:top-4">
+
+    <section class="bg-white rounded-2xl border p-5">
+
+      <p class="text-xs font-bold text-ink-muted uppercase mb-1">Statut</p>
+
+      <p class="inline-flex items-center gap-1.5 text-amber-800 bg-amber-100 font-bold text-sm px-3 py-1 rounded-full">
+
+        <span class="material-symbols-rounded sm">hourglass_top</span> En attente d'examen
+
+      </p>
+
+    </section>
+
+
+
+    <section class="bg-white rounded-2xl border p-5 space-y-3">
+
+      <h3 class="font-extrabold">Décision</h3>
+
+      <form method="post" onsubmit="return confirm('Confirmer la validation de ce dossier ?');">
+
+        {% csrf_token %}
+
+        <input type="hidden" name="action" value="validate_insurer">
+
+        <button type="submit" class="w-full bg-primary text-white font-bold text-sm px-4 py-2.5 rounded-xl flex items-center justify-center gap-1">
+
+          <span class="material-symbols-rounded sm">verified</span> Valider l'inscription
+
+        </button>
+
+      </form>
+
+      <form method="post" class="pt-3 border-t space-y-2">
+
+        {% csrf_token %}
+
+        <input type="hidden" name="action" value="reject_insurer">
+
+        <label class="block text-[11px] font-bold text-ink-muted uppercase">Motif du refus (obligatoire)</label>
+
+        <textarea name="review_notes" required rows="3" placeholder="Ex. RCCM non vérifiable, pièces manquantes…" class="w-full border border-rose-200 rounded-xl px-3 py-2 text-sm"></textarea>
+
+        <button type="submit" class="w-full border border-rose-300 text-rose-700 font-bold text-sm px-4 py-2.5 rounded-xl">Refuser la demande</button>
+
+      </form>
+
+    </section>
+
+  </aside>
+
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,25 @@
+{% extends "backoffice/client/profile_form_base.html" %}
+{% block profile_back_href %}{% url 'bo_client_parametres' %}{% endblock %}
+{% block profile_back_label %}Retour aux paramètres{% endblock %}
+{% block profile_lead %}
+<p class="c-lead">Protégez votre compte avec un mot de passe fort et unique.</p>
+{% endblock %}
+{% block profile_form %}
+<form method="post" class="space-y-4 text-sm">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="change_password">
+  <div class="c-field">
+    <label class="c-label">Mot de passe actuel</label>
+    <input type="password" name="current_password" required autocomplete="current-password" class="c-input">
+  </div>
+  <div class="c-field">
+    <label class="c-label">Nouveau mot de passe</label>
+    <input type="password" name="new_password" required minlength="8" autocomplete="new-password" class="c-input" placeholder="8 caractères minimum">
+  </div>
+  <div class="c-field">
+    <label class="c-label">Confirmer le nouveau mot de passe</label>
+    <input type="password" name="new_password2" required minlength="8" autocomplete="new-password" class="c-input">
+  </div>
+  <button type="submit" class="c-btn c-btn--primary w-full">Mettre à jour le mot de passe</button>
+</form>
+{% endblock %}

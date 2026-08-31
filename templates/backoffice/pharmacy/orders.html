@@ -1,0 +1,416 @@
+{% extends "backoffice/base_bo.html" %}
+{% load bo_extras %}
+{% block title %}Commandes{% endblock %}
+{% block bo_title %}Commandes{% endblock %}
+{% block extra_head %}
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/pharmacy-orders.css?v=3">
+<link rel="stylesheet" href="/static/css/stats-mobile.css?v=1">
+{% endblock %}
+{% block bo_content %}
+<div class="pharmacy-orders" id="pharmacy-orders-root">
+
+  <section class="po-hero" aria-label="Vue d'ensemble commandes">
+    <div class="po-hero__row">
+      <div>
+        {% if pharmacy %}<p class="po-hero__eyebrow">{{ pharmacy.name }}</p>{% endif %}
+        <h2 class="po-hero__title">Commandes</h2>
+        {% if pharmacy_job_label %}
+        <span class="po-hero__role po-hero__role--{{ pharmacy_job_role|default:'staff' }}">
+          <span class="material-symbols-rounded sm">{{ pharmacy_job_role|pharmacy_job_icon }}</span>
+          {{ pharmacy_job_label }}
+        </span>
+        {% endif %}
+      </div>
+      <button type="button" class="po-hero__create" id="po-open-create" title="Nouvelle commande" aria-label="Créer une commande">
+        <span class="material-symbols-rounded">add</span>
+      </button>
+    </div>
+    <div class="po-kpi-scroll" role="tablist" aria-label="Filtres commandes">
+      <a href="?filter=all{% if order_filter_extra %}&{{ order_filter_extra }}{% endif %}" class="po-kpi {% if order_filter == 'all' %}is-active{% endif %}">
+        <div class="po-kpi__n">{{ order_kpis.all }}</div>
+        <div class="po-kpi__label">Toutes</div>
+      </a>
+      <a href="?filter=prep{% if order_filter_extra %}&{{ order_filter_extra }}{% endif %}" class="po-kpi {% if order_filter == 'prep' %}is-active{% endif %}">
+        <div class="po-kpi__n">{{ order_kpis.prep }}</div>
+        <div class="po-kpi__label">À préparer</div>
+      </a>
+      <a href="?filter=deliver{% if order_filter_extra %}&{{ order_filter_extra }}{% endif %}" class="po-kpi {% if order_filter == 'deliver' %}is-active{% endif %}">
+        <div class="po-kpi__n">{{ order_kpis.deliver }}</div>
+        <div class="po-kpi__label">En livraison</div>
+      </a>
+      <a href="?filter=done{% if order_filter_extra %}&{{ order_filter_extra }}{% endif %}" class="po-kpi {% if order_filter == 'done' %}is-active{% endif %}">
+        <div class="po-kpi__n">{{ order_kpis.done }}</div>
+        <div class="po-kpi__label">Livrées</div>
+      </a>
+      <a href="?filter=urgent{% if order_filter_extra %}&{{ order_filter_extra }}{% endif %}" class="po-kpi po-kpi--warn {% if order_filter == 'urgent' %}is-active{% endif %}">
+        <div class="po-kpi__n">{{ order_kpis.urgent }}</div>
+        <div class="po-kpi__label">Urgentes</div>
+      </a>
+      <a href="?filter=cancelled{% if order_filter_extra %}&{{ order_filter_extra }}{% endif %}" class="po-kpi {% if order_filter == 'cancelled' %}is-active{% endif %}">
+        <div class="po-kpi__n">{{ order_kpis.cancelled }}</div>
+        <div class="po-kpi__label">Annulées</div>
+      </a>
+    </div>
+  </section>
+
+  {% if awaiting_rx_count %}
+  <div class="po-alert" role="status">
+    <span class="po-alert__icon"><span class="material-symbols-rounded sm">prescriptions</span></span>
+    <div>
+      <strong>{{ awaiting_rx_count }} ordonnance{{ awaiting_rx_count|pluralize }} à valider</strong>
+      <p class="mt-0.5 text-amber-900/80">Ouvrez le panneau sur chaque commande concernée pour prévisualiser et valider.</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <form method="get" class="po-search" id="po-search-form">
+    <input type="hidden" name="filter" value="{{ order_filter }}">
+    <div class="po-search__row">
+      <div class="po-search__input-wrap">
+        <span class="material-symbols-rounded">search</span>
+        <input type="search" name="q" value="{{ search_q }}" placeholder="N°, client, téléphone, produit…" class="po-search__input" autocomplete="off">
+      </div>
+      <button type="button" class="po-search__toggle" id="po-filter-toggle" aria-expanded="false" aria-controls="po-advanced-filters" title="Filtres avancés">
+        <span class="material-symbols-rounded sm">tune</span>
+      </button>
+    </div>
+    <div class="po-search__advanced" id="po-advanced-filters">
+      <select name="status" aria-label="Statut">
+        <option value="">Tous statuts</option>
+        {% for val, label in all_statuses %}
+        {% if val != 'cart' %}<option value="{{ val }}" {% if search_status == val %}selected{% endif %}>{{ label }}</option>{% endif %}
+        {% endfor %}
+      </select>
+      <select name="delivery_mode" aria-label="Livraison">
+        <option value="">Livraison</option>
+        <option value="pickup" {% if search_delivery == 'pickup' %}selected{% endif %}>Retrait</option>
+        <option value="home" {% if search_delivery == 'home' %}selected{% endif %}>Domicile</option>
+        <option value="express" {% if search_delivery == 'express' %}selected{% endif %}>Express</option>
+      </select>
+      <select name="payment" aria-label="Paiement">
+        <option value="">Paiement</option>
+        {% for val, label in payment_methods %}<option value="{{ val }}" {% if search_payment == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <input type="date" name="date_from" value="{{ search_date_from }}" aria-label="Du">
+      <input type="date" name="date_to" value="{{ search_date_to }}" aria-label="Au">
+      <label class="flex items-center gap-1.5 text-xs font-bold px-1 w-full">
+        <input type="checkbox" name="urgent" value="1" {% if search_urgent %}checked{% endif %}> Urgent uniquement
+      </label>
+      <div class="po-search__actions">
+        <button type="submit" class="po-search__btn po-search__btn--primary">Appliquer</button>
+        <a href="?filter={{ order_filter }}" class="po-search__btn po-search__btn--ghost">Réinitialiser</a>
+      </div>
+    </div>
+  </form>
+
+  <p class="po-results-count">{{ orders_count }} commande{{ orders_count|pluralize }} · filtre « {% if order_filter == 'prep' %}À préparer{% elif order_filter == 'deliver' %}En livraison{% elif order_filter == 'done' %}Livrées{% elif order_filter == 'cancelled' %}Annulées{% elif order_filter == 'urgent' %}Urgentes{% else %}Toutes{% endif %} »</p>
+
+  <details class="po-create-panel" id="po-create-panel">
+    <summary>
+      <span class="material-symbols-rounded text-primary">add_circle</span>
+      Créer une commande manuelle
+    </summary>
+    <div class="po-create-panel__body">
+      <form method="post" class="grid sm:grid-cols-2 gap-3 text-sm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_order">
+        <div>
+          <label class="text-xs font-bold text-ink-muted">Client</label>
+          <select name="client_id" required class="mt-1 w-full border rounded-xl px-3 py-2">
+            {% for c in clients %}<option value="{{ c.id }}">{{ c.get_full_name|default:c.username }}</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-ink-muted">Produit en stock</label>
+          <select name="stock_id" required class="mt-1 w-full border rounded-xl px-3 py-2">
+            {% for s in pharmacy_stocks %}<option value="{{ s.id }}">{{ s.medicine }} ({{ s.quantity }} u.) — {{ s.price }} F</option>{% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-ink-muted">Quantité</label>
+          <input type="number" name="quantity" value="1" min="1" class="mt-1 w-full border rounded-xl px-3 py-2">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-ink-muted">Mode livraison</label>
+          <select name="delivery_mode" class="mt-1 w-full border rounded-xl px-3 py-2">
+            <option value="pickup">Retrait en pharmacie</option>
+            <option value="home">Livraison à domicile</option>
+            <option value="express">Express</option>
+          </select>
+        </div>
+        <label class="flex items-center gap-2 text-xs font-bold sm:col-span-2">
+          <input type="checkbox" name="is_urgent" value="1"> Commande urgente
+        </label>
+        <input name="notes" placeholder="Notes internes" class="border rounded-xl px-3 py-2 sm:col-span-2">
+        <button class="bg-primary text-white font-bold rounded-xl py-2.5 sm:col-span-2">Créer la commande</button>
+      </form>
+    </div>
+  </details>
+
+  <div class="po-order-list">
+    {% for o in orders %}
+    <article id="order-{{ o.id }}" class="po-order-card {% if o.status == 'awaiting_rx' %}po-order-card--rx{% elif highlight_order_id == o.id %}po-order-card--highlight{% endif %}">
+      <div class="po-order-card__head">
+        <div class="po-order-card__status-dot" aria-hidden="true"></div>
+        <div class="po-order-card__main">
+          <p class="po-order-card__code">
+            {{ o.code }}
+            {% if o.is_urgent %}<span class="po-order-card__urgent">URGENT</span>{% endif %}
+          </p>
+          <p class="po-order-card__meta">{{ o.client }} · {{ o.created_at|date:"d/m/Y H:i" }} · {{ o.get_delivery_mode_display }}</p>
+          {% with pay=o.payments.first %}
+          {% if pay %}<p class="po-order-card__meta">Paiement : {{ pay.get_method_display }} ({{ pay.get_status_display }})</p>{% endif %}
+          {% endwith %}
+          {% if o.delivery.courier %}<p class="po-order-card__meta text-primary font-semibold">Livreur : {{ o.delivery.courier.get_full_name|default:o.delivery.courier.username }}</p>{% endif %}
+          {% if o.status == "preparing" and o.preparing_at %}
+          <p class="po-order-card__meta text-amber-700">Préparation depuis {{ o.preparing_at|timesince }} (SLA {{ prep_sla_minutes }} min)</p>
+          {% endif %}
+          <p class="po-order-card__items">{% for it in o.items.all %}{{ it.quantity }}× {{ it.medicine_name }}{% if it.medicine.requires_prescription %} <span class="text-amber-700 font-bold">(ordo.)</span>{% endif %}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+          {% if o.status == "cancelled" and o.cancellation_reason %}
+          <p class="po-order-card__meta text-rose-700 mt-1">Motif : {{ o.cancellation_reason }}</p>
+          {% endif %}
+        </div>
+        <div class="po-order-card__aside">
+          <p class="po-order-card__total">{{ o.total }} F</p>
+          <span class="po-order-card__badge {% if o.status == 'awaiting_rx' %}po-order-card__badge--rx{% elif o.status == 'cancelled' %}po-order-card__badge--cancelled{% endif %}">{{ o.get_status_display }}</span>
+          <a href="{% url 'bo_pharmacy_order_print' o.pk %}" target="_blank" class="po-order-card__print">Imprimer</a>
+        </div>
+      </div>
+
+      <div class="po-order-card__body">
+        {% if o.status == "awaiting_rx" %}
+        <details class="rx-panel group border border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-primary-50/30 rounded-2xl overflow-hidden mb-1 shadow-sm" open>
+          <summary class="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer list-none hover:bg-amber-50/60 transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-800 ring-1 ring-amber-200/80">
+                <span class="material-symbols-rounded">prescriptions</span>
+              </span>
+              <div class="min-w-0">
+                <p class="font-extrabold text-amber-950 text-sm sm:text-base">Ordonnance à vérifier</p>
+                <p class="text-[11px] text-amber-900/70 font-medium">Aperçu du document</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <a href="{% url 'bo_pharmacy_prescription_detail' o.pk %}" class="hidden sm:inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-white border border-primary/25 px-2.5 py-1 rounded-full hover:bg-primary-50" onclick="event.stopPropagation()">
+                <span class="material-symbols-rounded text-sm">open_in_full</span> Détail
+              </a>
+              <span class="flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-white/80 border border-amber-200 rounded-full px-2.5 py-1">
+                <span class="rx-label-open hidden sm:inline">Ouvrir</span>
+                <span class="rx-label-close hidden sm:inline">Fermer</span>
+                <span class="material-symbols-rounded text-lg rx-chevron">expand_more</span>
+              </span>
+            </div>
+          </summary>
+          <div class="px-4 pb-4 pt-1 border-t border-amber-100/80">
+            <a href="{% url 'bo_pharmacy_prescription_detail' o.pk %}" class="sm:hidden inline-flex items-center gap-1 text-xs font-bold text-primary mb-3">
+              <span class="material-symbols-rounded sm">open_in_full</span> Détail ordonnance
+            </a>
+            {% if o.linked_prescription %}
+            <div class="rounded-xl overflow-hidden bg-white border border-slate-200 shadow-inner mb-3">
+              {% if o.linked_prescription.is_image %}
+              <img src="{% url 'bo_prescription_file' o.linked_prescription.id %}" alt="Ordonnance" class="max-h-80 w-full mx-auto object-contain bg-slate-50">
+              {% elif o.linked_prescription.is_pdf %}
+              <embed src="{% url 'bo_prescription_file' o.linked_prescription.id %}#toolbar=1" type="application/pdf" class="w-full h-72 min-h-[18rem]">
+              {% else %}
+              <iframe src="{% url 'bo_prescription_file' o.linked_prescription.id %}" class="w-full h-72 bg-slate-50" title="Ordonnance"></iframe>
+              {% endif %}
+            </div>
+            <div class="flex flex-wrap gap-2 mb-3">
+              <a href="{% url 'bo_prescription_file' o.linked_prescription.id %}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-bold text-primary bg-white border border-primary/20 px-3 py-1.5 rounded-lg hover:bg-primary-50">
+                <span class="material-symbols-rounded sm">open_in_new</span> Plein écran
+              </a>
+              <a href="{% url 'bo_prescription_file' o.linked_prescription.id %}" download class="inline-flex items-center gap-1 text-xs font-bold text-ink-muted bg-white border px-3 py-1.5 rounded-lg hover:bg-canvas">
+                <span class="material-symbols-rounded sm">download</span> Télécharger
+              </a>
+            </div>
+            {% if can_validate_rx %}
+            <div class="grid sm:grid-cols-2 gap-3">
+              <form method="post" class="space-y-2 bg-white/80 border border-primary/15 rounded-xl p-3">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="validate_rx">
+                <input type="hidden" name="order_id" value="{{ o.id }}">
+                <p class="text-[11px] font-extrabold text-primary flex items-center gap-1">
+                  <span class="material-symbols-rounded sm text-emerald-600">check_circle</span> Valider
+                </p>
+                <input name="review_notes" placeholder="Note pharmacien (optionnel)" class="w-full border rounded-lg px-2 py-1.5 text-xs">
+                <button class="w-full bg-primary text-white font-bold text-xs py-2.5 rounded-lg hover:opacity-95">Valider l’ordonnance → préparer</button>
+              </form>
+              <form method="post" class="space-y-2 bg-white/80 border border-rose-200 rounded-xl p-3" onsubmit="return confirm('Refuser l’ordonnance et annuler la commande ?')">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject_rx">
+                <input type="hidden" name="order_id" value="{{ o.id }}">
+                <p class="text-[11px] font-extrabold text-rose-700 flex items-center gap-1">
+                  <span class="material-symbols-rounded sm">cancel</span> Refuser
+                </p>
+                <select name="refusal_reason" required class="w-full border rounded-lg px-2 py-1.5 text-xs">
+                  <option value="">Motif du refus *</option>
+                  {% for val, label in refusal_reasons %}
+                  <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <input name="review_notes" placeholder="Précision (obligatoire si Autre)" class="w-full border rounded-lg px-2 py-1.5 text-xs">
+                <button class="w-full border-2 border-rose-300 text-rose-700 font-bold text-xs py-2.5 rounded-lg hover:bg-rose-50">Refuser l’ordonnance</button>
+              </form>
+            </div>
+            {% else %}
+            <p class="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">Ordonnance en attente — seul un pharmacien habilité peut valider ou refuser.</p>
+            {% endif %}
+            {% elif o.prescription %}
+            <div class="rounded-xl overflow-hidden bg-white border border-slate-200 mb-3">
+              <embed src="{% url 'bo_order_prescription_file' o.id %}#toolbar=1" type="application/pdf" class="w-full h-72 min-h-[18rem]">
+            </div>
+            <a href="{% url 'bo_order_prescription_file' o.id %}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-bold text-primary">
+              <span class="material-symbols-rounded sm">open_in_new</span> Ouvrir le fichier
+            </a>
+            {% else %}
+            <p class="text-sm text-rose-700 font-bold">Aucune ordonnance jointe — refusez la commande ou contactez le client.</p>
+            <form method="post" class="mt-3 space-y-2 max-w-sm" onsubmit="return confirm('Refuser cette commande ?')">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="refuse_order">
+              <input type="hidden" name="order_id" value="{{ o.id }}">
+              <select name="refusal_reason" required class="w-full border rounded-lg px-2 py-1.5 text-xs">
+                <option value="">Motif *</option>
+                {% for val, label in refusal_reasons %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+              <input name="review_notes" placeholder="Précision" class="w-full border rounded-lg px-2 py-1.5 text-xs">
+              <button class="w-full border border-rose-300 text-rose-700 font-bold text-xs py-2 rounded-lg">Refuser la commande</button>
+            </form>
+            {% endif %}
+          </div>
+        </details>
+        {% elif o.linked_prescription %}
+        <details class="rx-panel group border border-slate-200 bg-white rounded-2xl overflow-hidden mb-1 shadow-sm">
+          <summary class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer list-none hover:bg-canvas/80 transition-colors">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-canvas text-primary">
+                <span class="material-symbols-rounded">description</span>
+              </span>
+              <div class="min-w-0">
+                <p class="font-extrabold text-sm">Ordonnance — {{ o.linked_prescription.get_status_display }}</p>
+                <p class="text-[11px] text-ink-muted font-medium">Aperçu du document</p>
+              </div>
+            </div>
+            <span class="material-symbols-rounded text-ink-muted rx-chevron">expand_more</span>
+          </summary>
+          <div class="px-4 pb-4 pt-1 border-t border-slate-100">
+            <div class="rounded-xl overflow-hidden bg-slate-50 border border-slate-200 mb-2">
+              {% if o.linked_prescription.is_image %}
+              <img src="{% url 'bo_prescription_file' o.linked_prescription.id %}" alt="Ordonnance" class="max-h-48 w-full mx-auto object-contain">
+              {% elif o.linked_prescription.is_pdf %}
+              <embed src="{% url 'bo_prescription_file' o.linked_prescription.id %}" type="application/pdf" class="w-full h-48">
+              {% else %}
+              <iframe src="{% url 'bo_prescription_file' o.linked_prescription.id %}" class="w-full h-48" title="Ordonnance"></iframe>
+              {% endif %}
+            </div>
+            <a href="{% url 'bo_pharmacy_prescription_detail' o.pk %}" class="inline-flex items-center gap-1 text-xs font-bold text-primary">
+              <span class="material-symbols-rounded sm">open_in_full</span> Détail ordonnance
+            </a>
+            <a href="{% url 'bo_prescription_file' o.linked_prescription.id %}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-bold text-ink-muted ml-2">
+              <span class="material-symbols-rounded sm">open_in_new</span> Voir / télécharger
+            </a>
+            {% if o.linked_prescription.review_notes %}
+            <p class="text-xs text-ink-muted mt-2 bg-canvas rounded-lg px-2 py-1.5">Note : {{ o.linked_prescription.review_notes }}</p>
+            {% endif %}
+          </div>
+        </details>
+        {% endif %}
+
+        {% include "backoffice/pharmacy/partials/handoff_panel.html" %}
+
+        {% if o.status == "pending" or o.status == "confirmed" or o.status == "preparing" or o.status == "ready" %}
+        {% pharmacy_status_choices o as order_statuses %}
+        {% if order_statuses %}
+        <div class="po-order-card__actions">
+          <form method="post" class="flex flex-wrap gap-2 items-center flex-1">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="status">
+            <input type="hidden" name="order_id" value="{{ o.id }}">
+            <select name="status" class="border rounded-lg text-xs px-2 py-1.5 flex-1 min-w-[8rem]">
+              {% for val, label in order_statuses %}
+              <option value="{{ val }}" {% if o.status == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <button class="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0">Mettre à jour</button>
+            {% if o.status == "ready" and o.delivery_mode != "pickup" %}<span class="text-[11px] text-ink-muted w-full sm:w-auto">Livreurs en ligne peuvent prendre la course.</span>{% elif o.status == "ready" and o.delivery_mode == "pickup" %}<span class="text-[11px] text-ink-muted w-full sm:w-auto">Passez en « Livrée » quand le client retire le colis.</span>{% endif %}
+          </form>
+          {% if o.status == "pending" or o.status == "confirmed" %}
+          <form method="post" class="space-y-2 sm:w-56 border border-rose-100 rounded-xl p-2.5 bg-rose-50/40 shrink-0" onsubmit="return confirm('Refuser cette commande ? Le client sera notifié du motif.')">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="refuse_order">
+            <input type="hidden" name="order_id" value="{{ o.id }}">
+            <p class="text-[11px] font-bold text-rose-800">Refuser</p>
+            <select name="refusal_reason" required class="w-full border rounded-lg px-2 py-1.5 text-xs">
+              <option value="">Motif *</option>
+              {% for val, label in refusal_reasons %}
+              <option value="{{ val }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+            <input name="review_notes" placeholder="Précision (si Autre)" class="w-full border rounded-lg px-2 py-1.5 text-xs">
+            <button class="w-full border border-rose-300 text-rose-700 font-bold text-xs py-1.5 rounded-lg">Confirmer le refus</button>
+          </form>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% if o.status == "ready" %}
+        <form method="post" class="mt-2">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="request_courier">
+          <input type="hidden" name="order_id" value="{{ o.id }}">
+          <button class="text-xs font-bold border border-primary text-primary px-3 py-1.5 rounded-lg hover:bg-primary-50">
+            Demander / relancer un livreur
+          </button>
+        </form>
+        {% endif %}
+        {% endif %}
+      </div>
+    </article>
+    {% empty %}
+    <div class="po-empty">
+      <span class="material-symbols-rounded block">inbox</span>
+      <p class="font-bold text-ink">Aucune commande</p>
+      <p class="text-sm mt-1">Modifiez le filtre ou créez une commande manuelle.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% include "backoffice/partials/pharmacy_bottom_nav.html" %}
+
+{% if highlight_order_id %}
+<script>
+  (function () {
+    var el = document.getElementById("order-{{ highlight_order_id }}");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  })();
+</script>
+{% endif %}
+<script>
+  (function () {
+    var toggle = document.getElementById("po-filter-toggle");
+    var panel = document.getElementById("po-advanced-filters");
+    if (toggle && panel) {
+      toggle.addEventListener("click", function () {
+        var open = panel.classList.toggle("is-open");
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      {% if search_status or search_delivery or search_payment or search_date_from or search_date_to or search_urgent %}
+      panel.classList.add("is-open");
+      toggle.setAttribute("aria-expanded", "true");
+      {% endif %}
+    }
+    var createBtn = document.getElementById("po-open-create");
+    var createPanel = document.getElementById("po-create-panel");
+    if (createBtn && createPanel) {
+      createBtn.addEventListener("click", function () {
+        createPanel.open = true;
+        createPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  })();
+</script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="/static/js/pharmacy-handoff-scanner.js?v=1"></script>
+{% endblock %}

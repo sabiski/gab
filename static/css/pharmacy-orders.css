@@ -1,0 +1,720 @@
+/* Page commandes pharmacie — design mobile-first */
+.pharmacy-orders {
+  --po-accent: #228545;
+  --po-accent-dark: #015533;
+  --po-accent-soft: #f0f9f3;
+  --po-warn: #f59e0b;
+  --po-danger: #ef4444;
+  font-family: "Poppins", "Plus Jakarta Sans", sans-serif;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding-bottom: 5.5rem;
+}
+
+@media (min-width: 1024px) {
+  .pharmacy-orders {
+    max-width: 52rem;
+    padding-bottom: 2rem;
+  }
+}
+
+/* Bandeau page */
+.po-hero {
+  background: linear-gradient(135deg, #015533 0%, #228545 55%, #3d9e62 100%);
+  color: #fff;
+  border-radius: 1.25rem;
+  padding: 1.15rem 1.1rem 1rem;
+  margin: -0.25rem 0 1rem;
+  box-shadow: 0 12px 32px rgba(1, 85, 51, 0.22);
+  position: relative;
+  overflow: hidden;
+}
+
+.po-hero::before {
+  content: "";
+  position: absolute;
+  top: -40%;
+  right: -15%;
+  width: 55%;
+  height: 140%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, transparent 68%);
+  pointer-events: none;
+}
+
+.po-hero__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.po-hero__eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  opacity: 0.85;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.po-hero__title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.po-hero__role {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.45rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(4px);
+}
+
+.po-hero__role--cashier {
+  background: rgba(219, 234, 254, 0.22);
+  border-color: rgba(191, 219, 254, 0.45);
+}
+
+.po-hero__create {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.9rem;
+  background: #fff;
+  color: var(--po-accent-dark);
+  border: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.po-hero__create:active {
+  transform: scale(0.96);
+}
+
+/* KPIs */
+.po-kpi-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  margin-top: 0.9rem;
+  padding-bottom: 0.15rem;
+  scrollbar-width: none;
+  position: relative;
+  z-index: 1;
+}
+
+.po-kpi-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.po-kpi {
+  flex: 0 0 auto;
+  min-width: 5.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.po-kpi:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.po-kpi.is-active {
+  background: #fff;
+  color: var(--po-accent-dark);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.po-kpi__n {
+  font-size: 1.125rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.po-kpi__label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  opacity: 0.9;
+  margin-top: 0.1rem;
+  white-space: nowrap;
+}
+
+.po-kpi.is-active .po-kpi__label {
+  opacity: 0.75;
+}
+
+.po-kpi--warn .po-kpi__n {
+  color: #fde68a;
+}
+
+.po-kpi.is-active.po-kpi--warn .po-kpi__n {
+  color: #b45309;
+}
+
+/* Alerte ordonnances */
+.po-alert {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.85rem;
+  border-radius: 1rem;
+  background: linear-gradient(90deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fcd34d;
+  margin-bottom: 0.85rem;
+  font-size: 0.8125rem;
+}
+
+.po-alert__icon {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+  background: #f59e0b;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.po-alert strong {
+  color: #92400e;
+}
+
+/* Recherche */
+.po-search {
+  background: #fff;
+  border-radius: 1rem;
+  border: 1px solid #e5ebe7;
+  padding: 0.65rem;
+  margin-bottom: 0.85rem;
+  box-shadow: 0 2px 8px rgba(20, 41, 28, 0.04);
+}
+
+.po-search__row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.po-search__input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.po-search__input-wrap .material-symbols-rounded {
+  position: absolute;
+  left: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #5b6b63;
+  font-size: 1.1rem;
+}
+
+.po-search__input {
+  width: 100%;
+  border: 1px solid #e5ebe7;
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.65rem 0.55rem 2.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: #f5f8f6;
+}
+
+.po-search__input:focus {
+  outline: 2px solid var(--po-accent);
+  border-color: var(--po-accent);
+  background: #fff;
+}
+
+.po-search__toggle {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e5ebe7;
+  background: #f5f8f6;
+  color: #14291c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.po-search__advanced {
+  display: none;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px dashed #e5ebe7;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.po-search__advanced.is-open {
+  display: flex;
+}
+
+.po-search__advanced select,
+.po-search__advanced input[type="date"] {
+  border: 1px solid #e5ebe7;
+  border-radius: 0.65rem;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #fff;
+  flex: 1 1 auto;
+  min-width: 7rem;
+}
+
+.po-search__actions {
+  display: flex;
+  gap: 0.45rem;
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.po-search__btn {
+  flex: 1;
+  border: none;
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.po-search__btn--primary {
+  background: var(--po-accent);
+  color: #fff;
+}
+
+.po-search__btn--ghost {
+  background: transparent;
+  color: #5b6b63;
+  text-align: center;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.po-results-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #5b6b63;
+  margin: 0 0 0.65rem 0.15rem;
+}
+
+/* Création commande */
+.po-create-panel {
+  background: #fff;
+  border: 1px solid #e5ebe7;
+  border-radius: 1rem;
+  margin-bottom: 0.85rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(20, 41, 28, 0.04);
+}
+
+.po-create-panel summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0.85rem 1rem;
+  font-weight: 800;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.po-create-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.po-create-panel[open] summary {
+  border-bottom: 1px solid #eef2ef;
+  background: var(--po-accent-soft);
+}
+
+.po-create-panel__body {
+  padding: 1rem;
+}
+
+/* Cartes commande */
+.po-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.po-order-card {
+  background: #fff;
+  border-radius: 1rem;
+  border: 1px solid #e8eeea;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(20, 41, 28, 0.05);
+  scroll-margin-top: 5.5rem;
+}
+
+.po-order-card--rx {
+  border-color: #fcd34d;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.12);
+}
+
+.po-order-card--highlight {
+  border-color: var(--po-accent);
+  box-shadow: 0 0 0 2px rgba(34, 133, 69, 0.15);
+}
+
+.po-order-card__head {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.85rem 0.9rem 0.65rem;
+}
+
+.po-order-card__status-dot {
+  width: 0.35rem;
+  border-radius: 9999px;
+  flex-shrink: 0;
+  align-self: stretch;
+  min-height: 2.5rem;
+  background: #cbd5e1;
+}
+
+.po-order-card--rx .po-order-card__status-dot {
+  background: linear-gradient(180deg, #f59e0b, #fbbf24);
+}
+
+.po-order-card__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.po-order-card__code {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.po-order-card__urgent {
+  font-size: 0.625rem;
+  font-weight: 800;
+  color: #fff;
+  background: #ef4444;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.35rem;
+}
+
+.po-order-card__meta {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #5b6b63;
+  margin-top: 0.2rem;
+  line-height: 1.45;
+}
+
+.po-order-card__items {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #14291c;
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+
+.po-order-card__aside {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.po-order-card__total {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--po-accent);
+}
+
+.po-order-card__badge {
+  display: inline-block;
+  margin-top: 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  padding: 0.2rem 0.45rem;
+  border-radius: 9999px;
+  background: #f5f8f6;
+  color: #14291c;
+}
+
+.po-order-card__badge--rx {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.po-order-card__badge--cancelled {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.po-order-card__print {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  color: var(--po-accent);
+  text-decoration: none;
+}
+
+.po-order-card__body {
+  padding: 0 0.9rem 0.85rem;
+}
+
+.po-order-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f0f4f1;
+}
+
+@media (min-width: 640px) {
+  .po-order-card__actions {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+.po-empty {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: #fff;
+  border-radius: 1rem;
+  border: 1px dashed #d1ddd6;
+  color: #5b6b63;
+}
+
+.po-empty .material-symbols-rounded {
+  font-size: 2.5rem;
+  color: #cbd5e1;
+  margin-bottom: 0.5rem;
+}
+
+/* Remise livreur — QR traçabilité */
+.po-handoff {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid #c4e8d0;
+  background: linear-gradient(135deg, #f0fdf4 0%, #fff 55%);
+}
+
+.po-handoff--done {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.po-handoff__head {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.po-handoff__icon {
+  color: #15803d;
+  font-size: 1.75rem;
+}
+
+.po-handoff__title {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #14532d;
+}
+
+.po-handoff__sub {
+  font-size: 0.7rem;
+  color: #166534;
+  margin-top: 0.15rem;
+  line-height: 1.35;
+}
+
+.po-handoff__grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .po-handoff__grid {
+    grid-template-columns: auto 1fr;
+    align-items: start;
+  }
+}
+
+.po-handoff__qr {
+  text-align: center;
+  padding: 0.5rem;
+  background: #fff;
+  border-radius: 0.75rem;
+  border: 1px solid #bbf7d0;
+}
+
+.po-handoff__qr-img {
+  display: block;
+  margin: 0 auto;
+  border-radius: 0.5rem;
+}
+
+.po-handoff__code-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #166534;
+  margin-top: 0.5rem;
+}
+
+.po-handoff__code {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: #15803d;
+  font-family: ui-monospace, monospace;
+}
+
+.po-handoff__scan-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.5rem 0.85rem;
+  border-radius: 0.65rem;
+  border: 1px solid #228545;
+  color: #228545;
+  background: #fff;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+}
+
+.po-handoff__code-input {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.85rem;
+  min-width: 0;
+}
+
+.po-handoff__submit {
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: #228545;
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.po-handoff__hint {
+  font-size: 0.65rem;
+  color: #5b6b63;
+  margin-top: 0.5rem;
+}
+
+.po-handoff__done {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.po-handoff__scanner {
+  margin-top: 0.75rem;
+}
+
+.po-handoff__scanner-view {
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.po-handoff__scan-close {
+  display: block;
+  margin: 0.5rem auto 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #6b7280;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.po-handoff__scanner.hidden {
+  display: none;
+}
+
+/* Sur cette page, le bandeau vert remplace le titre du header (mobile) */
+@media (max-width: 1023px) {
+  .bo-shell__main:has(#pharmacy-orders-root) .bo-pharmacy-header .bo-pharmacy-header__icon,
+  .bo-shell__main:has(#pharmacy-orders-root) .bo-pharmacy-header .min-w-0.flex-1 {
+    display: none;
+  }
+
+  .bo-shell__main:has(#pharmacy-orders-root) .bo-pharmacy-header {
+    background: transparent;
+    border-bottom: none;
+    box-shadow: none;
+    padding-bottom: 0;
+  }
+}
+
+/* Panneau ordonnance (conservé) */
+.rx-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.rx-panel summary::marker {
+  content: "";
+  display: none;
+}
+
+.rx-panel .rx-chevron {
+  transition: transform 0.2s ease;
+}
+
+.rx-panel[open] .rx-chevron {
+  transform: rotate(180deg);
+}
+
+.rx-panel:not([open]) .rx-label-close {
+  display: none;
+}
+
+.rx-panel[open] .rx-label-open {
+  display: none;
+}

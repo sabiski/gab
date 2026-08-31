@@ -1,0 +1,6 @@
+<nav class="ins-claims-tabs" aria-label="Filtres demandes">
+  <a href="{% url 'bo_insurer_claims' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if bo_nav_active_section == 'claims' %} is-active{% endif %}">Toutes les demandes <span class="ins-claims-tabs__count">({{ claim_stats.total|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_claims_pending' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if bo_nav_active_section == 'claims_pending' %} is-active{% endif %}">En attente <span class="ins-claims-tabs__count">({{ claim_stats.pending|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_claims_approved' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if bo_nav_active_section == 'claims_approved' %} is-active{% endif %}">Validées <span class="ins-claims-tabs__count">({{ claim_stats.validated|default:0 }})</span></a>
+  <a href="{% url 'bo_insurer_claims_rejected' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="ins-claims-tabs__link{% if bo_nav_active_section == 'claims_rejected' %} is-active{% endif %}">Refusées <span class="ins-claims-tabs__count">({{ claim_stats.rejected|default:0 }})</span></a>
+</nav>

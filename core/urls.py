@@ -1,0 +1,41 @@
+from django.urls import path
+
+from core import views
+
+urlpatterns = [
+    path("", views.home, name="home"),
+    path("recherche/", views.search, name="search"),
+    path("forfaits/", views.subscription_plans, name="subscription_plans"),
+    path("urgence/", views.emergency_page, name="emergency"),
+    path("messagerie/", views.message_inbox, name="messages_inbox"),
+    path("messagerie/pharmacie/<slug:slug>/", views.pharmacy_chat, name="pharmacy_chat"),
+    path("produit/<int:stock_id>/", views.product_detail, name="product_detail"),
+    path(
+        "produit/<int:stock_id>/verifier-disponibilite/",
+        views.verify_stock_availability,
+        name="verify_stock_availability",
+    ),
+    path("pharmacies/", views.pharmacy_list, name="pharmacy_list"),
+    path("pharmacies/<slug:slug>/", views.pharmacy_detail, name="pharmacy_detail"),
+    path("commandes/", views.orders_page, name="orders"),
+    path("panier/", views.cart_view, name="cart"),
+    path("panier/ajouter/<int:stock_id>/", views.cart_add_view, name="cart_add"),
+    path("commander/", views.checkout_view, name="checkout"),
+    path("commander/devis-assurance/", views.checkout_insurance_quote, name="checkout_insurance_quote"),
+    path("commande/<str:code>/confirme/", views.payment_confirmed, name="payment_confirmed"),
+    path("commande/<str:code>/suivi/", views.order_tracking_api, name="order_tracking"),
+    path("commande/<str:code>/qr-livraison/", views.client_delivery_qr, name="client_delivery_qr"),
+    path("favoris/", views.favorites_page, name="favorites"),
+    path("favoris/toggle/<int:stock_id>/", views.favorite_toggle, name="favorite_toggle"),
+    path("profil/", views.profile_page, name="profile"),
+    path("profil/informations/", views.profile_personal, name="profile_personal"),
+    path("profil/adresse/", views.profile_address, name="profile_address"),
+    path("profil/paiement/", views.profile_payment, name="profile_payment"),
+    path("profil/notifications/", views.profile_notifications, name="profile_notifications"),
+    path("api/push/subscribe/", views.push_subscribe, name="push_subscribe"),
+    path("profil/preferences/", views.profile_preferences, name="profile_preferences"),
+    path("profil/securite/", views.profile_security, name="profile_security"),
+    path("profil/confidentialite/", views.profile_privacy, name="profile_privacy"),
+    path("offline/", views.offline, name="offline"),
+    path("manifest.webmanifest", views.manifest, name="manifest"),
+]

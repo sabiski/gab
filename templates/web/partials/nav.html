@@ -1,0 +1,47 @@
+<nav class="bg-white border-b border-slate-100 hidden md:block" aria-label="Catégories">
+  <div class="max-w-site mx-auto px-4">
+    <ul class="flex items-center gap-0.5 overflow-x-auto text-[13px] font-semibold scrollbar-hide tracking-tight">
+      <li>
+        <a href="{% url 'search' %}" class="flex items-center gap-1.5 px-3 py-3.5 text-ink hover:text-primary border-b-[3px] {% if active_nav == 'search' and not category %}border-primary text-primary{% else %}border-transparent{% endif %} whitespace-nowrap">
+          <span class="material-symbols-rounded sm filled text-primary">medication</span>
+          Médicaments
+        </a>
+      </li>
+      {% for cat in nav_categories %}
+      <li>
+        <a href="{% url 'search' %}?category={{ cat.slug }}"
+          class="block px-3 py-3.5 text-ink hover:text-primary border-b-[3px] whitespace-nowrap
+          {% if category and category.slug == cat.slug %}border-primary text-primary{% else %}border-transparent{% endif %}">
+          {{ cat.name }}
+        </a>
+      </li>
+      {% endfor %}
+      <li>
+        <a href="{% url 'pharmacy_list' %}" class="flex items-center gap-1.5 px-3 py-3.5 text-ink hover:text-primary border-b-[3px] {% if active_nav == 'pharmacies' %}border-primary text-primary{% else %}border-transparent{% endif %} whitespace-nowrap">
+          <span class="material-symbols-rounded sm">local_pharmacy</span>
+          Pharmacies
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'search' %}" class="flex items-center gap-1.5 px-3 py-3.5 text-secondary-600 hover:text-primary-700 border-b-[3px] border-transparent whitespace-nowrap">
+          <span class="material-symbols-rounded sm filled text-secondary">sell</span>
+          Promotions
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>
+
+<div class="md:hidden bg-white border-b border-slate-100 overflow-x-auto scrollbar-hide max-w-full">
+  <div class="flex gap-2 px-4 py-2.5 w-max">
+    <a href="{% url 'search' %}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-white">
+      <span class="material-symbols-rounded sm filled">medication</span> Médicaments
+    </a>
+    {% for cat in nav_categories|slice:":5" %}
+    <a href="{% url 'search' %}?category={{ cat.slug }}" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-canvas text-ink hover:bg-primary-50">{{ cat.name }}</a>
+    {% endfor %}
+    <a href="{% url 'pharmacy_list' %}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-canvas text-ink">
+      <span class="material-symbols-rounded sm">local_pharmacy</span> Pharmacies
+    </a>
+  </div>
+</div>

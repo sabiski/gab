@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Pharmacies{% endblock %}
+{% block content %}
+<div class="max-w-site mx-auto px-4 py-8">
+  <h1 class="text-2xl font-extrabold text-ink tracking-tight mb-2">Pharmacies partenaires</h1>
+  <p class="text-sm text-ink-muted mb-4 font-medium">Officines vérifiées — Libreville et Grand Libreville</p>
+  <form method="get" class="mb-4 max-w-xl">
+    {% if filter_mode %}<input type="hidden" name="filter" value="{{ filter_mode }}">{% endif %}
+    <div class="flex rounded-full border border-primary/20 overflow-hidden bg-white">
+      <input type="search" name="q" value="{{ q|default:'' }}" placeholder="Nom, quartier, ville…"
+        class="flex-1 px-4 py-2.5 text-sm outline-none font-medium">
+      <button class="bg-primary text-white px-4 text-sm font-bold">Rechercher</button>
+    </div>
+  </form>
+  <div class="flex flex-wrap gap-2 mb-6 text-xs font-bold">
+    <a href="{% url 'pharmacy_list' %}{% if q %}?q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full {% if not filter_mode %}bg-primary text-white{% else %}bg-white border{% endif %}">Toutes</a>
+    <a href="{% url 'pharmacy_list' %}?filter=on_duty{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full {% if filter_mode == 'on_duty' %}bg-primary text-white{% else %}bg-white border{% endif %}">De garde</a>
+    <a href="{% url 'pharmacy_list' %}?filter=24h{% if q %}&q={{ q|urlencode }}{% endif %}" class="px-3 py-1.5 rounded-full {% if filter_mode == '24h' %}bg-primary text-white{% else %}bg-white border{% endif %}">Ouvertes 24h/24</a>
+  </div>
+  {% if q %}
+  <p class="text-sm text-ink-muted font-medium mb-4">{{ pharmacies|length }} résultat{{ pharmacies|length|pluralize }} pour « {{ q }} »</p>
+  {% endif %}
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for pharmacy in pharmacies %}
+    <a href="{% url 'pharmacy_detail' pharmacy.slug %}" class="bg-white border border-slate-100 rounded-2xl p-5 hover:shadow-lift hover:border-primary/25 transition">
+      <div class="flex gap-3">
+        <div class="h-14 w-14 rounded-2xl bg-primary-50 text-primary flex items-center justify-center shrink-0 overflow-hidden">
+          {% if pharmacy.logo %}
+          <img src="{{ pharmacy.logo.url }}" alt="" class="h-full w-full object-cover">
+          {% else %}
+          <span class="material-symbols-rounded filled lg">local_pharmacy</span>
+          {% endif %}
+        </div>
+        <div>
+          <h2 class="font-bold text-ink tracking-tight">{{ pharmacy.name }}</h2>
+          <p class="text-xs text-ink-muted mt-1 font-medium">{{ pharmacy.address }}</p>
+          <p class="text-xs text-ink-muted font-medium">{{ pharmacy.district }}, {{ pharmacy.city }}</p>
+          <p class="text-xs text-primary mt-2 font-semibold inline-flex items-center gap-0.5 flex-wrap">
+            <span class="material-symbols-rounded sm filled text-amber-500">star</span>
+            {{ pharmacy.rating }} ({{ pharmacy.review_count }}) · {{ pharmacy.status_label }}
+            {% if pharmacy.is_on_duty %}<span class="ml-1 bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">De garde</span>{% endif %}
+            {% if pharmacy.is_24h %}<span class="ml-1 bg-primary-50 text-primary px-1.5 py-0.5 rounded">24h</span>{% endif %}
+          </p>
+        </div>
+      </div>
+    </a>
+    {% empty %}
+    <p class="text-sm text-ink-muted">Aucune pharmacie.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

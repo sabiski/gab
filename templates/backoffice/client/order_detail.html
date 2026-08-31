@@ -1,0 +1,479 @@
+{% extends "backoffice/base_bo.html" %}
+
+{% load l10n %}
+
+{% block title %}Commande {{ order.code }}{% endblock %}
+
+{% block bo_label %}Espace patient{% endblock %}
+
+{% block bo_title %}Commande {{ order.code }}{% endblock %}
+
+{% block extra_head %}
+
+{% if show_courier_map %}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+
+{% endif %}
+
+{% endblock %}
+
+{% block bo_content %}
+
+<p class="mb-4"><a href="{% url 'bo_client_orders' %}" class="text-sm font-bold text-primary">← Mes commandes</a></p>
+
+
+
+<div class="grid lg:grid-cols-3 gap-6 max-w-5xl">
+
+  <div class="lg:col-span-2 space-y-5">
+
+    <section class="bg-white rounded-2xl border p-5">
+
+      <div class="flex flex-wrap justify-between gap-2 mb-4">
+
+        <div>
+
+          <p class="text-xs font-bold text-ink-muted uppercase">Statut</p>
+
+          <p class="text-xl font-extrabold {% if order.status == 'cancelled' %}text-rose-700{% elif order.status == 'delivered' %}text-emerald-700{% else %}text-primary{% endif %}">{{ order.get_status_display }}</p>
+
+        </div>
+
+        <div class="text-right">
+
+          <p class="text-xs font-bold text-ink-muted uppercase">Total</p>
+
+          <p class="text-xl font-extrabold">{{ order.total }} F</p>
+
+        </div>
+
+      </div>
+
+      {% if order.status == "delivered" %}
+
+      <div class="mb-4 text-sm bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl px-3 py-2.5">
+
+        <p class="font-extrabold">Commande terminée</p>
+
+        <p class="font-medium mt-1 text-xs">
+
+          {% if delivery and delivery.delivered_at %}
+
+          Livrée le {{ delivery.delivered_at|date:"d/m/Y à H:i" }}.
+
+          {% else %}
+
+          Parcours clôturé avec succès.
+
+          {% endif %}
+
+          Le code de retrait n'est plus nécessaire.
+
+        </p>
+
+      </div>
+
+      {% elif order.status == "cancelled" and order.cancellation_reason %}
+
+      <div class="mb-4 text-sm bg-rose-50 border border-rose-200 text-rose-900 rounded-xl px-3 py-2.5">
+
+        <p class="font-extrabold">Commande refusée par la pharmacie</p>
+
+        <p class="font-medium mt-1">Motif : {{ order.cancellation_reason }}</p>
+
+      </div>
+
+      {% elif order.linked_prescription and order.linked_prescription.status == "rejected" and order.linked_prescription.review_notes %}
+
+      <div class="mb-4 text-sm bg-rose-50 border border-rose-200 text-rose-900 rounded-xl px-3 py-2.5">
+
+        <p class="font-extrabold">Ordonnance refusée</p>
+
+        <p class="font-medium mt-1">Motif : {{ order.linked_prescription.review_notes }}</p>
+
+      </div>
+
+      {% elif insurance_pending %}
+
+      <div class="mb-4 text-sm bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-3 py-2.5">
+
+        <p class="font-extrabold">En attente de validation assurance</p>
+
+        <p class="font-medium mt-1 text-xs">
+          {% if order.insurance_provider %}{{ order.insurance_provider.name }}{% else %}Votre assureur{% endif %}
+          doit valider la prise en charge avant l'envoi à la pharmacie. Le code de retrait sera disponible après validation.
+        </p>
+
+      </div>
+
+      {% endif %}
+
+      <ol class="space-y-3">
+
+        <li class="flex gap-3 items-start">
+
+          <span class="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 {% if steps_done.created %}bg-primary text-white{% else %}bg-canvas text-ink-muted{% endif %}">1</span>
+
+          <div><p class="font-bold text-sm">Commande créée</p><p class="text-xs text-ink-muted">{{ order.created_at|date:"d/m/Y H:i" }}</p></div>
+
+        </li>
+
+        {% if order.linked_prescription or steps_done.awaiting_rx %}
+
+        <li class="flex gap-3 items-start">
+
+          <span class="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 {% if not steps_done.awaiting_rx and steps_done.confirmed %}bg-primary text-white{% elif steps_done.awaiting_rx %}bg-amber-500 text-white{% else %}bg-canvas text-ink-muted{% endif %}">2</span>
+
+          <div>
+
+            <p class="font-bold text-sm">Validation ordonnance pharmacie</p>
+
+            {% if steps_done.awaiting_rx %}<p class="text-xs text-amber-700 font-bold">En cours de vérification…</p>
+
+            {% elif order.linked_prescription and order.linked_prescription.status == "rejected" %}<p class="text-xs text-rose-700 font-bold">{{ order.linked_prescription.get_status_display }}{% if order.linked_prescription.review_notes %} — {{ order.linked_prescription.review_notes }}{% endif %}</p>
+
+            {% elif order.linked_prescription %}<p class="text-xs text-ink-muted">{{ order.linked_prescription.get_status_display }}</p>{% endif %}
+
+          </div>
+
+        </li>
+
+        {% endif %}
+
+        <li class="flex gap-3 items-start">
+
+          <span class="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 {% if steps_done.preparing %}bg-primary text-white{% else %}bg-canvas text-ink-muted{% endif %}">3</span>
+
+          <div><p class="font-bold text-sm">Préparation</p>{% if steps_done.delivered %}<p class="text-xs text-ink-muted">Terminée</p>{% endif %}</div>
+
+        </li>
+
+        <li class="flex gap-3 items-start">
+
+          <span class="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 {% if steps_done.shipping or steps_done.delivered %}bg-primary text-white{% else %}bg-canvas text-ink-muted{% endif %}">4</span>
+
+          <div>
+
+            <p class="font-bold text-sm">Livraison</p>
+
+            {% if delivery %}
+
+            <p class="text-xs text-ink-muted">
+
+              {% if order.status == "delivered" %}
+
+              Effectuée{% if delivery.courier %} · {{ delivery.courier.get_full_name|default:delivery.courier.username }}{% endif %}
+
+              {% else %}
+
+              {{ delivery.get_status_display }}{% if delivery.courier %} · {{ delivery.courier.get_full_name|default:delivery.courier.username }}{% endif %}
+
+              {% endif %}
+
+            </p>
+
+            {% endif %}
+
+          </div>
+
+        </li>
+
+        <li class="flex gap-3 items-start">
+
+          <span class="h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 {% if steps_done.delivered %}bg-primary text-white{% else %}bg-canvas text-ink-muted{% endif %}">5</span>
+
+          <div><p class="font-bold text-sm">Livrée</p>{% if delivery and delivery.delivered_at %}<p class="text-xs text-ink-muted">{{ delivery.delivered_at|date:"d/m/Y H:i" }}</p>{% endif %}</div>
+
+        </li>
+
+      </ol>
+
+    </section>
+
+
+
+    {% if order.status == "delivered" %}
+
+    {% if evaluation %}
+
+    <section class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+
+      <h2 class="font-extrabold text-emerald-900 mb-2">Votre évaluation</h2>
+
+      <p class="text-sm font-medium text-emerald-900/90">Pharmacie : <strong>{{ evaluation.pharmacy_rating }}/5</strong>{% if evaluation.pharmacy_comment %} — « {{ evaluation.pharmacy_comment }} »{% endif %}</p>
+
+      {% if evaluation.courier_rating %}
+
+      <p class="text-sm font-medium text-emerald-900/90 mt-1">Livreur : <strong>{{ evaluation.courier_rating }}/5</strong>{% if evaluation.courier_comment %} — « {{ evaluation.courier_comment }} »{% endif %}</p>
+
+      {% endif %}
+
+      <p class="text-xs text-emerald-800/70 mt-2">{{ evaluation.created_at|date:"d/m/Y H:i" }}</p>
+
+    </section>
+
+    {% else %}
+
+    <section class="bg-[#F5F3FF] border-2 border-[#6C3AED]/30 rounded-2xl p-5">
+
+      <h2 class="font-extrabold text-[#6C3AED] mb-1">Évaluez votre expérience</h2>
+
+      <p class="text-xs text-ink-muted font-medium mb-4">Dernière étape du parcours commande — votre avis aide la communauté.</p>
+
+      <form method="post" class="grid sm:grid-cols-2 gap-3 text-sm">
+
+        {% csrf_token %}
+
+        <input type="hidden" name="action" value="evaluate">
+
+        <div>
+
+          <label class="text-xs font-bold text-ink-muted">Pharmacie {{ order.pharmacy.name }}</label>
+
+          <select name="pharmacy_rating" required class="mt-1 w-full border rounded-xl px-3 py-2">
+
+            <option value="5">5 — Excellent</option>
+
+            <option value="4">4 — Très bien</option>
+
+            <option value="3">3 — Correct</option>
+
+            <option value="2">2 — Insuffisant</option>
+
+            <option value="1">1 — Mauvais</option>
+
+          </select>
+
+          <textarea name="pharmacy_comment" rows="2" placeholder="Commentaire (optionnel)" class="mt-2 w-full border rounded-xl px-3 py-2 text-xs"></textarea>
+
+        </div>
+
+        {% if needs_courier_rating %}
+
+        <div>
+
+          <label class="text-xs font-bold text-ink-muted">Livreur{% if delivery.courier %} — {{ delivery.courier.get_full_name|default:delivery.courier.username }}{% endif %}</label>
+
+          <select name="courier_rating" required class="mt-1 w-full border rounded-xl px-3 py-2">
+
+            <option value="5">5 — Excellent</option>
+
+            <option value="4">4 — Très bien</option>
+
+            <option value="3">3 — Correct</option>
+
+            <option value="2">2 — Insuffisant</option>
+
+            <option value="1">1 — Mauvais</option>
+
+          </select>
+
+          <textarea name="courier_comment" rows="2" placeholder="Commentaire livreur (optionnel)" class="mt-2 w-full border rounded-xl px-3 py-2 text-xs"></textarea>
+
+        </div>
+
+        {% endif %}
+
+        <button class="sm:col-span-2 bg-[#6C3AED] text-white font-bold py-2.5 rounded-xl">Envoyer mon évaluation</button>
+
+      </form>
+
+    </section>
+
+    {% endif %}
+
+    {% endif %}
+
+
+
+    {% if show_courier_map %}
+
+    <section class="bg-white rounded-2xl border p-5">
+
+      <h2 class="font-extrabold mb-1">Suivi livreur en direct</h2>
+
+      <p class="text-xs text-ink-muted mb-3">Position mise à jour pendant la livraison.</p>
+
+      <div id="track-map" class="h-56 rounded-xl border z-0"></div>
+
+    </section>
+
+    {% endif %}
+
+
+
+    <section class="bg-white rounded-2xl border p-5">
+
+      <h2 class="font-extrabold mb-3">Articles</h2>
+
+      {% for item in order.items.all %}
+
+      <div class="flex justify-between text-sm py-2 border-b border-slate-50">
+
+        <p class="font-bold">{{ item.quantity }}× {{ item.medicine_name }}</p>
+
+        <p>{{ item.line_total }} F</p>
+
+      </div>
+
+      {% empty %}<p class="text-sm text-ink-muted">Aucun article.</p>{% endfor %}
+
+    </section>
+
+  </div>
+
+
+
+  <aside class="space-y-4">
+
+    <div class="bg-white rounded-2xl border p-4 text-sm">
+
+      <p class="text-xs font-bold text-ink-muted uppercase mb-1">Pharmacie</p>
+
+      <p class="font-extrabold">{{ order.pharmacy.name|default:"—" }}</p>
+
+      {% if order.pharmacy %}<p class="text-ink-muted text-xs mt-1">{{ order.pharmacy.phone }}</p>{% endif %}
+
+    </div>
+
+    <div class="bg-white rounded-2xl border p-4 text-sm">
+
+      <p class="text-xs font-bold text-ink-muted uppercase mb-1">Livraison</p>
+
+      <p class="font-bold">{{ order.get_delivery_mode_display }}</p>
+
+      <p class="text-ink-muted text-xs mt-1">{{ order.delivery_address|default:"—" }}</p>
+
+    </div>
+
+    {% if show_validation_code %}
+
+    <div class="bg-[#F5F3FF] border border-[#6C3AED]/25 rounded-2xl p-4 text-sm">
+
+      <p class="font-extrabold text-[#6C3AED]">Code de retrait / livraison</p>
+
+      <p class="text-2xl font-extrabold tracking-widest mt-1 text-[#6C3AED]">{{ order.validation_code_display }}</p>
+
+      <a href="{% url 'bo_client_order_confirmed' order.code %}" class="inline-flex mt-3 text-xs font-bold text-white bg-[#6C3AED] px-4 py-2 rounded-full">Voir l'écran paiement confirmé</a>
+
+    </div>
+    {% if show_client_delivery_qr and client_delivery_qr_url %}
+    <div class="bg-white rounded-2xl border p-4 text-sm text-center">
+      <p class="font-extrabold text-[#6C3AED] mb-1">QR pour le livreur</p>
+      <p class="text-xs text-ink-muted mb-3">Présentez ce QR au livreur à la réception.</p>
+      <img src="{{ client_delivery_qr_url }}?v={{ order.updated_at|date:'U' }}" width="160" height="160" alt="QR livraison" class="mx-auto rounded-xl border">
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if order.status == "delivering" or order.status == "ready" %}
+
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm">
+
+      <p class="font-extrabold text-amber-800">Rappel</p>
+
+      <p class="text-xs text-amber-800/80 mt-1">Présentez le code au livreur ou en pharmacie à la réception.</p>
+
+    </div>
+
+    {% endif %}
+
+    {% if order.status == "delivered" %}
+
+    <div class="bg-white rounded-2xl border p-4 text-sm">
+
+      <p class="text-xs font-bold text-ink-muted uppercase mb-2">Assurance maladie</p>
+
+      {% if order.insurance_provider and order.insurance_coverage %}
+
+      <p class="text-xs text-ink-muted mb-2">Prise en charge à la commande</p>
+
+      <p class="font-bold">{{ order.insurance_provider.name }} — {{ order.insurance_coverage }} F</p>
+
+      {% endif %}
+
+      {% for c in insurance_claims %}
+
+      <p class="font-bold mt-2">{{ c.provider.name }} — {{ c.amount }} F</p>
+
+      <p class="text-xs text-ink-muted mb-2">{{ c.get_status_display }}</p>
+
+      {% empty %}
+
+      {% if insurance_providers and not order.insurance_coverage %}
+
+      <form method="post" class="space-y-2">
+
+        {% csrf_token %}
+
+        <input type="hidden" name="action" value="insurance_claim">
+
+        <select name="provider_id" required class="w-full border rounded-xl px-2 py-1.5 text-sm">
+
+          {% for p in insurance_providers %}<option value="{{ p.id }}">{{ p.name }} ({{ p.coverage_rate }} %)</option>{% endfor %}
+
+        </select>
+
+        <button class="w-full bg-primary text-white text-xs font-bold py-2 rounded-full">Demander un remboursement</button>
+
+      </form>
+
+      {% elif not order.insurance_coverage %}
+
+      <p class="text-ink-muted text-xs">Aucun assureur partenaire pour le moment.</p>
+
+      {% endif %}
+
+      {% endfor %}
+
+    </div>
+
+    {% endif %}
+
+    {% if order.status != "delivered" and order.status != "cancelled" %}
+
+    <a href="{% url 'bo_client_support' %}?order={{ order.code }}" class="block text-center text-xs font-bold text-primary border rounded-2xl py-3 hover:bg-primary-50">Signaler un problème</a>
+
+    {% elif not evaluation %}
+
+    <a href="{% url 'bo_client_support' %}?order={{ order.code }}" class="block text-center text-xs font-bold text-ink-muted border rounded-2xl py-3 hover:bg-canvas">Besoin d'aide ? Contacter le support</a>
+
+    {% endif %}
+
+  </aside>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+
+{% if show_courier_map %}
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<script>
+
+(function () {
+
+  var lat = {% localize off %}{{ delivery.courier_lat }}{% endlocalize %};
+
+  var lng = {% localize off %}{{ delivery.courier_lng }}{% endlocalize %};
+
+  var map = L.map('track-map').setView([lat, lng], 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OSM' }).addTo(map);
+
+  L.marker([lat, lng]).addTo(map).bindPopup('Livreur');
+
+  setTimeout(function () { map.invalidateSize(); }, 150);
+
+})();
+
+</script>
+
+{% endif %}
+
+{% endblock %}
+

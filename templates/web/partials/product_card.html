@@ -1,0 +1,92 @@
+{% load portal_urls %}
+<article class="group relative bg-white border border-slate-100 rounded-2xl overflow-hidden hover:shadow-lift hover:border-primary/25 transition flex flex-col h-full min-w-0">
+  {% if user.is_authenticated %}
+  <form method="post" action="{% portal_url 'favorite_toggle' stock.id %}" class="absolute top-2.5 right-2.5 z-20">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <button type="submit"
+      class="h-9 w-9 rounded-full bg-white shadow-card flex items-center justify-center transition {% if stock.id in favorite_ids %}text-rose-500{% else %}text-ink-muted hover:text-rose-500{% endif %}"
+      aria-label="Favori"
+      title="{% if stock.id in favorite_ids %}Retirer des favoris{% else %}Ajouter aux favoris{% endif %}">
+      <span class="material-symbols-rounded sm {% if stock.id in favorite_ids %}filled{% endif %}"
+        {% if stock.id in favorite_ids %}style="font-variation-settings:'FILL' 1,'wght' 600,'GRAD' 0,'opsz' 24; color:#f43f5e;"{% endif %}>favorite</span>
+    </button>
+  </form>
+  {% else %}
+  <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="absolute top-2.5 right-2.5 z-20 h-9 w-9 rounded-full bg-white text-ink-muted hover:text-rose-500 shadow-card flex items-center justify-center" aria-label="Favori" title="Connectez-vous pour ajouter aux favoris">
+    <span class="material-symbols-rounded sm">favorite</span>
+  </a>
+  {% endif %}
+  <a href="{% if mask_details %}{% portal_url 'subscription_plans' %}?next={{ request.get_full_path|urlencode }}{% else %}{% portal_url 'product_detail' stock.id %}{% endif %}" class="relative block aspect-[4/3] bg-gradient-to-b from-canvas to-white flex items-center justify-center p-4">
+    {% if stock.promotional_price %}
+    <span class="absolute top-2.5 left-2.5 z-10 bg-rose-500 text-white text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md">Promo</span>
+    {% elif stock.medicine.requires_prescription %}
+    <span class="absolute top-2.5 left-2.5 z-10 bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md">Ordonnance</span>
+    {% elif stock.medicine.is_featured %}
+    <span class="absolute top-2.5 left-2.5 z-10 bg-secondary text-primary-800 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md">Prix bas</span>
+    {% endif %}
+    {% if stock.medicine.image %}
+    <img src="{{ stock.medicine.image.url }}" alt="{{ stock.medicine.name }}" class="max-h-full max-w-full object-contain group-hover:scale-105 transition duration-300">
+    {% else %}
+    <div class="flex flex-col items-center gap-1 text-primary">
+      <span class="material-symbols-rounded filled xl opacity-80">medication</span>
+      <span class="text-[10px] font-bold text-primary-700/70 uppercase tracking-wide">{{ stock.medicine.form_label }}</span>
+    </div>
+    {% endif %}
+  </a>
+  <div class="p-3.5 flex flex-col flex-1">
+    <p class="text-[10px] text-ink-muted uppercase tracking-wider font-semibold">{{ stock.medicine.laboratory|default:stock.medicine.form_label }}</p>
+    <h3 class="text-sm font-bold text-ink mt-1 line-clamp-2 leading-snug tracking-tight">
+      <a href="{% if mask_details %}{% portal_url 'subscription_plans' %}?next={{ request.get_full_path|urlencode }}{% else %}{% portal_url 'product_detail' stock.id %}{% endif %}" class="hover:text-primary">
+        {{ stock.medicine.name }}{% if stock.medicine.format_label %} {{ stock.medicine.format_label }}{% elif stock.medicine.dosage %} {{ stock.medicine.dosage }}{% endif %}
+      </a>
+    </h3>
+    <p class="text-xs text-ink-muted mt-1 line-clamp-2 font-medium">
+      {% if stock.medicine.dci %}{{ stock.medicine.dci }} · {% endif %}{{ stock.medicine.form_label }}
+    </p>
+    <p class="text-[11px] font-semibold text-primary-700 mt-1.5 truncate" title="{{ stock.pharmacy.name }}">
+      {% if mask_details %}<span class="text-ink-muted">Pharmacie partenaire</span>{% else %}{{ stock.pharmacy.name }}{% endif %}
+    </p>
+    <div class="mt-auto pt-3 flex items-end justify-between gap-1.5 min-w-0">
+      <div class="min-w-0">
+        {% if mask_details %}
+        <p class="text-sm font-bold text-ink-muted">Prix sur forfait</p>
+        <a href="{% portal_url 'subscription_plans' %}?next={{ request.get_full_path|urlencode }}" class="text-[11px] font-bold text-[#6C3AED]">Débloquer →</a>
+        {% elif stock.promotional_price %}
+        <p class="text-sm sm:text-base font-extrabold text-primary tracking-tight truncate">{{ stock.formatted_price }}</p>
+        <p class="text-xs text-ink-muted line-through font-medium">{{ stock.price }} FCFA</p>
+        {% else %}
+        <p class="text-sm sm:text-base font-extrabold text-primary tracking-tight truncate">{{ stock.formatted_price }}</p>
+        {% endif %}
+        {% if show_availability %}
+          {% if stock.availability == "available" %}
+          <p class="text-[11px] text-primary font-semibold mt-0.5 inline-flex items-center gap-0.5">
+            <span class="material-symbols-rounded sm filled text-primary">check_circle</span> Disponible
+          </p>
+          {% elif stock.availability == "low" %}
+          <p class="text-[11px] text-amber-600 font-semibold mt-0.5 inline-flex items-center gap-0.5">
+            <span class="material-symbols-rounded sm">warning</span> Stock faible
+          </p>
+          {% endif %}
+        {% endif %}
+      </div>
+      {% if user.is_authenticated and not mask_details %}
+      <button type="submit" form="cart-add-{{ stock.id }}" class="shrink-0 h-9 w-9 sm:w-auto sm:px-3 rounded-full bg-primary hover:bg-primary-600 text-white text-xs font-bold flex items-center justify-center gap-1 transition shadow-sm">
+        <span class="material-symbols-rounded sm">add_shopping_cart</span>
+        <span class="hidden sm:inline">Panier</span>
+      </button>
+      {% elif not mask_details %}
+      <a href="{% url 'login' %}?next={{ request.get_full_path|urlencode }}" class="shrink-0 h-9 w-9 sm:w-auto sm:px-3 rounded-full bg-primary hover:bg-primary-600 text-white text-xs font-bold flex items-center justify-center gap-1 transition shadow-sm">
+        <span class="material-symbols-rounded sm">add_shopping_cart</span>
+        <span class="hidden sm:inline">Panier</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</article>
+{% if user.is_authenticated %}
+<form id="cart-add-{{ stock.id }}" method="post" action="{% portal_url 'cart_add' stock.id %}" class="hidden js-cart-add-form">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}">
+</form>
+{% endif %}

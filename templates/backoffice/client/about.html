@@ -1,0 +1,22 @@
+{% extends "backoffice/client/profile_form_base.html" %}
+{% block profile_back_href %}{% url 'bo_client_parametres' %}{% endblock %}
+{% block profile_back_label %}Retour aux paramètres{% endblock %}
+{% block profile_lead %}
+<p class="c-lead">Plateforme nationale du médicament au Gabon.</p>
+{% endblock %}
+{% block profile_form %}
+<div class="space-y-4 text-sm text-[#374151]">
+  <div class="text-center py-4">
+    <img src="/static/images/logo-gabpharma.png" alt="Gab'Pharma" class="h-14 mx-auto mb-3">
+    <p class="font-extrabold text-lg">Gab'Pharma</p>
+    <p class="text-xs text-[#6B7280] mt-1">Version {{ app_version }}</p>
+  </div>
+  <p class="text-[#6B7280] leading-relaxed">Gab'Pharma connecte patients, pharmacies et professionnels de santé pour faciliter l'accès aux médicaments, la recherche de stocks et la livraison à domicile au Gabon.</p>
+  <ul class="space-y-2 text-xs text-[#6B7280]">
+    <li class="flex gap-2"><span class="material-symbols-rounded sm text-[#6C3AED]">check_circle</span> Catalogue et recherche de médicaments</li>
+    <li class="flex gap-2"><span class="material-symbols-rounded sm text-[#6C3AED]">check_circle</span> Commande et suivi en temps réel</li>
+    <li class="flex gap-2"><span class="material-symbols-rounded sm text-[#6C3AED]">check_circle</span> Dossier ordonnances sécurisé</li>
+  </ul>
+  <p class="text-xs text-[#9CA3AF] text-center pt-2">© {{ user.date_joined.year }} Gab'Pharma — Tous droits réservés</p>
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Livreur{% endblock %}
+{% block bo_label %}Espace Livreur{% endblock %}
+{% block bo_title %}Tableau de bord{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/courier-portal.css?v=1">
+{% endblock %}
+{% block bo_content %}
+
+{% if not eligibility.is_eligible %}
+<section class="cp-info-banner max-w-5xl mb-4 {% if eligibility.status == 'pending_admin' %}border-sky-200 bg-sky-50 text-sky-900{% else %}border-amber-200 bg-amber-50 text-amber-900{% endif %}">
+  <span class="material-symbols-rounded shrink-0">{% if eligibility.status == 'pending_admin' %}hourglass_top{% else %}warning{% endif %}</span>
+  <div>
+    {% if eligibility.status == 'pending_admin' %}
+    <p class="font-extrabold">Dossier complet — validation en attente</p>
+    <p class="mt-1">Vos {{ eligibility.total }} documents ont été transmis. L'administration doit valider votre éligibilité avant de passer en ligne.</p>
+    {% else %}
+    <p class="font-extrabold">Compte non éligible ({{ eligibility.progress_label }} documents)</p>
+    <p class="mt-1">Complétez les 7 pièces réglementaires (pièce d'identité, permis, assurance, etc.) pour soumettre votre dossier.</p>
+    <a href="{% url 'bo_courier_vehicles' %}?tab=documents" class="inline-flex items-center gap-1 font-bold text-sm mt-2 text-primary">
+      Compléter mes documents <span class="material-symbols-rounded text-sm">arrow_forward</span>
+    </a>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6 max-w-5xl">
+  <div>
+    <p class="text-sm text-ink-muted font-medium">Niveau {{ stats.level }} · Note {{ stats.rating }}/5 · {{ stats.total }} livraisons</p>
+    <p class="text-xs mt-1">Statut actuel :
+      <strong class="{% if profile.courier_status == 'online' %}text-primary{% elif profile.courier_status == 'busy' %}text-amber-600{% else %}text-ink-muted{% endif %}">
+        {{ profile.get_courier_status_display }}
+      </strong>
+      {% if profile.zone %} · Zone {{ profile.zone }}{% endif %}
+    </p>
+  </div>
+  <div class="flex flex-wrap gap-2">
+    <form method="post"{% if profile.courier_status == "offline" %} class="courier-gps-form"{% endif %}>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="toggle_status">
+      <button type="submit" class="font-bold text-sm px-4 py-2 rounded-xl {% if profile.courier_status == 'online' or profile.courier_status == 'busy' %}bg-rose-50 text-rose-700 border border-rose-200        {% elif not eligibility.is_eligible %}bg-slate-200 text-slate-500 cursor-not-allowed{% else %}bg-primary text-white{% endif %}" {% if not eligibility.is_eligible and profile.courier_status == 'offline' %}disabled title="{% if eligibility.status == 'pending_admin' %}Validation admin en attente{% else %}Documents incomplets{% endif %}"{% endif %}>
+        {% if profile.courier_status == 'online' or profile.courier_status == 'busy' %}Passer hors ligne{% elif eligibility.status == 'pending_admin' %}Validation en attente{% elif not eligibility.is_eligible %}Documents requis{% else %}Passer en ligne (GPS requis){% endif %}
+      </button>
+    </form>
+    <a href="{% url 'bo_courier_settings' %}" class="font-bold text-sm px-4 py-2 rounded-xl border">Mon profil</a>
+    <a href="{% url 'bo_courier_vehicles' %}" class="font-bold text-sm px-4 py-2 rounded-xl border hidden sm:inline-flex">Véhicules</a>
+  </div>
+</div>
+
+{% include "backoffice/courier/partials/urgent_mission.html" %}
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Aujourd'hui</p><p class="text-2xl font-extrabold mt-1">{{ stats.today }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">En cours</p><p class="text-2xl font-extrabold text-primary mt-1">{{ stats.in_progress }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Terminées</p><p class="text-2xl font-extrabold text-secondary-600 mt-1">{{ stats.done_today }}</p></div>
+  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">En attente</p><p class="text-2xl font-extrabold text-amber-600 mt-1">{{ stats.pending }}</p></div>
+</div>
+
+{% if pending_handoffs %}
+<section class="bg-amber-50 border border-amber-200 rounded-2xl p-5 max-w-5xl mb-6">
+  <h2 class="font-extrabold text-amber-900 mb-3">Reprises en attente de validation</h2>
+  <p class="text-xs text-amber-800 mb-3">Saisissez le code de transfert remis par le livreur initial (≠ code client).</p>
+  {% for d in pending_handoffs %}
+  <div class="bg-white border rounded-xl p-3 mb-2 text-sm flex flex-wrap justify-between gap-2 items-end">
+    <div>
+      <p class="font-extrabold">{{ d.order.code }}</p>
+      <p class="text-xs text-ink-muted">Remise par {{ d.courier.get_full_name|default:d.courier.username }}</p>
+    </div>
+    <form method="post" class="flex gap-2 items-end">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="validate_handoff">
+      <input type="hidden" name="delivery_id" value="{{ d.id }}">
+      <input name="transfer_code" required maxlength="6" placeholder="Code transfert" class="border rounded-lg px-2 py-1.5 w-28 text-xs">
+      <button class="bg-primary text-white font-bold text-xs px-3 py-2 rounded-lg">Valider la reprise</button>
+    </form>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if handoff_offers %}
+<section class="bg-sky-50 border border-sky-200 rounded-2xl p-5 max-w-5xl mb-6">
+  <h2 class="font-extrabold text-sky-900 mb-3">Courses à reprendre (transfert)</h2>
+  {% for d in handoff_offers %}
+  <div class="bg-white border rounded-xl p-3 mb-2 text-sm flex flex-wrap justify-between gap-2 items-center">
+    <div>
+      <p class="font-extrabold">{{ d.order.code }}</p>
+      <p class="text-xs text-ink-muted">{{ d.order.pharmacy.name }} · {{ d.courier.get_full_name|default:d.courier.username }}</p>
+    </div>
+    <form method="post" class="courier-gps-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="accept_handoff">
+      <input type="hidden" name="delivery_id" value="{{ d.id }}">
+      <button type="submit" class="bg-primary text-white font-bold text-xs px-4 py-2 rounded-lg">Accepter la reprise</button>
+    </form>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+
+<section class="bg-white rounded-2xl border p-5 max-w-5xl mb-6">
+  <div class="flex justify-between items-center mb-4">
+    <h2 class="font-extrabold">Missions actives</h2>
+    <a href="{% url 'bo_courier_deliveries' %}" class="text-xs font-bold text-primary">Toutes les livraisons</a>
+  </div>
+  {% for d in active %}
+  <div class="border rounded-xl p-3 mb-3 text-sm">
+    <div class="flex flex-wrap justify-between gap-2 items-start">
+      <div>
+        <p class="font-extrabold">{{ d.order.code }}</p>
+        <p class="text-xs text-ink-muted">{{ d.order.pharmacy.name|default:"—" }} → {{ d.order.client.get_full_name|default:d.order.client.username }}</p>
+        <p class="text-xs text-ink-muted mt-1">{{ d.order.delivery_address|default:"Adresse non précisée" }}</p>
+        <span class="inline-block mt-2 text-[11px] font-bold bg-primary-50 text-primary px-2 py-0.5 rounded-full">{{ d.get_status_display }}</span>
+      </div>
+      <div class="flex flex-col gap-1.5 min-w-[150px]">
+        <a href="{% url 'bo_courier_deliveries' %}#delivery-{{ d.id }}" class="inline-flex items-center justify-center gap-1 bg-primary text-white font-extrabold text-xs px-3 py-2.5 rounded-lg">
+          <span class="material-symbols-rounded sm">local_shipping</span>
+          {% if d.status == "in_transit" %}Valider livraison{% elif d.status == "picking_up" %}Valider récupération{% else %}Continuer{% endif %}
+        </a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <p class="text-sm text-ink-muted">Aucune mission active. Consultez les courses disponibles ci-dessous ou passez en ligne.</p>
+  {% endfor %}
+</section>
+
+<section class="bg-white rounded-2xl border p-5 max-w-5xl mb-6">
+  <h2 class="font-extrabold mb-3">Courses disponibles</h2>
+  <p class="text-xs text-ink-muted mb-3 flex items-center gap-1">
+    <span class="material-symbols-rounded sm text-primary">my_location</span>
+    Le GPS est obligatoire pour passer en ligne et accepter une course.
+  </p>
+  {% if profile.courier_status == "offline" %}
+  <p class="text-sm text-ink-muted">Passez en ligne pour voir les commandes prêtes à livrer.</p>
+  {% else %}
+    {% for d in available %}
+    <div class="border rounded-xl p-3 mb-2 text-sm flex flex-wrap justify-between gap-2 items-center">
+      <div>
+        <p class="font-extrabold">{{ d.order.code }}</p>
+        <p class="text-xs text-ink-muted">{{ d.order.pharmacy.name }} → {{ d.order.delivery_address|truncatechars:60 }}</p>
+        {% if profile.pharmacy %}<p class="text-xs text-ink-muted mt-0.5">Course pharmacie partenaire</p>{% endif %}
+      </div>
+      <form method="post" class="courier-gps-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="claim">
+        <input type="hidden" name="delivery_id" value="{{ d.id }}">
+        <button type="submit" class="bg-primary text-white font-bold text-xs px-4 py-2 rounded-lg">Prendre cette course</button>
+      </form>
+    </div>
+    {% empty %}
+    <p class="text-sm text-ink-muted">Aucune course disponible pour le moment.</p>
+    {% endfor %}
+  {% endif %}
+</section>
+
+<section class="bg-white rounded-2xl border p-5 max-w-5xl mb-6" id="gains">
+  <h2 class="font-extrabold mb-1">Gains (30 derniers jours)</h2>
+  <p class="text-xs text-ink-muted mb-3">Historique des courses terminées — distinct des missions en cours ci-dessus.</p>
+  <div class="grid grid-cols-3 gap-3 mb-4 text-sm">
+    <div class="border rounded-xl p-3"><p class="text-xs text-ink-muted">Total</p><p class="text-xl font-extrabold text-primary">{{ earnings.total }} F</p></div>
+    <div class="border rounded-xl p-3"><p class="text-xs text-ink-muted">En attente</p><p class="text-xl font-extrabold text-amber-600">{{ earnings.pending }} F</p></div>
+    <div class="border rounded-xl p-3"><p class="text-xs text-ink-muted">Versés</p><p class="text-xl font-extrabold text-secondary-600">{{ earnings.paid }} F</p></div>
+  </div>
+  {% for e in recent_earnings %}
+  <div class="border rounded-xl p-2.5 mb-2 text-xs flex justify-between">
+    <span>{{ e.delivery.order.code }} · {{ e.created_at|date:"d/m H:i" }}</span>
+    <span class="font-bold">{{ e.total }} F</span>
+  </div>
+  {% empty %}
+  <p class="text-sm text-ink-muted">Aucun gain enregistré.</p>
+  {% endfor %}
+</section>
+
+<section class="bg-white rounded-2xl border p-5 max-w-5xl">
+  <h2 class="font-extrabold mb-2">Partager ma position</h2>
+  <p class="text-xs text-ink-muted mb-3">Le patient pourra suivre votre position sur la commande en cours.</p>
+  <form method="post" class="flex flex-wrap gap-2 items-end text-sm" id="gps-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="update_gps">
+    <input type="hidden" name="latitude" id="gps-lat">
+    <input type="hidden" name="longitude" id="gps-lng">
+    <button type="button" id="btn-share-gps" class="bg-primary text-white font-bold px-4 py-2 rounded-xl">Obtenir ma position GPS</button>
+  </form>
+</section>
+<script>
+document.getElementById('btn-share-gps').addEventListener('click', function () {
+  if (!navigator.geolocation) { alert('GPS indisponible'); return; }
+  navigator.geolocation.getCurrentPosition(function (pos) {
+    document.getElementById('gps-lat').value = pos.coords.latitude.toFixed(6);
+    document.getElementById('gps-lng').value = pos.coords.longitude.toFixed(6);
+    document.getElementById('gps-form').submit();
+  }, function () { alert('Impossible d’obtenir la position'); });
+});
+</script>
+<script src="/static/js/courier-gps-required.js?v=1"></script>
+<script src="/static/js/courier-portal.js?v=1"></script>
+{% include "backoffice/courier/partials/mobile_nav.html" %}
+{% endblock %}

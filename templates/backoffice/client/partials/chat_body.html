@@ -1,0 +1,55 @@
+{% load portal_urls %}
+<div class="c-chat-shell">
+  <div class="c-chat-toolbar">
+    {% if from_urgence %}
+    <a href="{% portal_url 'emergency' %}" class="c-chat-back">
+      <span class="material-symbols-rounded sm">arrow_back</span> Urgence
+    </a>
+    {% else %}
+    <a href="{% portal_url 'messages_inbox' %}" class="c-chat-back">
+      <span class="material-symbols-rounded sm">arrow_back</span> Messagerie
+    </a>
+    {% endif %}
+    {% if pharmacy.phone %}
+    <a href="tel:{{ pharmacy.phone }}" class="c-btn c-btn--ghost ml-auto">
+      <span class="material-symbols-rounded sm">call</span> Appeler
+    </a>
+    {% endif %}
+    {% if emergency_alert %}
+    <span class="c-pill c-pill--danger">
+      <span class="material-symbols-rounded sm">e911_emergency</span> {{ emergency_alert.code }}
+    </span>
+    {% endif %}
+  </div>
+
+  <div class="c-card p-0 overflow-hidden">
+    <div class="c-chat-window" id="chat-scroll">
+      {% for m in chat_messages %}
+      <div class="c-bubble {% if m.sender_id == user.id %}c-bubble--me{% else %}c-bubble--them{% endif %}">
+        <p class="whitespace-pre-wrap">{{ m.body }}</p>
+        <p class="c-bubble__time">{{ m.created_at|date:"d/m H:i" }}{% if m.sender_id != user.id %} · Pharmacie{% endif %}</p>
+      </div>
+      {% empty %}
+      <div class="c-empty my-auto">
+        <div class="c-empty__icon"><span class="material-symbols-rounded">chat</span></div>
+        <p class="text-sm font-bold text-[#374151]">Démarrez la conversation</p>
+        <p class="text-xs text-[#6B7280] mt-1 max-w-xs mx-auto">Décrivez votre besoin — un pharmacien de {{ pharmacy.name }} vous répondra ici.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <form method="post" class="c-chat-compose m-3 mt-0">
+      {% csrf_token %}
+      <textarea name="body" required rows="2" placeholder="Écrivez votre message…" aria-label="Message"></textarea>
+      <button type="submit" class="c-chat-send" aria-label="Envoyer">
+        <span class="material-symbols-rounded">send</span>
+      </button>
+    </form>
+  </div>
+</div>
+<script>
+(function () {
+  var el = document.getElementById('chat-scroll');
+  if (el) el.scrollTop = el.scrollHeight;
+})();
+</script>

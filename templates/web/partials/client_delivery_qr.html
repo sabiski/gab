@@ -1,0 +1,8 @@
+{% if client_delivery_qr_url %}
+<section class="{% if client_portal %}card p-5 mb-4{% else %}card p-5 mb-4{% endif %} text-center">
+  <p class="text-sm font-bold text-[#374151] mb-1">QR livraison pour le livreur</p>
+  <p class="text-xs text-[#6B7280] mb-3 max-w-sm mx-auto">À la réception, le livreur peut scanner ce QR sur votre téléphone pour valider la livraison (médicaments, pharmacie, commande).</p>
+  <img src="{{ client_delivery_qr_url }}?v={{ order.updated_at|date:'U' }}" width="180" height="180" alt="QR livraison commande {{ order.code }}" class="mx-auto rounded-xl border border-[#E5E7EB] bg-white p-2">
+  <p class="text-[10px] text-[#9CA3AF] mt-2">Vous pouvez aussi lui dicter le code à 6 chiffres ci-dessus.</p>
+</section>
+{% endif %}

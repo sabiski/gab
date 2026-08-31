@@ -1,0 +1,37 @@
+{% load portal_urls %}
+{% if favorites %}
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+  {% for fav in favorites %}
+  <div class="c-card c-card--lift p-4 relative">
+    <form method="post" action="{% portal_url 'favorites' %}" class="absolute top-2.5 right-2.5 z-10">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="remove">
+      <input type="hidden" name="fav_id" value="{{ fav.id }}">
+      <button type="submit" class="h-8 w-8 rounded-full bg-[#FEF2F2] text-rose-500 flex items-center justify-center hover:bg-rose-100" title="Retirer">
+        <span class="material-symbols-rounded sm filled">favorite</span>
+      </button>
+    </form>
+    <a href="{% portal_url 'product_detail' fav.stock.id %}" class="block">
+      <div class="h-24 rounded-xl bg-gradient-to-b from-[#F5F3FF] to-white border border-[#EDE9FE] flex items-center justify-center mb-3 overflow-hidden p-2">
+        {% if fav.stock.medicine.image %}
+        <img src="{{ fav.stock.medicine.image.url }}" alt="{{ fav.stock.medicine.name }}" class="max-h-full max-w-full object-contain">
+        {% else %}
+        <span class="material-symbols-rounded text-[#6C3AED] text-3xl opacity-80">medication</span>
+        {% endif %}
+      </div>
+      <h3 class="text-sm font-bold text-[#374151] pr-8 line-clamp-2">{{ fav.stock.medicine.name }}</h3>
+      <p class="text-xs text-[#6B7280] mt-1">{{ fav.stock.medicine.form_label }}</p>
+      <p class="text-xs font-bold text-[#6C3AED] mt-2">{{ fav.stock.formatted_price }}</p>
+      <p class="text-[11px] text-[#6B7280] mt-0.5 truncate">{{ fav.stock.pharmacy.name }}</p>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="c-card c-empty">
+  <div class="c-empty__icon"><span class="material-symbols-rounded">favorite</span></div>
+  <p class="text-sm font-bold text-[#374151]">Aucun favori</p>
+  <p class="text-xs text-[#6B7280] mt-1 mb-4">Ajoutez des médicaments depuis le catalogue.</p>
+  <a href="{% portal_url 'search' %}" class="c-btn c-btn--primary">Parcourir le catalogue</a>
+</div>
+{% endif %}

@@ -1,0 +1,33 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Audit{% endblock %}
+{% block bo_label %}Administration{% endblock %}
+{% block bo_title %}Journal d'audit{% endblock %}
+{% block bo_content %}
+<form method="get" class="bg-white rounded-2xl border p-3 mb-4 flex flex-wrap gap-2 items-center">
+  <div class="relative flex-1 min-w-[200px]">
+    <span class="material-symbols-rounded sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
+    <input name="q" value="{{ q }}" placeholder="Action, module, détails…" class="w-full border rounded-xl pl-9 pr-3 py-2 text-sm">
+  </div>
+  <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl">Rechercher</button>
+</form>
+<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} résultat{{ total_count|pluralize }}</p>
+<div class="bg-white rounded-2xl border overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+      <tr><th class="px-4 py-3">Date</th><th class="px-4 py-3">Utilisateur</th><th class="px-4 py-3">Action</th><th class="px-4 py-3">Module</th><th class="px-4 py-3">Détails</th></tr>
+    </thead>
+    <tbody>
+      {% for l in page_obj %}
+      <tr class="border-t hover:bg-canvas/50 {% if l.is_sensitive %}bg-amber-50/40{% endif %}">
+        <td class="px-4 py-3 text-ink-muted whitespace-nowrap">{{ l.created_at|date:"d/m/Y H:i" }}</td>
+        <td class="px-4 py-3">{{ l.user|default:"—" }}</td>
+        <td class="px-4 py-3 font-bold">{{ l.action }}</td>
+        <td class="px-4 py-3">{{ l.module }}</td>
+        <td class="px-4 py-3 text-xs text-ink-muted">{{ l.details|truncatechars:80 }}</td>
+      </tr>
+      {% empty %}<tr><td colspan="5" class="px-4 py-10 text-center text-ink-muted">Aucune entrée</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endblock %}

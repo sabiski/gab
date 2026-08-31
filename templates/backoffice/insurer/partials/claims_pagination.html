@@ -1,0 +1,28 @@
+{% load humanize %}
+{% if page_obj.paginator.count %}
+<nav class="ins-claims-pagination">
+  <p class="ins-claims-pagination__meta">
+    Affichage {{ page_obj.start_index }} à {{ page_obj.end_index }} sur {{ page_obj.paginator.count|intcomma }} demande{{ page_obj.paginator.count|pluralize }}
+  </p>
+  <div class="ins-claims-pagination__controls">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if pharmacy_id %}&amp;pharmacy={{ pharmacy_id }}{% endif %}{% if overdue_only %}&amp;overdue=1{% endif %}{% if show_filters %}&amp;filters=1{% endif %}&amp;per_page={{ per_page }}" class="ins-claims-pagination__btn">←</a>
+    {% endif %}
+    <span class="ins-claims-pagination__current">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}{% if pharmacy_id %}&amp;pharmacy={{ pharmacy_id }}{% endif %}{% if overdue_only %}&amp;overdue=1{% endif %}{% if show_filters %}&amp;filters=1{% endif %}&amp;per_page={{ per_page }}" class="ins-claims-pagination__btn">→</a>
+    {% endif %}
+    <form method="get" class="ins-claims-pagination__per-page">
+      {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+      {% if pharmacy_id %}<input type="hidden" name="pharmacy" value="{{ pharmacy_id }}">{% endif %}
+      {% if overdue_only %}<input type="hidden" name="overdue" value="1">{% endif %}
+      {% if show_filters %}<input type="hidden" name="filters" value="1">{% endif %}
+      <select name="per_page" onchange="this.form.submit()">
+        <option value="10" {% if per_page == 10 %}selected{% endif %}>10 / page</option>
+        <option value="25" {% if per_page == 25 %}selected{% endif %}>25 / page</option>
+        <option value="50" {% if per_page == 50 %}selected{% endif %}>50 / page</option>
+      </select>
+    </form>
+  </div>
+</nav>
+{% endif %}

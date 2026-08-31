@@ -1,0 +1,30 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Mes commandes{% endblock %}
+{% block bo_label %}Espace patient{% endblock %}
+{% block bo_title %}Mes commandes{% endblock %}
+{% block bo_content %}
+<div class="space-y-3 max-w-4xl">
+  {% for o in orders %}
+  <a href="{% url 'bo_client_order_detail' o.pk %}" class="block bg-white rounded-2xl border p-4 hover:border-primary transition">
+    <div class="flex flex-wrap justify-between gap-2">
+      <div>
+        <p class="font-extrabold">{{ o.code }}</p>
+        <p class="text-xs text-ink-muted font-medium">{{ o.pharmacy.name|default:"Pharmacie" }} · {{ o.get_delivery_mode_display }} · {{ o.created_at|date:"d/m/Y H:i" }}</p>
+      </div>
+      <div class="text-right">
+        <p class="font-extrabold text-primary">{{ o.total }} F</p>
+        <span class="text-[11px] font-bold px-2 py-0.5 rounded-full {% if o.status == 'cancelled' %}bg-rose-100 text-rose-800{% elif o.status == 'delivered' and not o.delivery_evaluation %}bg-violet-100 text-violet-800{% else %}bg-canvas{% endif %}">{{ o.get_status_display }}{% if o.status == 'delivered' and not o.delivery_evaluation %} · À noter{% endif %}</span>
+      </div>
+    </div>
+    {% if o.status == "cancelled" and o.cancellation_reason %}
+    <p class="text-xs text-rose-700 font-medium mt-2">Motif : {{ o.cancellation_reason }}</p>
+    {% endif %}
+  </a>
+  {% empty %}
+  <div class="bg-white border rounded-2xl p-8 text-center">
+    <p class="text-ink-muted text-sm mb-3">Aucune commande pour le moment.</p>
+    <a href="{% url 'bo_client_catalog' %}" class="inline-flex bg-primary text-white font-bold text-sm px-4 py-2 rounded-xl">Voir le catalogue</a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

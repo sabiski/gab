@@ -1,0 +1,51 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Hero accueil{% endblock %}
+{% block bo_label %}Site public{% endblock %}
+{% block bo_title %}Configurer le hero{% endblock %}
+{% block bo_content %}
+<p class="text-sm text-ink-muted font-medium mb-4">Ces textes et l’image s’affichent en haut de la page d’accueil. Image paysage recommandée (ex. pharmacie, patients, médicaments) : entre <strong>200×150</strong> et <strong>1600×900</strong> px — JPG/PNG/WebP, 3 Mo max. Une image de démo est préchargée (tu pourras la remplacer).</p>
+<form method="post" enctype="multipart/form-data" class="bg-white rounded-2xl border p-5 grid sm:grid-cols-2 gap-3 text-sm max-w-4xl">
+  {% csrf_token %}
+  <div class="sm:col-span-2">
+    <label class="text-xs font-bold text-ink-muted">Sur-titre</label>
+    <input name="eyebrow" value="{{ hero.eyebrow }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Titre (ligne 1)</label>
+    <input name="title" value="{{ hero.title }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Titre accentué (ligne 2)</label>
+    <input name="title_accent" value="{{ hero.title_accent }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div class="sm:col-span-2">
+    <label class="text-xs font-bold text-ink-muted">Description</label>
+    <textarea name="description" rows="3" class="mt-1 w-full border rounded-xl px-3 py-2">{{ hero.description }}</textarea>
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Bouton 1 — libellé</label>
+    <input name="cta1_label" value="{{ hero.cta1_label }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Bouton 1 — URL</label>
+    <input name="cta1_url" value="{{ hero.cta1_url }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Bouton 2 — libellé</label>
+    <input name="cta2_label" value="{{ hero.cta2_label }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  <div>
+    <label class="text-xs font-bold text-ink-muted">Bouton 2 — URL</label>
+    <input name="cta2_url" value="{{ hero.cta2_url }}" class="mt-1 w-full border rounded-xl px-3 py-2">
+  </div>
+  {% include "backoffice/partials/image_field.html" with name="hero_image" label="Image / logo du hero" current=hero.hero_image rule="hero" hint=image_rules.hint min_w=image_rules.min_width max_w=image_rules.max_width min_h=image_rules.min_height max_h=image_rules.max_height max_bytes=image_rules.max_bytes %}
+  <label class="flex items-center gap-2 text-xs sm:col-span-2"><input type="checkbox" name="is_active" {% if hero.is_active %}checked{% endif %}> Actif</label>
+  {% if hero.hero_image %}
+  <label class="flex items-center gap-2 text-xs text-rose-600 sm:col-span-2"><input type="checkbox" name="clear_image"> Retirer l’image (revenir au logo par défaut)</label>
+  {% endif %}
+  <div class="sm:col-span-2 flex gap-2">
+    <button class="bg-primary text-white font-bold rounded-xl px-5 py-2.5">Enregistrer</button>
+    <a href="{% url 'home' %}" target="_blank" class="border font-bold rounded-xl px-5 py-2.5">Voir le site</a>
+  </div>
+</form>
+{% endblock %}

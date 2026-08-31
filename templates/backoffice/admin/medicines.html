@@ -1,0 +1,99 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Médicaments{% endblock %}
+{% block bo_label %}Administration{% endblock %}
+{% block bo_title %}Médicaments{% endblock %}
+{% block bo_content %}
+<form method="get" class="bg-white rounded-2xl border p-3 mb-4 flex flex-wrap gap-2 items-center">
+  <div class="relative flex-1 min-w-[200px]">
+    <span class="material-symbols-rounded sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted">search</span>
+    <input name="q" value="{{ q }}" placeholder="Nom, DCI, laboratoire…" class="w-full border rounded-xl pl-9 pr-3 py-2 text-sm">
+  </div>
+  <select name="category" class="border rounded-xl px-3 py-2 text-sm">
+    <option value="">Toutes catégories</option>
+    {% for c in categories %}<option value="{{ c.id }}" {% if filter_category == c.id|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+  </select>
+  <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl">Filtrer</button>
+  <a href="?new=1" class="bg-primary text-white font-bold text-sm px-4 py-2 rounded-xl inline-flex items-center gap-1"><span class="material-symbols-rounded sm">add</span> Ajouter</a>
+</form>
+<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} résultat{{ total_count|pluralize }}</p>
+
+{% if show_create %}
+<section class="bg-white rounded-2xl border p-5 mb-4">
+  <div class="flex justify-between mb-3"><h2 class="font-extrabold">Nouveau médicament</h2><a href="{% url 'bo_admin_medicines' %}" class="text-xs font-bold text-ink-muted">Fermer</a></div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-3 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="create">
+    <input name="name" required placeholder="Nom *" class="border rounded-xl px-3 py-2">
+    <input name="dosage" placeholder="Dosage" class="border rounded-xl px-3 py-2">
+    <input name="dci" placeholder="DCI" class="border rounded-xl px-3 py-2">
+    <input name="laboratory" placeholder="Laboratoire" class="border rounded-xl px-3 py-2">
+    <select name="form" class="border rounded-xl px-3 py-2">{% for val, label in forms %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select>
+    <select name="category" class="border rounded-xl px-3 py-2"><option value="">Catégorie</option>{% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    {% include "backoffice/partials/image_field.html" with name="image" label="Photo médicament" %}
+    <label class="text-xs flex gap-2 items-center"><input type="checkbox" name="requires_prescription"> Ordonnance</label>
+    <label class="text-xs flex gap-2 items-center"><input type="checkbox" name="is_featured"> Featured</label>
+    <textarea name="description" rows="2" placeholder="Résumé" class="border rounded-xl px-3 py-2 sm:col-span-3"></textarea>
+    <textarea name="presentation" rows="3" placeholder="Présentation" class="border rounded-xl px-3 py-2 sm:col-span-3"></textarea>
+    <textarea name="composition" rows="2" placeholder="Composition" class="border rounded-xl px-3 py-2"></textarea>
+    <textarea name="usage_advice" rows="2" placeholder="Conseils d'utilisation" class="border rounded-xl px-3 py-2"></textarea>
+    <input name="recommended_by" placeholder="Recommandé par" class="border rounded-xl px-3 py-2">
+    <textarea name="pharmacist_advice" rows="2" placeholder="Avis pharmacien" class="border rounded-xl px-3 py-2 sm:col-span-3"></textarea>
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Créer</button>
+  </form>
+</section>
+{% endif %}
+
+{% if edit_obj %}
+<section class="bg-primary-50 border border-primary/20 rounded-2xl p-5 mb-4">
+  <div class="flex justify-between mb-3"><h2 class="font-extrabold">Modifier — {{ edit_obj.name }}</h2><a href="{% url 'bo_admin_medicines' %}" class="text-xs font-bold text-ink-muted">Fermer</a></div>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-3 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="update"><input type="hidden" name="medicine_id" value="{{ edit_obj.id }}">
+    <input name="name" value="{{ edit_obj.name }}" class="border rounded-xl px-3 py-2">
+    <input name="dosage" value="{{ edit_obj.dosage }}" class="border rounded-xl px-3 py-2">
+    <input name="dci" value="{{ edit_obj.dci }}" class="border rounded-xl px-3 py-2">
+    <input name="laboratory" value="{{ edit_obj.laboratory }}" class="border rounded-xl px-3 py-2">
+    <select name="form" class="border rounded-xl px-3 py-2">{% for val, label in forms %}<option value="{{ val }}" {% if edit_obj.form == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <select name="category" class="border rounded-xl px-3 py-2"><option value="">—</option>{% for c in categories %}<option value="{{ c.id }}" {% if edit_obj.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    {% include "backoffice/partials/image_field.html" with name="image" label="Photo médicament" current=edit_obj.image %}
+    <label class="text-xs flex gap-2"><input type="checkbox" name="requires_prescription" {% if edit_obj.requires_prescription %}checked{% endif %}> Ordonnance</label>
+    <label class="text-xs flex gap-2"><input type="checkbox" name="is_featured" {% if edit_obj.is_featured %}checked{% endif %}> Featured</label>
+    <textarea name="description" rows="2" class="border rounded-xl px-3 py-2 sm:col-span-3">{{ edit_obj.description }}</textarea>
+    <textarea name="presentation" rows="3" placeholder="Présentation" class="border rounded-xl px-3 py-2 sm:col-span-3">{{ edit_obj.presentation }}</textarea>
+    <textarea name="composition" rows="2" class="border rounded-xl px-3 py-2">{{ edit_obj.composition }}</textarea>
+    <textarea name="usage_advice" rows="2" class="border rounded-xl px-3 py-2">{{ edit_obj.usage_advice }}</textarea>
+    <input name="recommended_by" value="{{ edit_obj.recommended_by }}" class="border rounded-xl px-3 py-2">
+    <textarea name="pharmacist_advice" rows="2" class="border rounded-xl px-3 py-2 sm:col-span-3">{{ edit_obj.pharmacist_advice }}</textarea>
+    <button class="bg-primary text-white font-bold rounded-xl py-2">Enregistrer</button>
+  </form>
+</section>
+{% endif %}
+
+<div class="bg-white rounded-2xl border overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-canvas text-[11px] font-bold text-ink-muted uppercase text-left">
+      <tr><th class="px-4 py-3">Médicament</th><th class="px-4 py-3">DCI</th><th class="px-4 py-3">Labo</th><th class="px-4 py-3">Catégorie</th><th class="px-4 py-3 text-right">Actions</th></tr>
+    </thead>
+    <tbody>
+      {% for m in page_obj %}
+      <tr class="border-t hover:bg-canvas/50">
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2">
+            <div class="h-10 w-10 rounded-lg bg-canvas overflow-hidden flex items-center justify-center shrink-0">
+              {% if m.image %}<img src="{{ m.image.url }}" alt="" class="h-full w-full object-contain">{% else %}<span class="material-symbols-rounded sm text-primary">medication</span>{% endif %}
+            </div>
+            <div><p class="font-bold">{{ m.name }} {{ m.dosage }}</p><p class="text-xs text-ink-muted">{{ m.get_form_display }}</p></div>
+          </div>
+        </td>
+        <td class="px-4 py-3 text-ink-muted">{{ m.dci|default:"—" }}</td>
+        <td class="px-4 py-3 text-ink-muted">{{ m.laboratory|default:"—" }}</td>
+        <td class="px-4 py-3 text-xs">{{ m.category.name|default:"—" }}</td>
+        <td class="px-4 py-3 text-right whitespace-nowrap">
+          <a href="?edit={{ m.id }}" class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-primary-50 text-primary"><span class="material-symbols-rounded sm">edit</span></a>
+          <form method="post" class="inline" onsubmit="return confirm('Supprimer ?')">{% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="medicine_id" value="{{ m.id }}"><button class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-rose-50 text-rose-600"><span class="material-symbols-rounded sm">delete</span></button></form>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="5" class="px-4 py-10 text-center text-ink-muted">Aucun médicament</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% include "backoffice/partials/pagination.html" %}
+{% endblock %}

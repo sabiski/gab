@@ -1,0 +1,184 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% load humanize %}
+{% block auth_page_title %}Tableau de bord national{% endblock %}
+
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>Tableau de bord national <span class="material-symbols-rounded text-base text-ink-muted align-middle" title="Données agrégées">info</span></h1>
+    <p>Vue d'ensemble de la situation sanitaire en temps réel</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <div class="auth-date-pill">
+      <span class="material-symbols-rounded text-sm">calendar_today</span>
+      <span>{{ widgets.last_updated|date:"d/m/Y" }}</span>
+    </div>
+    <button type="button" class="auth-filter-btn auth-filter-btn--outline">
+      <span class="material-symbols-rounded text-sm">tune</span> Filtres
+    </button>
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-icon-btn relative" aria-label="Notifications">
+      <span class="material-symbols-rounded">notifications</span>
+      {% if widgets.alert_total %}<span class="auth-icon-btn__badge">{{ widgets.alert_total }}</span>{% endif %}
+    </a>
+    {% if bo_role != "admin" %}{% include "backoffice/authority/partials/user_chip.html" %}{% endif %}
+  </div>
+</header>
+
+{% if authority_profile and not authority_profile.is_validated %}
+<div class="auth-portal__banner !bg-amber-50 !text-amber-900 border border-amber-200 mb-3">
+  <span class="font-bold">Compte en attente de validation administrative.</span>
+</div>
+{% endif %}
+
+<section class="auth-kpi-grid auth-kpi-grid--5 auth-kpi-grid--national">
+  {% for k in widgets.kpis %}
+  <article class="auth-kpi auth-kpi--national">
+    <p class="auth-kpi__label">{{ k.label }}</p>
+    <p class="auth-kpi__value">{{ k.value|intcomma }}</p>
+    {% if k.trend >= 0 %}
+    <p class="auth-kpi__trend is-up">
+      <span class="material-symbols-rounded text-xs">trending_up</span> +{{ k.trend }}% {{ k.trend_label|default:"" }}
+    </p>
+    {% else %}
+    <p class="auth-kpi__trend text-rose-600">
+      <span class="material-symbols-rounded text-xs">trending_down</span> {{ k.trend }}% {{ k.trend_label|default:"" }}
+    </p>
+    {% endif %}
+    {% if k.link %}
+    <a href="{% url 'bo_authority_alerts' %}" class="auth-kpi__link">Voir les alertes →</a>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+
+<section class="auth-national-mid">
+  <article class="auth-panel auth-panel--map">
+    <div class="flex items-center justify-between gap-2 mb-2">
+      <h3>Répartition des demandes par région</h3>
+      <a href="{% url 'bo_authority_map' %}" class="auth-map-link text-xs">Voir la carte interactive →</a>
+    </div>
+    {% if portal_permissions.map %}
+    <div class="auth-national-map-grid">
+      <div class="auth-map-preview__map-wrap">
+        <div id="auth-map-mini" class="auth-map auth-map--mini" role="img" aria-label="Carte Gabon"></div>
+      </div>
+      <div class="auth-map-preview__table">
+        {% for r in widgets.region_orders %}
+        <div class="auth-list-row">
+          <span class="inline-flex items-center gap-2 font-bold min-w-0">
+            <span class="w-2 h-2 rounded-full shrink-0" style="background:{{ r.fill_color }}"></span>
+            <span class="truncate">{{ r.name }}</span>
+          </span>
+          <span class="text-xs text-ink-muted shrink-0">{{ r.orders_pct }}%</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p class="text-sm text-ink-muted">Carte non disponible pour votre profil.</p>
+    {% endif %}
+  </article>
+
+  <article class="auth-panel">
+    <h3>Évolution des demandes de médicaments</h3>
+    <div class="auth-bars auth-bars--tall mt-1" role="img" aria-label="Évolution hebdomadaire">
+      {% for w in widgets.orders_by_week %}
+      <div class="auth-bars__col">
+        <div class="auth-bars__stack">
+          <div class="auth-bars__fill auth-bars__fill--light" style="height: {{ w.prev_pct }}%;" title="Période précédente: {{ w.prev }}"></div>
+          <div class="auth-bars__fill" style="height: {{ w.pct }}%;" title="Demandes: {{ w.value }}"></div>
+        </div>
+        <span class="auth-bars__lbl">{{ w.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="auth-line-chart__legend mt-3">
+      <span><i class="auth-dot auth-dot--green"></i> Demandes</span>
+      <span><i class="auth-dot auth-dot--grey"></i> Période précédente</span>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <div class="flex items-center justify-between gap-2 mb-2">
+      <h3>Alertes sanitaires &amp; épidémiologiques</h3>
+      <a href="{% url 'bo_authority_alerts' %}" class="auth-map-link text-xs">Voir tout →</a>
+    </div>
+    <ul class="auth-alert-feed">
+      {% for a in widgets.health_alerts %}
+      <li class="auth-alert-feed__item">
+        <span class="auth-alert-feed__badge auth-alert-feed__badge--{{ a.level }}">{{ a.level_label }}</span>
+        <div class="min-w-0">
+          <p class="auth-alert-feed__title">{{ a.title }}</p>
+          <p class="auth-alert-feed__meta">{{ a.zone }} · {{ a.time_ago }}</p>
+        </div>
+      </li>
+      {% empty %}
+      <li class="text-sm text-ink-muted py-4">Aucune alerte active.</li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+
+<section class="auth-national-bottom">
+  <article class="auth-panel">
+    <h3>Disponibilité des médicaments essentiels</h3>
+    <div class="auth-stock-donut">
+      <div class="auth-stock-donut__ring" style="--pct-available: {{ widgets.stock_donut.available }}; --pct-low: {{ widgets.stock_donut.low }}; --pct-out: {{ widgets.stock_donut.out }};">
+        <span class="auth-stock-donut__center">{{ widgets.stock_donut.available }}%<small>Disponibles</small></span>
+      </div>
+      <ul class="auth-stock-donut__legend">
+        <li><span class="auth-dot auth-dot--green"></span> Disponibles <strong>{{ widgets.stock_donut.available }}%</strong></li>
+        <li><span class="auth-dot auth-dot--amber"></span> Faible stock <strong>{{ widgets.stock_donut.low }}%</strong></li>
+        <li><span class="auth-dot auth-dot--red"></span> Rupture de stock <strong>{{ widgets.stock_donut.out }}%</strong></li>
+      </ul>
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Top 5 des médicaments les plus demandés</h3>
+    <div class="auth-top-meds">
+      {% for m in widgets.top_medicines %}
+      <div class="auth-top-meds__row">
+        <span class="auth-top-meds__rank">{{ forloop.counter }}</span>
+        <div class="min-w-0 flex-1">
+          <p class="auth-top-meds__name">{{ m.medicine__name|default:"—" }}</p>
+          <div class="auth-top-meds__bar"><span style="width: {{ m.pct }}%;"></span></div>
+        </div>
+        <span class="auth-top-meds__qty">{{ m.qty|intcomma }}</span>
+      </div>
+      {% empty %}
+      <p class="text-sm text-ink-muted">Pas encore de données.</p>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="auth-panel">
+    <h3>Indicateurs clés</h3>
+    <div class="auth-key-grid">
+      {% for ind in widgets.key_indicators %}
+      <div class="auth-key-tile">
+        <p class="auth-key-tile__label">{{ ind.label }}</p>
+        <p class="auth-key-tile__value">{{ ind.value }}</p>
+        <p class="auth-key-tile__trend {% if ind.up %}is-up{% endif %}">{{ ind.trend }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+
+<footer class="auth-national-footer">
+  <p>
+    <span class="material-symbols-rounded text-sm align-middle">shield</span>
+    Les données affichées sont anonymisées et agrégées conformément aux normes de protection des données.
+    Dernière mise à jour : {{ widgets.last_updated|date:"d/m/Y" }} à {{ widgets.last_updated|date:"H:i" }}
+  </p>
+  <a href="{% url 'bo_authority_reports' %}">À propos des indicateurs</a>
+</footer>
+
+{% if portal_permissions.map %}
+{{ map_data|json_script:"authority-map-data" }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/authority-map.js?v=2"></script>
+{% endif %}
+{% endblock %}

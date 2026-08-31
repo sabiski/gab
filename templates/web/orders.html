@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Mes commandes{% endblock %}
+{% block content %}
+<div class="max-w-site mx-auto px-4 py-8 max-w-3xl">
+  <h1 class="text-2xl font-bold text-ink mb-6">Mes commandes</h1>
+  {% if orders %}
+  <div class="space-y-3">
+    {% for order in orders %}
+    <div class="bg-white border border-slate-100 rounded-xl p-4 flex justify-between items-start">
+      <div>
+        <p class="font-semibold text-ink">Commande {{ order.code }}</p>
+        <p class="text-xs text-ink-muted mt-1">{{ order.pharmacy.name|default:"—" }} · {{ order.created_at|date:"d/m/Y H:i" }}</p>
+      </div>
+      <div class="text-right">
+        <span class="text-[11px] font-medium px-2 py-1 rounded-full bg-primary-50 text-primary">{{ order.get_status_display }}</span>
+        <p class="text-sm font-bold text-primary mt-2">{{ order.total }} FCFA</p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="bg-white border border-slate-100 rounded-xl p-10 text-center">
+    <p class="text-ink-muted text-sm mb-4">Votre panier / historique est vide.</p>
+    <a href="{% url 'search' %}" class="inline-flex bg-primary text-white text-sm font-medium px-5 py-2.5 rounded-full">Voir le catalogue</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

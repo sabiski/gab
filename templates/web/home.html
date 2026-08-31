@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}Accueil{% endblock %}
+
+{% block content %}
+<section class="relative overflow-hidden bg-white border-b border-slate-100">
+  <div class="absolute inset-0 opacity-[0.07] pointer-events-none"
+    style="background-image: radial-gradient(circle at 80% 20%, #8DC63F 0%, transparent 45%), radial-gradient(circle at 10% 80%, #228545 0%, transparent 40%);"></div>
+  <div class="max-w-site mx-auto px-4 py-10 lg:py-14 relative">
+    <div class="grid lg:grid-cols-[1.15fr_0.85fr] gap-10 items-center">
+      <div>
+        <p class="inline-flex items-center gap-1.5 text-primary text-sm font-bold mb-3">
+          <span class="material-symbols-rounded filled sm text-secondary">location_on</span>
+          {{ hero.eyebrow }}
+        </p>
+        <h1 class="text-[1.75rem] sm:text-4xl lg:text-[2.75rem] font-extrabold text-ink leading-[1.15] tracking-tight break-anywhere">
+          {{ hero.title }}{% if hero.title_accent %}<br class="hidden sm:block">
+          <span class="text-primary">{{ hero.title_accent }}</span>{% endif %}
+        </h1>
+        <p class="mt-4 text-ink-muted text-sm lg:text-base max-w-lg font-medium leading-relaxed">
+          {{ hero.description }}
+        </p>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a href="{{ hero.cta1_url }}" class="inline-flex items-center gap-2 bg-primary hover:bg-primary-600 text-white font-bold text-sm px-6 py-3 rounded-full transition shadow-sm">
+            {{ hero.cta1_label }}
+            <span class="material-symbols-rounded sm">arrow_forward</span>
+          </a>
+          <a href="{{ hero.cta2_url }}" class="inline-flex items-center gap-2 border-2 border-primary text-primary hover:bg-primary-50 font-bold text-sm px-6 py-3 rounded-full transition">
+            <span class="material-symbols-rounded sm">near_me</span>
+            {{ hero.cta2_label }}
+          </a>
+        </div>
+      </div>
+      <div class="relative flex justify-center lg:justify-end">
+        {% if hero.hero_image %}
+        <img src="{{ hero.hero_image.url }}" alt="Gab'Pharma" class="w-full max-w-md lg:max-w-lg rounded-3xl shadow-xl relative z-10 object-cover aspect-[16/10]">
+        {% else %}
+        <img src="/static/images/logo-gabpharma.png" alt="Gab'Pharma" class="w-40 sm:w-52 lg:w-60 drop-shadow-xl relative z-10">
+        {% endif %}
+        <div class="absolute -inset-6 bg-gradient-to-br from-secondary/20 to-primary/10 rounded-full blur-2xl"></div>
+      </div>
+    </div>
+
+    <div class="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="rounded-2xl bg-primary-50 p-4 border border-primary/10">
+        <span class="material-symbols-rounded filled text-primary lg">local_pharmacy</span>
+        <p class="text-2xl font-extrabold text-primary mt-1 tracking-tight">{{ pharmacies|length }}+</p>
+        <p class="text-xs text-ink-muted font-medium mt-0.5">Pharmacies partenaires</p>
+      </div>
+      <div class="rounded-2xl bg-secondary-50 p-4 border border-secondary/20">
+        <span class="material-symbols-rounded filled text-secondary-600 lg">schedule</span>
+        <p class="text-2xl font-extrabold text-primary-700 mt-1 tracking-tight">24h</p>
+        <p class="text-xs text-ink-muted font-medium mt-0.5">Livraison &amp; garde</p>
+      </div>
+      <div class="rounded-2xl bg-white p-4 border border-slate-100 shadow-card">
+        <span class="material-symbols-rounded filled text-amber-500 lg">star</span>
+        <p class="text-2xl font-extrabold text-ink mt-1 tracking-tight">4,8</p>
+        <p class="text-xs text-ink-muted font-medium mt-0.5">Note moyenne</p>
+      </div>
+      <div class="rounded-2xl bg-white p-4 border border-slate-100 shadow-card">
+        <span class="material-symbols-rounded filled text-primary lg">verified_user</span>
+        <p class="text-2xl font-extrabold text-ink mt-1 tracking-tight">100%</p>
+        <p class="text-xs text-ink-muted font-medium mt-0.5">Circuit officiel</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% if ads_top %}
+<section class="max-w-site mx-auto px-4 py-5">
+  <p class="text-xs font-bold text-ink-muted uppercase tracking-wide mb-3">Partenaires</p>
+  <div class="grid {% if ads_top|length > 1 %}sm:grid-cols-2{% endif %} gap-3">
+    {% for ad in ads_top %}
+    <a href="{{ ad.link_url|default:'#' }}" {% if ad.link_url %}target="_blank" rel="noopener"{% endif %} class="block rounded-2xl overflow-hidden border border-slate-100 hover:shadow-lift transition bg-canvas">
+      {% if ad.image %}
+      <img src="{{ ad.image.url }}" alt="{{ ad.title }}" class="w-full h-36 sm:h-44 object-cover" loading="lazy">
+      {% endif %}
+      <p class="px-3 py-2 text-xs font-bold text-ink">{{ ad.title }}</p>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="bg-mint border-b border-primary/10">
+  <div class="max-w-site mx-auto px-4 py-5 grid grid-cols-1 sm:grid-cols-3 gap-5">
+    <div class="flex items-start gap-3">
+      <span class="h-10 w-10 rounded-full bg-white text-primary flex items-center justify-center shrink-0 shadow-card">
+        <span class="material-symbols-rounded filled">clinical_notes</span>
+      </span>
+      <div>
+        <p class="font-bold text-ink text-sm tracking-tight">Conseils de pharmaciens</p>
+        <p class="text-xs text-ink-muted font-medium mt-0.5">Accompagnement personnalisé sur vos commandes</p>
+      </div>
+    </div>
+    <div class="flex items-start gap-3">
+      <span class="h-10 w-10 rounded-full bg-white text-primary flex items-center justify-center shrink-0 shadow-card">
+        <span class="material-symbols-rounded filled">local_shipping</span>
+      </span>
+      <div>
+        <p class="font-bold text-ink text-sm tracking-tight">Livraison sécurisée</p>
+        <p class="text-xs text-ink-muted font-medium mt-0.5">Suivi en temps réel &amp; code de validation</p>
+      </div>
+    </div>
+    <div class="flex items-start gap-3">
+      <span class="h-10 w-10 rounded-full bg-white text-primary flex items-center justify-center shrink-0 shadow-card">
+        <span class="material-symbols-rounded filled">payments</span>
+      </span>
+      <div>
+        <p class="font-bold text-ink text-sm tracking-tight">Paiement local</p>
+        <p class="text-xs text-ink-muted font-medium mt-0.5">Moov Money, Airtel Money, carte &amp; COD</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="max-w-site mx-auto px-4 py-10 space-y-12">
+
+  <section>
+    <div class="flex items-end justify-between gap-3 mb-5 min-w-0">
+      <div class="min-w-0">
+        <h2 class="text-xl lg:text-2xl font-extrabold text-ink tracking-tight">Médicaments</h2>
+        <p class="text-sm text-ink-muted mt-1 font-medium">Douleur, fièvre, digestion, vitamines… chez nos partenaires</p>
+      </div>
+      <a href="{% url 'search' %}" class="text-sm font-bold text-primary hover:underline whitespace-nowrap inline-flex items-center gap-1">
+        Voir tout <span class="material-symbols-rounded sm">arrow_forward</span>
+      </a>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
+      {% for stock in featured %}
+      {% include "web/partials/product_card.html" with stock=stock show_availability=False %}
+      {% empty %}
+      <p class="col-span-full text-sm text-ink-muted">Catalogue en cours de chargement.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-xl lg:text-2xl font-extrabold text-ink tracking-tight mb-5">Univers &amp; catégories</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+      {% for cat in categories %}
+      <a href="{% url 'search' %}?category={{ cat.slug }}"
+        class="bg-white border border-slate-100 rounded-2xl p-4 text-center hover:border-primary hover:shadow-lift transition group">
+        <span class="cat-icon mx-auto mb-2.5">
+          {% if cat.icon == "head" or "douleur" in cat.slug %}<span class="material-symbols-rounded filled">thermostat</span>
+          {% elif "toux" in cat.slug %}<span class="material-symbols-rounded filled">air</span>
+          {% elif "digest" in cat.slug %}<span class="material-symbols-rounded filled">gastroenterology</span>
+          {% elif "peau" in cat.slug %}<span class="material-symbols-rounded filled">spa</span>
+          {% elif "hygiene" in cat.slug %}<span class="material-symbols-rounded filled">soap</span>
+          {% elif "maternite" in cat.slug %}<span class="material-symbols-rounded filled">child_care</span>
+          {% elif "vitamine" in cat.slug %}<span class="material-symbols-rounded filled">nutrition</span>
+          {% elif "antibiot" in cat.slug %}<span class="material-symbols-rounded filled">medication</span>
+          {% else %}<span class="material-symbols-rounded filled">medical_services</span>{% endif %}
+        </span>
+        <span class="text-xs font-bold text-ink group-hover:text-primary leading-tight block tracking-tight">{{ cat.name }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if ads_mid %}
+  <section>
+    <p class="text-xs font-bold text-ink-muted uppercase tracking-wide mb-3">Offres partenaires</p>
+    <div class="grid {% if ads_mid|length > 1 %}md:grid-cols-2{% endif %} gap-4">
+      {% for ad in ads_mid %}
+      <a href="{{ ad.link_url|default:'#' }}" {% if ad.link_url %}target="_blank" rel="noopener"{% endif %} class="block rounded-3xl overflow-hidden border border-slate-100 hover:shadow-lift transition bg-canvas relative">
+        {% if ad.image %}
+        <img src="{{ ad.image.url }}" alt="{{ ad.title }}" class="w-full h-40 sm:h-48 object-cover" loading="lazy">
+        {% endif %}
+        <span class="absolute bottom-3 left-3 bg-white/95 text-ink text-xs font-bold px-3 py-1.5 rounded-full">{{ ad.title }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section>
+    <div class="flex items-end justify-between gap-3 mb-5 min-w-0">
+      <div class="min-w-0">
+        <h2 class="text-lg sm:text-xl lg:text-2xl font-extrabold text-ink tracking-tight">Nos indispensables à petit prix</h2>
+        <p class="text-sm text-ink-muted mt-1 font-medium">Sélection du moment en FCFA</p>
+      </div>
+      <a href="{% url 'search' %}" class="text-sm font-bold text-primary hover:underline whitespace-nowrap inline-flex items-center gap-1">
+        Découvrir <span class="material-symbols-rounded sm">arrow_forward</span>
+      </a>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
+      {% for stock in featured|slice:":5" %}
+      {% include "web/partials/product_card.html" with stock=stock show_availability=False %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="bg-white rounded-3xl border border-slate-100 p-5 lg:p-8 shadow-card">
+    <div class="flex items-end justify-between gap-3 mb-5 min-w-0">
+      <div class="min-w-0">
+        <h2 class="text-xl lg:text-2xl font-extrabold text-ink tracking-tight inline-flex items-center gap-2">
+          <span class="material-symbols-rounded filled text-secondary">sell</span> Promotions
+        </h2>
+        <p class="text-sm text-ink-muted mt-1 font-medium">Offres limitées sur les pharmacies partenaires</p>
+      </div>
+      <a href="{% url 'search' %}" class="text-sm font-bold text-primary hover:underline whitespace-nowrap">Toutes →</a>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 lg:gap-4">
+      {% for stock in promos %}
+      {% include "web/partials/product_card.html" with stock=stock show_availability=False %}
+      {% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <div class="flex items-end justify-between gap-3 mb-5 min-w-0">
+      <div class="min-w-0">
+        <h2 class="text-xl lg:text-2xl font-extrabold text-ink tracking-tight">Pharmacies partenaires</h2>
+        <p class="text-sm text-ink-muted mt-1 font-medium">Officines vérifiées à Libreville et environs</p>
+      </div>
+      <a href="{% url 'pharmacy_list' %}" class="text-sm font-bold text-primary hover:underline whitespace-nowrap inline-flex items-center gap-1">
+        Voir toutes <span class="material-symbols-rounded sm">arrow_forward</span>
+      </a>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for pharmacy in pharmacies %}
+      <a href="{% url 'pharmacy_detail' pharmacy.slug %}" class="bg-white border border-slate-100 rounded-2xl p-4 flex gap-3 hover:shadow-lift hover:border-primary/25 transition">
+        <div class="h-12 w-12 rounded-xl bg-primary-50 text-primary flex items-center justify-center shrink-0 overflow-hidden">
+          {% if pharmacy.logo %}
+          <img src="{{ pharmacy.logo.url }}" alt="" class="h-full w-full object-cover">
+          {% else %}
+          <span class="material-symbols-rounded filled lg">local_pharmacy</span>
+          {% endif %}
+        </div>
+        <div class="min-w-0">
+          <h3 class="font-bold text-sm text-ink truncate tracking-tight">{{ pharmacy.name }}</h3>
+          <p class="text-xs text-ink-muted mt-0.5 truncate font-medium">{{ pharmacy.district }}, {{ pharmacy.city }}</p>
+          <p class="text-xs text-primary mt-1 font-semibold inline-flex items-center gap-0.5">
+            <span class="material-symbols-rounded sm filled text-amber-500">star</span>
+            {{ pharmacy.rating }} · {{ pharmacy.status_label }}
+          </p>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section>
+    <h2 class="text-xl lg:text-2xl font-extrabold text-ink tracking-tight mb-5">Conseils pharmacien</h2>
+    <div class="grid md:grid-cols-3 gap-4">
+      {% for tip in tips %}
+      <article class="bg-white border border-slate-100 rounded-2xl overflow-hidden hover:shadow-lift transition">
+        <div class="h-36 bg-gradient-to-br from-primary-100 to-secondary-50 flex items-center justify-center overflow-hidden">
+          {% if tip.cover_image %}
+          <img src="{{ tip.cover_image.url }}" alt="" class="h-full w-full object-cover">
+          {% else %}
+          <span class="material-symbols-rounded filled text-primary" style="font-size:3rem">{{ tip.icon|default:"health_and_safety" }}</span>
+          {% endif %}
+        </div>
+        <div class="p-4">
+          <p class="text-[11px] text-primary font-bold uppercase tracking-wide">{{ tip.category|default:"Santé" }}{% if tip.pharmacy %} · {{ tip.pharmacy.name }}{% endif %}</p>
+          <h3 class="font-bold text-ink mt-1 text-sm tracking-tight">{{ tip.title }}</h3>
+          {% if tip.excerpt %}<p class="text-xs text-ink-muted mt-2 line-clamp-2 font-medium">{{ tip.excerpt }}</p>{% endif %}
+        </div>
+      </article>
+      {% empty %}
+      <p class="col-span-full text-sm text-ink-muted">Les conseils des pharmacies partenaires apparaîtront ici.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if ads_bottom %}
+  <section>
+    <p class="text-xs font-bold text-ink-muted uppercase tracking-wide mb-3">Partenaires paiement</p>
+    {% for ad in ads_bottom %}
+    <a href="{{ ad.link_url|default:'#' }}" {% if ad.link_url %}target="_blank" rel="noopener"{% endif %} class="block rounded-3xl overflow-hidden border border-slate-100 hover:shadow-lift transition mb-3 last:mb-0 bg-canvas">
+      {% if ad.image %}
+      <img src="{{ ad.image.url }}" alt="{{ ad.title }}" class="w-full h-36 sm:h-48 object-cover" loading="lazy">
+      {% endif %}
+      <p class="px-3 py-2 text-sm font-bold text-ink">{{ ad.title }}</p>
+    </a>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if labs %}
+  <section>
+    <h2 class="text-xl lg:text-2xl font-extrabold text-ink tracking-tight mb-5">Laboratoires &amp; marques</h2>
+    <div class="flex flex-wrap gap-3">
+      {% for lab in labs %}
+      <a href="{% url 'search' %}?q={{ lab|urlencode }}" class="px-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm font-bold text-ink hover:border-primary hover:text-primary transition tracking-tight">{{ lab }}</a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="bg-white rounded-3xl border border-slate-100 p-6 lg:p-8">
+    <div class="flex items-start gap-3 mb-3">
+      <img src="/static/images/logo-gabpharma.png" alt="" class="h-10 w-auto">
+      <h2 class="text-lg font-extrabold text-ink tracking-tight pt-1">Faites confiance à Gab'Pharma</h2>
+    </div>
+    <div class="text-ink-muted space-y-3 text-sm leading-relaxed max-w-4xl font-medium">
+      <p>Gab'Pharma est la plateforme nationale de recherche, réservation et livraison de médicaments conçue pour le marché gabonais. Elle relie patients, officines partenaires, livreurs et autorités sanitaires.</p>
+      <p>Tous les médicaments proposés proviennent de pharmacies agréées. La disponibilité en stock n'est affichée qu'après une recherche explicite.</p>
+    </div>
+  </section>
+
+</div>
+{% endblock %}

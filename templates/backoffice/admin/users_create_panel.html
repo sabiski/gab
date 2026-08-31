@@ -1,0 +1,26 @@
+<section class="bg-white rounded-2xl border p-5 mb-4">
+  <div class="flex justify-between mb-3">
+    <h2 class="font-extrabold">Nouveau compte</h2>
+    <a href="{% url 'bo_admin_users' %}" class="text-xs font-bold text-ink-muted">Fermer</a>
+  </div>
+  <p class="text-xs text-ink-muted font-medium mb-3">Patients : inscription libre. Compagnies d'assurance : <a href="{% url 'insurer_register' %}" class="text-primary font-bold underline">inscription publique</a> puis validation dans Assurances — pilotage. Ici : autres comptes professionnels avec envoi des identifiants par e-mail.</p>
+  <form method="post" enctype="multipart/form-data" class="grid sm:grid-cols-3 gap-2 text-sm">
+    {% csrf_token %}<input type="hidden" name="action" value="create">
+    <input name="username" required placeholder="Identifiant *" class="border rounded-xl px-3 py-2">
+    <input name="first_name" placeholder="Prénom" class="border rounded-xl px-3 py-2">
+    <input name="last_name" placeholder="Nom" class="border rounded-xl px-3 py-2">
+    <input name="email" type="email" required placeholder="E-mail *" class="border rounded-xl px-3 py-2">
+    <input name="phone" placeholder="Téléphone" class="border rounded-xl px-3 py-2">
+    <input name="city" value="Libreville" class="border rounded-xl px-3 py-2">
+    <select name="role" class="border rounded-xl px-3 py-2">
+      {% for val, label in create_roles %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+    </select>
+    <input name="institution" placeholder="Institution (autorité)" class="border rounded-xl px-3 py-2">
+    <input name="password" type="password" placeholder="MDP (vide = généré)" class="border rounded-xl px-3 py-2">
+    <label class="flex items-center gap-2 text-xs font-semibold border rounded-xl px-3 py-2">
+      <input type="checkbox" name="send_email" value="on" checked> Envoyer par e-mail
+    </label>
+    {% include "backoffice/partials/image_field.html" with name="avatar" label="Photo" %}
+    <button class="bg-primary text-white font-bold rounded-xl py-2 sm:col-span-2">Créer et envoyer les accès</button>
+  </form>
+</section>

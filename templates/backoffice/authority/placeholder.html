@@ -1,0 +1,39 @@
+{% extends "backoffice/authority/base_authority.html" %}
+{% block auth_page_title %}{{ page_title }}{% endblock %}
+{% block auth_content %}
+<header class="auth-national-header">
+  <div class="auth-national-header__title">
+    <h1>{{ page_title }}</h1>
+    <p>{{ page_subtitle }}</p>
+  </div>
+  <div class="auth-national-header__actions">
+    <a href="{% url 'bo_authority_dashboard' %}" class="auth-filter-btn auth-filter-btn--outline">
+      <span class="material-symbols-rounded text-sm">arrow_back</span> Tableau de bord
+    </a>
+  </div>
+</header>
+
+<div class="auth-panel auth-coming-soon">
+  <span class="material-symbols-rounded auth-coming-soon__icon">construction</span>
+  <h2>Section en cours de déploiement</h2>
+  <p>{{ page_subtitle }}</p>
+  <p class="text-sm text-ink-muted mt-2">Vous pourrez bientôt accéder à l'ensemble des fonctionnalités de cette page. Envoyez-nous l'image de référence pour accélérer l'intégration.</p>
+</div>
+
+{% if preview_alerts %}
+<section class="auth-panel mt-4">
+  <h3>Aperçu des alertes récentes</h3>
+  <ul class="auth-alert-feed">
+    {% for a in preview_alerts %}
+    <li class="auth-alert-feed__item">
+      <span class="auth-alert-feed__badge auth-alert-feed__badge--{{ a.level }}">{{ a.level_label }}</span>
+      <div>
+        <p class="auth-alert-feed__title">{{ a.title }}</p>
+        <p class="auth-alert-feed__meta">{{ a.zone }} · {{ a.time_ago }}</p>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

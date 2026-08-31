@@ -1,0 +1,103 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Admin{% endblock %}
+{% block bo_label %}Super Administration{% endblock %}
+{% block bo_title %}Tableau de bord plateforme{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/stats-mobile.css?v=1">
+{% endblock %}
+{% block bo_content %}
+<div class="stats-portal stats-portal--admin">
+<div class="stats-kpi-scroll mb-6">
+  <div class="stats-kpi-card">
+    <p class="stats-kpi-card__label">Utilisateurs</p>
+    <p class="stats-kpi-card__value stats-kpi-card__value--neutral">{{ stats.users }}</p>
+    <p class="stats-kpi-card__sub">{{ stats.clients }} clients</p>
+  </div>
+  <div class="stats-kpi-card">
+    <p class="stats-kpi-card__label">Pharmacies actives</p>
+    <p class="stats-kpi-card__value">{{ stats.pharmacies_active }}</p>
+    <p class="stats-kpi-card__sub">{{ stats.pharmacies_pending }} en attente</p>
+  </div>
+  <div class="stats-kpi-card">
+    <p class="stats-kpi-card__label">Commandes</p>
+    <p class="stats-kpi-card__value stats-kpi-card__value--neutral">{{ stats.orders }}</p>
+    <p class="stats-kpi-card__sub">{{ stats.orders_today }} aujourd'hui</p>
+  </div>
+  <div class="stats-kpi-card">
+    <p class="stats-kpi-card__label">Paiements réussis</p>
+    <p class="stats-kpi-card__value">{{ stats.revenue|floatformat:0 }} F</p>
+    <p class="stats-kpi-card__sub">{{ stats.incidents_open }} incidents</p>
+  </div>
+</div>
+
+<div class="grid lg:grid-cols-3 gap-4 mb-6">
+  <section class="lg:col-span-2 bg-white rounded-2xl border p-5">
+    <h2 class="font-extrabold mb-3 tracking-tight">Commandes — 14 derniers jours</h2>
+    <div class="h-56 sm:h-64 min-w-0"><canvas id="chartOrders"></canvas></div>
+  </section>
+  <section class="bg-white rounded-2xl border p-5">
+    <h2 class="font-extrabold mb-3 tracking-tight">Répartition des rôles</h2>
+    <div class="h-56 sm:h-64 min-w-0"><canvas id="chartRoles"></canvas></div>
+  </section>
+  <section class="bg-white rounded-2xl border p-5">
+    <h2 class="font-extrabold mb-3 tracking-tight">Commandes par statut</h2>
+    <div class="h-56 sm:h-64 min-w-0"><canvas id="chartStatuses"></canvas></div>
+  </section>
+  <section class="lg:col-span-2 bg-white rounded-2xl border p-5">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="font-extrabold tracking-tight">Activité récente</h2>
+      <a href="{% url 'bo_admin_orders' %}" class="text-xs font-bold text-primary">Voir tout</a>
+    </div>
+    {% for o in recent_orders %}
+    <div class="flex justify-between gap-2 text-sm py-2 border-b border-slate-50 min-w-0">
+      <div class="min-w-0">
+        <p class="font-bold truncate">{{ o.code }}</p>
+        <p class="text-xs text-ink-muted truncate">{{ o.client }} · {{ o.pharmacy.name|default:"—" }}</p>
+      </div>
+      <div class="text-right shrink-0">
+        <p class="font-bold text-primary">{{ o.total }} F</p>
+        <p class="text-[11px] text-ink-muted">{{ o.get_status_display }}</p>
+      </div>
+    </div>
+    {% empty %}<p class="text-sm text-ink-muted">Aucune commande.</p>{% endfor %}
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  const charts = {{ charts_json|safe }};
+  const green = '#228545';
+  const lime = '#8DC63F';
+  const palette = ['#228545','#8DC63F','#015533','#F59E0B','#EF4444','#0EA5E9','#8B5CF6','#64748B'];
+
+  new Chart(document.getElementById('chartOrders'), {
+    type: 'line',
+    data: {
+      labels: charts.orders.labels,
+      datasets: [{
+        label: 'Commandes',
+        data: charts.orders.data,
+        borderColor: green,
+        backgroundColor: 'rgba(34,133,69,.12)',
+        fill: true,
+        tension: 0.35,
+        pointRadius: 3,
+      }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+
+  new Chart(document.getElementById('chartRoles'), {
+    type: 'doughnut',
+    data: { labels: charts.roles.labels, datasets: [{ data: charts.roles.data, backgroundColor: palette }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+  });
+
+  new Chart(document.getElementById('chartStatuses'), {
+    type: 'bar',
+    data: { labels: charts.statuses.labels, datasets: [{ data: charts.statuses.data, backgroundColor: green, borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+</script>
+</div>
+{% endblock %}

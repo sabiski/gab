@@ -1,0 +1,18 @@
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="flex flex-wrap items-center justify-between gap-3 mt-4 text-sm">
+  <p class="text-ink-muted font-medium">
+    {{ page_obj.start_index }}–{{ page_obj.end_index }} sur {{ page_obj.paginator.count }}
+  </p>
+  <div class="flex items-center gap-1">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if filter_role %}&role={{ filter_role }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}{% if filter_category %}&category={{ filter_category }}{% endif %}"
+      class="px-3 py-1.5 rounded-lg border bg-white hover:bg-canvas font-bold">←</a>
+    {% endif %}
+    <span class="px-3 py-1.5 font-bold text-primary">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if filter_role %}&role={{ filter_role }}{% endif %}{% if filter_status %}&status={{ filter_status }}{% endif %}{% if filter_category %}&category={{ filter_category }}{% endif %}"
+      class="px-3 py-1.5 rounded-lg border bg-white hover:bg-canvas font-bold">→</a>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}

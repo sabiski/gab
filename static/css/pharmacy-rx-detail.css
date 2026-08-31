@@ -1,0 +1,928 @@
+/* Détail ordonnance — pharmacien (responsive mobile → desktop) */
+
+.rx-detail {
+  --rx-primary: #6c3aed;
+  --rx-primary-50: #f5f3ff;
+  --rx-success: #16a34a;
+  --rx-warn: #f59e0b;
+  --rx-danger: #ef4444;
+  --rx-info: #2563eb;
+  --rx-ink: #1f1b27;
+  --rx-muted: #6b7280;
+  --rx-border: #e5e7eb;
+  --rx-surface: #ffffff;
+  --rx-canvas: #f3f4f6;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 1024px) {
+  .rx-detail {
+    padding-bottom: 2rem;
+  }
+}
+
+/* Barre outils */
+.rx-detail__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.rx-detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--rx-muted);
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--rx-border);
+  background: var(--rx-surface);
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.rx-detail__back:hover {
+  color: var(--rx-primary);
+  border-color: #ddd6fe;
+}
+
+.rx-detail__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--rx-ink);
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .rx-detail__title {
+    font-size: 1.375rem;
+    text-align: left;
+  }
+}
+
+.rx-detail__print {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--rx-border);
+  background: var(--rx-surface);
+  color: var(--rx-muted);
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.rx-detail__print:hover {
+  color: var(--rx-primary);
+  border-color: #ddd6fe;
+}
+
+/* Grille principale */
+.rx-detail__layout {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .rx-detail__layout {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    align-items: start;
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .rx-detail__layout {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+    gap: 1.5rem;
+  }
+}
+
+.rx-detail__main,
+.rx-detail__aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+/* Cartes */
+.rx-detail-card {
+  background: var(--rx-surface);
+  border: 1px solid var(--rx-border);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.rx-detail-card__body {
+  padding: 1rem;
+}
+
+@media (min-width: 768px) {
+  .rx-detail-card__body {
+    padding: 1.25rem;
+  }
+}
+
+/* En-tête ordonnance */
+.rx-detail-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+}
+
+.rx-detail-hero__icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #dcfce7;
+  color: var(--rx-success);
+}
+
+.rx-detail-hero__icon.is-pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.rx-detail-hero__icon.is-rejected {
+  background: #fee2e2;
+  color: var(--rx-danger);
+}
+
+.rx-detail-hero__id {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--rx-ink);
+  line-height: 1.3;
+}
+
+@media (min-width: 768px) {
+  .rx-detail-hero__id {
+    font-size: 1.125rem;
+  }
+}
+
+/* Badges statut */
+.rx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.rx-badge--pending {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+.rx-badge--validated {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.rx-badge--rejected {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.rx-badge--used {
+  background: var(--rx-primary-50);
+  color: var(--rx-primary);
+  border: 1px solid #ddd6fe;
+}
+
+/* Patient */
+.rx-detail-patient {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.rx-detail-patient__left {
+  display: flex;
+  gap: 0.875rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.rx-detail-patient__avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--rx-primary), #8b5cf6);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.rx-detail-patient__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rx-detail-patient__name {
+  font-weight: 800;
+  font-size: 0.9375rem;
+  color: var(--rx-ink);
+}
+
+.rx-detail-patient__meta {
+  font-size: 0.75rem;
+  color: var(--rx-muted);
+  margin-top: 0.15rem;
+}
+
+.rx-detail-patient__phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--rx-primary);
+  margin-top: 0.35rem;
+  text-decoration: none;
+}
+
+.rx-detail-patient__right {
+  text-align: right;
+  font-size: 0.6875rem;
+  color: var(--rx-muted);
+  flex-shrink: 0;
+}
+
+.rx-detail-patient__date {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+  font-weight: 700;
+  color: var(--rx-ink);
+  font-size: 0.75rem;
+}
+
+/* Alerte */
+.rx-detail-alert {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0.875rem;
+  background: var(--rx-primary-50);
+  border: 1px solid #ddd6fe;
+  font-size: 0.8125rem;
+  color: #4c1d95;
+  line-height: 1.45;
+}
+
+.rx-detail-alert .material-symbols-rounded {
+  color: var(--rx-primary);
+  flex-shrink: 0;
+}
+
+/* Section titre */
+.rx-detail-section__title {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--rx-ink);
+  margin-bottom: 0.75rem;
+}
+
+/* Médicaments — cartes mobile */
+.rx-med-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .rx-med-cards {
+    display: none;
+  }
+}
+
+.rx-med-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--rx-border);
+  border-radius: 0.875rem;
+  background: #fafafa;
+}
+
+.rx-med-card__thumb {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.5rem;
+  background: #fff;
+  border: 1px solid var(--rx-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.rx-med-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.rx-med-card__name {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--rx-ink);
+}
+
+.rx-med-card__form {
+  font-size: 0.6875rem;
+  color: var(--rx-muted);
+}
+
+.rx-med-card__grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  font-size: 0.6875rem;
+}
+
+.rx-med-card__grid dt {
+  color: var(--rx-muted);
+  font-weight: 600;
+}
+
+.rx-med-card__grid dd {
+  font-weight: 800;
+  color: var(--rx-ink);
+  margin: 0;
+}
+
+.rx-med-card__posology {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: var(--rx-muted);
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--rx-border);
+}
+
+/* Médicaments — tableau tablette+ */
+.rx-med-table-wrap {
+  display: none;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 768px) {
+  .rx-med-table-wrap {
+    display: block;
+  }
+}
+
+.rx-med-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.rx-med-table th {
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--rx-muted);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--rx-border);
+  white-space: nowrap;
+}
+
+.rx-med-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: top;
+  color: var(--rx-ink);
+}
+
+.rx-med-table tr:last-child td {
+  border-bottom: none;
+}
+
+.rx-med-table__product {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 10rem;
+}
+
+.rx-med-table__thumb {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--rx-border);
+  background: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rx-med-table__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Prescripteur */
+.rx-detail-doctor {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.rx-detail-doctor__avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background: var(--rx-canvas);
+  color: var(--rx-primary);
+  font-weight: 800;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rx-detail-doctor__name {
+  font-weight: 800;
+  font-size: 0.875rem;
+  color: var(--rx-ink);
+}
+
+.rx-detail-doctor__role {
+  font-size: 0.6875rem;
+  color: var(--rx-muted);
+}
+
+.rx-detail-doctor__call {
+  margin-left: auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  background: var(--rx-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.rx-detail-doctor__call:hover {
+  opacity: 0.9;
+}
+
+/* Pièce jointe */
+.rx-detail-file {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.rx-detail-file__icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.65rem;
+  background: #fee2e2;
+  color: var(--rx-danger);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rx-detail-file__name {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  color: var(--rx-ink);
+}
+
+.rx-detail-file__size {
+  font-size: 0.6875rem;
+  color: var(--rx-muted);
+}
+
+.rx-detail-file__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.rx-detail-file__btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--rx-border);
+  background: #fff;
+  color: var(--rx-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.rx-detail-file__btn:hover {
+  color: var(--rx-primary);
+  border-color: #ddd6fe;
+}
+
+/* Aperçu document */
+.rx-detail-preview {
+  border-radius: 0.875rem;
+  overflow: hidden;
+  border: 1px solid var(--rx-border);
+  background: var(--rx-canvas);
+}
+
+.rx-detail-preview img {
+  display: block;
+  width: 100%;
+  max-height: min(50vh, 28rem);
+  object-fit: contain;
+  margin: 0 auto;
+  background: #fff;
+}
+
+.rx-detail-preview iframe,
+.rx-detail-preview embed {
+  display: block;
+  width: 100%;
+  height: min(50vh, 28rem);
+  border: none;
+  background: #fff;
+}
+
+@media (min-width: 1024px) {
+  .rx-detail-preview img,
+  .rx-detail-preview iframe,
+  .rx-detail-preview embed {
+    max-height: min(60vh, 32rem);
+    height: min(60vh, 32rem);
+  }
+}
+
+/* Historique */
+.rx-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rx-timeline__item {
+  display: flex;
+  gap: 0.75rem;
+  padding-bottom: 1rem;
+  position: relative;
+}
+
+.rx-timeline__item:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 0.4375rem;
+  top: 1.125rem;
+  bottom: 0;
+  width: 2px;
+  background: var(--rx-border);
+}
+
+.rx-timeline__dot {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 9999px;
+  background: var(--rx-border);
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+  z-index: 1;
+}
+
+.rx-timeline__dot.is-done {
+  background: var(--rx-success);
+}
+
+.rx-timeline__dot.is-current {
+  background: var(--rx-warn);
+  box-shadow: 0 0 0 3px #fef3c7;
+}
+
+.rx-timeline__label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--rx-ink);
+}
+
+.rx-timeline__time {
+  font-size: 0.6875rem;
+  color: var(--rx-muted);
+  margin-top: 0.1rem;
+}
+
+/* Commentaires */
+.rx-detail-quote {
+  font-size: 0.8125rem;
+  color: var(--rx-muted);
+  line-height: 1.55;
+  font-style: italic;
+  padding: 0.75rem 1rem;
+  background: #fafafa;
+  border-radius: 0.75rem;
+  border-left: 3px solid var(--rx-primary);
+}
+
+/* Actions — barre fixe mobile */
+.rx-detail__actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid var(--rx-border);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -4px 24px rgba(15, 23, 42, 0.08);
+}
+
+@media (min-width: 1024px) {
+  .rx-detail__actions {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    margin-top: 0.5rem;
+  }
+
+  .rx-detail__actions--desktop-top {
+    display: flex;
+    margin-bottom: 0.25rem;
+  }
+
+  .rx-detail__actions--mobile {
+    display: none;
+  }
+}
+
+@media (max-width: 1023px) {
+  .rx-detail__actions--desktop-top {
+    display: none;
+  }
+}
+
+.rx-detail__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .rx-detail__btn {
+    width: auto;
+    min-width: 12rem;
+    flex: 1;
+  }
+}
+
+.rx-detail__btn--reject {
+  background: #fff;
+  border-color: #fecaca;
+  color: var(--rx-danger);
+}
+
+.rx-detail__btn--reject:hover {
+  background: #fef2f2;
+}
+
+.rx-detail__btn--validate {
+  background: var(--rx-success);
+  color: #fff;
+}
+
+.rx-detail__btn--validate:hover {
+  opacity: 0.92;
+}
+
+.rx-detail__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Panneaux refus / validation */
+.rx-detail-forms {
+  display: none;
+  gap: 1rem;
+}
+
+.rx-detail-forms.is-open {
+  display: grid;
+}
+
+@media (min-width: 768px) {
+  .rx-detail-forms.is-open {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.rx-detail-form-panel {
+  padding: 1rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--rx-border);
+  background: #fff;
+}
+
+.rx-detail-form-panel--validate {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.rx-detail-form-panel--reject {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.rx-detail-form-panel label,
+.rx-detail-form-panel input,
+.rx-detail-form-panel select {
+  display: block;
+  width: 100%;
+  font-size: 0.8125rem;
+}
+
+.rx-detail-form-panel input,
+.rx-detail-form-panel select {
+  margin-top: 0.35rem;
+  border: 1px solid var(--rx-border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.rx-detail-form-panel button[type="submit"] {
+  margin-top: 0.65rem;
+  width: 100%;
+  padding: 0.65rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+}
+
+/* Masquer éléments aside sur mobile si dupliqués */
+.rx-detail__aside .rx-detail-preview {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .rx-detail__main .rx-detail-preview--mobile-only {
+    display: none;
+  }
+
+  .rx-detail__aside .rx-detail-preview {
+    display: block;
+  }
+}
+
+/* Modale plein écran */
+.rx-detail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+}
+
+.rx-detail-modal.is-hidden {
+  display: none;
+}
+
+.rx-detail-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.rx-detail-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 64rem;
+  margin: auto;
+  background: #fff;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 100dvh;
+}
+
+@media (min-width: 768px) {
+  .rx-detail-modal__panel {
+    margin: 1.5rem auto;
+    border-radius: 1rem;
+    max-height: calc(100dvh - 3rem);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.rx-detail-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--rx-border);
+  flex-shrink: 0;
+}
+
+.rx-detail-modal__body {
+  flex: 1;
+  overflow: auto;
+  padding: 0.5rem;
+  background: var(--rx-canvas);
+}
+
+.rx-detail-modal__body iframe,
+.rx-detail-modal__body img {
+  width: 100%;
+  min-height: 70dvh;
+  object-fit: contain;
+}
+
+/* Impression */
+@media print {
+  .rx-detail__toolbar,
+  .rx-detail__actions,
+  .rx-detail__actions--desktop-top,
+  .bo-sidebar,
+  .bo-shell__header,
+  #bo-menu-btn {
+    display: none !important;
+  }
+
+  .rx-detail {
+    padding: 0;
+    max-width: none;
+  }
+
+  .rx-detail__layout {
+    display: block;
+  }
+}
