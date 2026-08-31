@@ -4,14 +4,49 @@ Plateforme nationale du médicament (Gabon)
 """
 from datetime import timedelta
 from pathlib import Path
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure-gabpharma-dev-change-me-in-production-2026"
 
-DEBUG = True
+def _load_dotenv():
+    env_path = BASE_DIR / ".env"
+    if not env_path.is_file():
+        return
+    for raw in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
 
-ALLOWED_HOSTS = ["*"]
+
+_load_dotenv()
+
+
+def _env_bool(key: str, *, default: bool = False) -> bool:
+    raw = os.environ.get(key)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_list(key: str, *, default: str = "") -> list[str]:
+    raw = os.environ.get(key, default)
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+SECRET_KEY = os.environ.get(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-gabpharma-dev-change-me-in-production-2026",
+)
+
+DEBUG = _env_bool("DJANGO_DEBUG", default=True)
+
+ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", default="*")
 
 # Tunnel de démo (Cloudflare / ngrok / localtunnel) : login et formulaires en HTTPS
 CSRF_TRUSTED_ORIGINS = [
@@ -27,6 +62,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://*.localhost.run",
     "https://*.serveo.net",
 ]
+CSRF_TRUSTED_ORIGINS.extend(_env_list("DJANGO_CSRF_TRUSTED_ORIGINS"))
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 
@@ -96,6 +132,39 @@ DATABASES = {
     }
 }
 
+_db_engine = os.environ.get("DB_ENGINE", "").strip()
+if _db_engine in {"mysql", "django.db.backends.mysql"}:
+    import pymysql
+
+    pymysql.install_as_MySQLdb()
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.environ.get("DB_NAME", "gabbdd"),
+            "USER": os.environ.get("DB_USER", "gabbdd"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+            "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
+            "PORT": os.environ.get("DB_PORT", "3306"),
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+            "CONN_MAX_AGE": int(os.environ.get("DB_CONN_MAX_AGE", "60")),
+        }
+    }
+elif _db_engine == "django.db.backends.postgresql":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DB_NAME", "gabpharma"),
+            "USER": os.environ.get("DB_USER", "gabpharma"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+            "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
+            "PORT": os.environ.get("DB_PORT", "5432"),
+            "CONN_MAX_AGE": int(os.environ.get("DB_CONN_MAX_AGE", "60")),
+        }
+    }
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -151,6 +220,53 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOWED_ORIGINS = _env_list("CORS_ALLOWED_ORIGINS")
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = _env_bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = _env_bool("DJANGO_HSTS_PRELOAD", default=True)
+    SECURE_REFERRER_POLICY = "same-origin"
+
+_log_file = Path(os.environ.get("DJANGO_LOG_FILE", str(BASE_DIR / "logs" / "django.log")))
+try:
+    _log_file.parent.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+        "file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(_log_file),
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 5,
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"] if DEBUG else ["file"],
+        "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
+    },
+}
 
 # --- Brand Gab'Pharma ---
 GABPHARMA = {
@@ -175,25 +291,6 @@ LOGOUT_REDIRECT_URL = "home"
 # --- E-mail (identifiants de connexion) ---
 # Sans SMTP configuré : les mails s'affichent dans la console du serveur.
 # Avec EMAIL_HOST_USER + EMAIL_HOST_PASSWORD : envoi réel (voir .env.example).
-import os
-
-
-def _load_dotenv():
-    env_path = BASE_DIR / ".env"
-    if not env_path.is_file():
-        return
-    for raw in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = value
-
-
-_load_dotenv()
 
 SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Gab'Pharma <noreply@gabpharma.ga>")

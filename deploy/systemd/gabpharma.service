@@ -1,0 +1,23 @@
+[Unit]
+Description=Gab'Pharma — Gunicorn (Django)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=notify
+User=gabpharma
+Group=www-data
+WorkingDirectory=/var/www/gabpharma
+EnvironmentFile=/var/www/gabpharma/.env
+Environment=DJANGO_SETTINGS_MODULE=config.settings_prod
+ExecStart=/var/www/gabpharma/.venv/bin/gunicorn config.wsgi:application \
+    --config /var/www/gabpharma/deploy/gunicorn.conf.py
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=30
+PrivateTmp=true
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
