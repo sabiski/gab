@@ -27,3 +27,6 @@ else:
 admin.site.site_header = "Gab'Pharma (technique)"
 admin.site.site_title = "Gab'Pharma"
 admin.site.index_title = "Accès technique — préférer /espace/"
+
+handler404 = "core.error_views.page_not_found"
+handler500 = "core.error_views.server_error"

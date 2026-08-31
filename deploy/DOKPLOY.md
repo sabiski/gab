@@ -11,7 +11,8 @@ Un **502 Bad Gateway** signifie que Traefik (Dokploy) n'atteint pas Gunicorn dan
 |-----------|--------|
 | **Build type** | Dockerfile |
 | **Dockerfile** | `Dockerfile` (racine) |
-| **Port conteneur** | `8000` |
+| **Port conteneur** | `8000` (pas 3000 !) |
+| **Domaine → Port** | `gabpharma.online` → **8000** |
 | **Health check** | `/health/` |
 
 ### Variables d'environnement (obligatoires)
