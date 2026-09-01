@@ -5,6 +5,7 @@ import hashlib
 import logging
 import secrets
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Any
 
 from django.contrib.auth import get_user_model
@@ -169,7 +170,7 @@ def start_pending_login(request, user, *, next_url: str = "") -> SendResult:
     request.session[SESSION_USER_KEY] = user.pk
     request.session[SESSION_CODE_HASH_KEY] = _hash_code(user.pk, code)
     request.session[SESSION_EXPIRES_KEY] = (
-        timezone.now() + timezone.timedelta(minutes=CODE_TTL_MINUTES)
+        timezone.now() + timedelta(minutes=CODE_TTL_MINUTES)
     ).isoformat()
     request.session[SESSION_METHOD_KEY] = method
     request.session[SESSION_NEXT_KEY] = next_url or ""
@@ -189,7 +190,7 @@ def resend_code(request) -> SendResult:
     method = request.session.get(SESSION_METHOD_KEY) or resolve_method(user)
     request.session[SESSION_CODE_HASH_KEY] = _hash_code(user.pk, code)
     request.session[SESSION_EXPIRES_KEY] = (
-        timezone.now() + timezone.timedelta(minutes=CODE_TTL_MINUTES)
+        timezone.now() + timedelta(minutes=CODE_TTL_MINUTES)
     ).isoformat()
     request.session[SESSION_ATTEMPTS_KEY] = 0
     request.session.modified = True
@@ -234,12 +235,16 @@ def verify_code(request, code: str) -> VerifyResult:
 
     expires_raw = request.session.get(SESSION_EXPIRES_KEY)
     if expires_raw:
-        expires = timezone.datetime.fromisoformat(expires_raw)
-        if timezone.is_naive(expires):
-            expires = timezone.make_aware(expires)
-        if timezone.now() > expires:
+        try:
+            expires = datetime.fromisoformat(expires_raw)
+            if timezone.is_naive(expires):
+                expires = timezone.make_aware(expires)
+            if timezone.now() > expires:
+                clear_pending(request)
+                return VerifyResult(ok=False, error="Code expiré. Reconnectez-vous.")
+        except (TypeError, ValueError):
             clear_pending(request)
-            return VerifyResult(ok=False, error="Code expiré. Reconnectez-vous.")
+            return VerifyResult(ok=False, error="Session expirée. Reconnectez-vous.")
 
     entered = "".join(c for c in (code or "") if c.isdigit())
     if len(entered) != 6:
