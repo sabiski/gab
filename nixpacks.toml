@@ -1,6 +1,6 @@
 # Dokploy / Nixpacks — si Dockerfile non utilisé
 [start]
-cmd = "python manage.py migrate_deploy && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 120"
+cmd = "python manage.py migrate_deploy && (test -n \"$SUPERADMIN_PASSWORD\" && python manage.py ensure_superadmin || true) && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --threads 2 --timeout 120"
 
 [variables]
 DJANGO_SETTINGS_MODULE = "config.settings_prod"

@@ -4,6 +4,11 @@ set -e
 echo "==> Migrations (auto-réparation déploiement)"
 python manage.py migrate_deploy
 
+if [ -n "${SUPERADMIN_PASSWORD:-}" ]; then
+  echo "==> Super administrateur"
+  python manage.py ensure_superadmin
+fi
+
 echo "==> Fichiers statiques"
 python manage.py collectstatic --noinput
 
