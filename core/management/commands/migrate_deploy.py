@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import re
-import sys
 from io import StringIO
 
 from django.core.management import call_command
@@ -42,7 +41,14 @@ class Command(BaseCommand):
                         f"[{attempt}] Table existante → fake {migration}"
                     )
                 )
-                call_command("migrate", migration, "--fake", verbosity=1)
+                app_label, migration_name = migration.split(".", 1)
+                call_command(
+                    "migrate",
+                    app_label,
+                    migration_name,
+                    fake=True,
+                    verbosity=1,
+                )
 
         raise RuntimeError(
             f"Trop de conflits de migration (>{_MAX_AUTO_FAKE}). "
