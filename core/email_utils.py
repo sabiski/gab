@@ -10,35 +10,7 @@ from django.core.mail import EmailMultiAlternatives, send_mail
 
 logger = logging.getLogger("gabpharma.mail")
 
-_USER_MAIL_ERRORS = (
-    "impossible d'envoyer",
-    "réessayez plus tard",
-    "service e-mail temporairement indisponible",
-    "contactez le support",
-)
-
-
-def mail_error_for_user(technical_error: str = "") -> str:
-    """Message générique affiché à l'utilisateur (jamais le détail SMTP)."""
-    raw = (technical_error or "").lower()
-    if any(marker in raw for marker in _USER_MAIL_ERRORS):
-        return technical_error.strip()
-    if (
-        "535" in raw
-        or "authentication failed" in raw
-        or "authentication" in raw
-        or "invalid credentials" in raw
-        or "username and password not accepted" in raw
-    ):
-        return (
-            "L'envoi du message a échoué. Réessayez plus tard ou contactez le support."
-        )
-    if "connection" in raw or "timeout" in raw or "unreachable" in raw:
-        return "Service e-mail temporairement indisponible. Réessayez dans quelques minutes."
-    return "Impossible d'envoyer l'e-mail pour le moment. Réessayez plus tard."
-
-
-@dataclass
+from core.mail_messages import mail_error_for_user
 class MailDeliveryResult:
     ok: bool
     mode: str = "skipped"  # smtp | console | skipped | failed
@@ -50,9 +22,9 @@ class MailDeliveryResult:
             return ""
         if self.error in {"Aucun destinataire."}:
             return self.error
-        return mail_error_for_user(self.error)
+        return mail_error_for_user(self.error, context="generic")
 
-    def notice(self, *, plain_password: str = "") -> str:
+    def notice(self, *, plain_password: str = "", context: str = "admin") -> str:
         """Message utilisateur court (flash Django)."""
         if self.ok and self.mode == "smtp":
             return "Identifiants envoyés par e-mail."
@@ -64,7 +36,7 @@ class MailDeliveryResult:
         if plain_password:
             return f"Mot de passe temporaire : {plain_password}"
         if self.error:
-            return f"E-mail non envoyé : {self.user_message}"
+            return mail_error_for_user(self.error, context=context)
         return ""
 
 

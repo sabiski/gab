@@ -24,6 +24,7 @@ from accounts.two_factor import (
     two_factor_enabled,
     verify_code,
 )
+from core.mail_messages import mail_error_for_user
 from accounts.mail import (
     build_credentials_email,
     generate_temp_password,
@@ -630,9 +631,7 @@ def login_view(request):
                             f"à {send_result.destination_masked}."
                         )
                         return redirect("two_factor_verify")
-                    error = send_result.error or (
-                        "Impossible d'envoyer le code de vérification. Réessayez plus tard."
-                    )
+                    error = send_result.error or mail_error_for_user(context="login")
                 else:
                     login(request, user)
                     if next_url and url_has_allowed_host_and_scheme(
@@ -693,7 +692,7 @@ def two_factor_resend_view(request):
     else:
         request.session[SESSION_FLASH_KEY] = (
             result.error
-            or "Impossible de renvoyer le code. Réessayez plus tard."
+            or mail_error_for_user(context="login")
         )
     return redirect("two_factor_verify")
 

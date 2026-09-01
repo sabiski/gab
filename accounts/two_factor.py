@@ -12,6 +12,7 @@ from django.utils import timezone
 
 from accounts.models import AuthorityProfile, PlatformSettings
 from core.email_utils import deliver_email
+from core.mail_messages import mail_error_for_user
 from notifications.providers.sms import send_sms_notification
 
 logger = logging.getLogger("gabpharma.2fa")
@@ -147,7 +148,11 @@ def _send_email_code(user, subject: str, body: str, code: str) -> SendResult:
         recipient_list=[user.email],
     )
     if not delivery.ok:
-        return SendResult(ok=False, method="email", error=delivery.user_message)
+        return SendResult(
+            ok=False,
+            method="email",
+            error=mail_error_for_user(delivery.error, context="login"),
+        )
     print(f"\n[Gab'Pharma 2FA] Code pour {user.email} : {code}\n", flush=True)
     return SendResult(
         ok=True,

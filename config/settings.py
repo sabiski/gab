@@ -66,6 +66,25 @@ CSRF_TRUSTED_ORIGINS.extend(_env_list("DJANGO_CSRF_TRUSTED_ORIGINS"))
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 
+
+def _csrf_origins_for_hosts(hosts: list[str], site_url: str = "") -> list[str]:
+    """Origines CSRF https/http pour chaque hôte autorisé (évite le 403 en prod)."""
+    origins: set[str] = set()
+    if site_url:
+        base = site_url.rstrip("/")
+        origins.add(base)
+        if base.startswith("https://"):
+            origins.add("http://" + base[len("https://") :])
+        elif base.startswith("http://"):
+            origins.add("https://" + base[len("http://") :])
+    for host in hosts:
+        host = (host or "").strip()
+        if not host or host == "*":
+            continue
+        origins.add(f"https://{host}")
+        origins.add(f"http://{host}")
+    return sorted(origins)
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -226,6 +245,8 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = _env_bool("DJANGO_SECURE_SSL_REDIRECT", default=True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SAMESITE = "Lax"
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
@@ -293,6 +314,11 @@ LOGOUT_REDIRECT_URL = "home"
 # Avec EMAIL_HOST_USER + EMAIL_HOST_PASSWORD : envoi réel (voir .env.example).
 
 SITE_URL = os.environ.get("SITE_URL", "http://127.0.0.1:8000")
+
+for _origin in _csrf_origins_for_hosts(ALLOWED_HOSTS, SITE_URL):
+    if _origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_origin)
+
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Gab'Pharma <noreply@gabpharma.ga>")
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
@@ -300,6 +326,7 @@ EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
 EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "0") == "1"
 EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "30"))
 
 _smtp_ready = bool(EMAIL_HOST_USER.strip() and EMAIL_HOST_PASSWORD.strip())
 EMAIL_BACKEND = os.environ.get(
