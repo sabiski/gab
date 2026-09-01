@@ -630,7 +630,9 @@ def login_view(request):
                             f"à {send_result.destination_masked}."
                         )
                         return redirect("two_factor_verify")
-                    error = send_result.error or "Impossible d'envoyer le code de vérification."
+                    error = send_result.error or (
+                        "Impossible d'envoyer le code de vérification. Réessayez plus tard."
+                    )
                 else:
                     login(request, user)
                     if next_url and url_has_allowed_host_and_scheme(
@@ -689,7 +691,10 @@ def two_factor_resend_view(request):
             f"Nouveau code envoyé par {channel} à {result.destination_masked}."
         )
     else:
-        request.session[SESSION_FLASH_KEY] = result.error or "Impossible de renvoyer le code."
+        request.session[SESSION_FLASH_KEY] = (
+            result.error
+            or "Impossible de renvoyer le code. Réessayez plus tard."
+        )
     return redirect("two_factor_verify")
 
 

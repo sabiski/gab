@@ -1,15 +1,22 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.http import JsonResponse
+from django.http import FileResponse, JsonResponse
 from django.urls import include, path
+from pathlib import Path
 
 
 def health_check(_request):
     return JsonResponse({"status": "ok"})
 
 
+def favicon(_request):
+  icon = Path(settings.BASE_DIR) / "static" / "icons" / "favicon.svg"
+  return FileResponse(icon.open("rb"), content_type="image/svg+xml")
+
+
 urlpatterns = [
+    path("favicon.ico", favicon, name="favicon"),
     path("health/", health_check, name="health"),
     path("django-admin/", admin.site.urls),  # technique uniquement
     path("api/v1/", include("api.urls")),

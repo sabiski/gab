@@ -147,7 +147,7 @@ def _send_email_code(user, subject: str, body: str, code: str) -> SendResult:
         recipient_list=[user.email],
     )
     if not delivery.ok:
-        return SendResult(ok=False, method="email", error=delivery.error)
+        return SendResult(ok=False, method="email", error=delivery.user_message)
     print(f"\n[Gab'Pharma 2FA] Code pour {user.email} : {code}\n", flush=True)
     return SendResult(
         ok=True,
