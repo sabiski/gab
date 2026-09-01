@@ -11,6 +11,9 @@ from django.core.mail import EmailMultiAlternatives, send_mail
 logger = logging.getLogger("gabpharma.mail")
 
 from core.mail_messages import mail_error_for_user
+
+
+@dataclass
 class MailDeliveryResult:
     ok: bool
     mode: str = "skipped"  # smtp | console | skipped | failed
