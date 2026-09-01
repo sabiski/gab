@@ -284,8 +284,30 @@ LOGGING = {
         },
     },
     "root": {
-        "handlers": ["console"] if DEBUG else ["file"],
+        "handlers": ["console", "file"] if not DEBUG else ["console"],
         "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console", "file"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "gabpharma": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "gabpharma.mail": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "gabpharma.2fa": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 

@@ -645,6 +645,10 @@ def login_view(request):
 
 
 def two_factor_verify_view(request):
+    import logging
+
+    logger = logging.getLogger("gabpharma.2fa")
+
     if request.user.is_authenticated:
         return redirect(request.user.backoffice_home())
     if not get_pending_user(request):
@@ -655,19 +659,26 @@ def two_factor_verify_view(request):
     info = request.session.pop(SESSION_FLASH_KEY, None)
 
     if request.method == "POST":
-        result = verify_code(request, request.POST.get("code", ""))
-        if result.ok:
-            login(request, result.user)
-            next_url = result.next_url
-            if next_url and url_has_allowed_host_and_scheme(
-                next_url, allowed_hosts={request.get_host()}
-            ):
-                return redirect(next_url)
-            return redirect(result.user.backoffice_home())
-        error = result.error
-        if result.locked:
-            messages.error(request, error)
-            return redirect("login")
+        try:
+            result = verify_code(request, request.POST.get("code", ""))
+            if result.ok:
+                login(request, result.user)
+                next_url = result.next_url
+                if next_url and url_has_allowed_host_and_scheme(
+                    next_url, allowed_hosts={request.get_host()}
+                ):
+                    return redirect(next_url)
+                return redirect(result.user.backoffice_home())
+            error = result.error
+            if result.locked:
+                messages.error(request, error)
+                return redirect("login")
+        except Exception:
+            logger.exception("Échec validation 2FA")
+            error = (
+                "Une erreur est survenue lors de la vérification. "
+                "Veuillez réessayer ou vous reconnecter."
+            )
 
     ctx = pending_context(request)
     ctx.update({"error": error, "info": info})
@@ -899,6 +910,13 @@ def backoffice_entry(request):
 @role_required(*admin_roles)
 def admin_dashboard(request):
     today = timezone.now().date()
+    incidents_open = 0
+    try:
+        incidents_open = DeliveryIncident.objects.filter(
+            status=DeliveryIncident.Status.OPEN
+        ).count()
+    except Exception:
+        pass
     stats = {
         "users": User.objects.count(),
         "clients": User.objects.filter(role=User.Role.CLIENT).count(),
@@ -913,7 +931,7 @@ def admin_dashboard(request):
         or 0,
         "couriers": User.objects.filter(role=User.Role.COURIER).count(),
         "medicines": Medicine.objects.count(),
-        "incidents_open": DeliveryIncident.objects.filter(status=DeliveryIncident.Status.OPEN).count(),
+        "incidents_open": incidents_open,
     }
     order_labels, order_data = [], []
     start = today - timedelta(days=13)
