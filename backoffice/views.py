@@ -18,7 +18,9 @@ from accounts.two_factor import (
     SESSION_FLASH_KEY,
     clear_pending,
     get_pending_user,
+    is_trusted_device,
     pending_context,
+    remember_trusted_device,
     resend_code,
     start_pending_login,
     two_factor_enabled,
@@ -622,7 +624,8 @@ def login_view(request):
                 )
             else:
                 next_url = request.GET.get("next") or request.POST.get("next") or ""
-                if two_factor_enabled():
+                needs_2fa = two_factor_enabled() and not is_trusted_device(request, user)
+                if needs_2fa:
                     send_result = start_pending_login(request, user, next_url=next_url)
                     if send_result.ok:
                         channel = "e-mail" if send_result.method == "email" else "SMS"
@@ -667,8 +670,12 @@ def two_factor_verify_view(request):
                 if next_url and url_has_allowed_host_and_scheme(
                     next_url, allowed_hosts={request.get_host()}
                 ):
-                    return redirect(next_url)
-                return redirect(result.user.backoffice_home())
+                    response = redirect(next_url)
+                else:
+                    response = redirect(result.user.backoffice_home())
+                if request.POST.get("remember_device") == "on":
+                    remember_trusted_device(response, result.user)
+                return response
             error = result.error
             if result.locked:
                 messages.error(request, error)

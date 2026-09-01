@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from django.contrib.auth import get_user_model
+from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from django.utils import timezone
 
 from accounts.models import AuthorityProfile, PlatformSettings
@@ -27,6 +28,41 @@ SESSION_ATTEMPTS_KEY = "2fa_attempts"
 SESSION_FLASH_KEY = "2fa_flash"
 
 CODE_TTL_MINUTES = 10
+TRUSTED_DEVICE_COOKIE = "gp_trusted_device"
+TRUSTED_DEVICE_DAYS = 30
+
+
+def _trusted_signer() -> TimestampSigner:
+    return TimestampSigner(salt="gabpharma-2fa-trust-v1")
+
+
+def is_trusted_device(request, user) -> bool:
+    """Appareil déjà validé par 2FA récemment (cookie « se souvenir »)."""
+    token = request.COOKIES.get(TRUSTED_DEVICE_COOKIE)
+    if not token or not user:
+        return False
+    try:
+        value = _trusted_signer().unsign(
+            token, max_age=TRUSTED_DEVICE_DAYS * 24 * 3600
+        )
+        return int(value) == user.pk
+    except (BadSignature, SignatureExpired, ValueError, TypeError):
+        return False
+
+
+def remember_trusted_device(response, user) -> None:
+    """Marque l'appareil comme fiable après une 2FA réussie."""
+    from django.conf import settings
+
+    token = _trusted_signer().sign(str(user.pk))
+    response.set_cookie(
+        TRUSTED_DEVICE_COOKIE,
+        token,
+        max_age=TRUSTED_DEVICE_DAYS * 24 * 3600,
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite="Lax",
+    )
 
 
 def two_factor_enabled() -> bool:
