@@ -1,8 +1,8 @@
 #!/bin/sh
 set -e
 
-echo "==> Migrations"
-python manage.py migrate --noinput
+echo "==> Migrations (auto-réparation déploiement)"
+python manage.py migrate_deploy
 
 echo "==> Fichiers statiques"
 python manage.py collectstatic --noinput
