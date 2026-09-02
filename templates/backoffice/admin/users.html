@@ -4,6 +4,8 @@
 {% block bo_title %}Gestion des utilisateurs{% endblock %}
 {% block bo_content %}
 
+{% include "backoffice/admin/partials/pharmacy_onboarding_guide.html" with compact=True %}
+
 <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-5">
   {% for r in role_distribution %}
   <div class="bg-white border rounded-xl px-3 py-2 text-center">

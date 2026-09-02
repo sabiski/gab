@@ -114,3 +114,7 @@ sudo -u gabpharma bash -lc 'cd /var/www/gabpharma && source .venv/bin/activate &
 ```
 
 **Erreur CSRF au login** — vérifiez `DJANGO_CSRF_TRUSTED_ORIGINS` avec `https://votre-domaine`.
+
+## Documentation métier
+
+- [Mise en service d'une pharmacie partenaire](PHARMACIE_ONBOARDING.md) — rattachement titulaire, abonnement, connexion portail

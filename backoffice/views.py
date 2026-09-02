@@ -1113,6 +1113,16 @@ def admin_users(request):
                             or AuthorityProfile.TwoFactorMethod.EMAIL,
                         },
                     )
+                elif role == User.Role.PHARMACIST:
+                    pharmacy_id = request.POST.get("pharmacy_id", "").strip()
+                    if pharmacy_id:
+                        from core.pharmacy_access import ensure_owner_membership
+
+                        pharmacy = Pharmacy.objects.filter(pk=pharmacy_id).first()
+                        if pharmacy:
+                            pharmacy.owner = user
+                            pharmacy.save(update_fields=["owner", "updated_at"])
+                            ensure_owner_membership(pharmacy)
                 _audit(request, "create_user", "users", f"Création {user.username} ({role})", True)
                 msg = f"Compte {user.username} créé."
                 if delivery:
@@ -1299,6 +1309,7 @@ def admin_users(request):
             show_import=request.GET.get("import") == "1",
             role_distribution=role_distribution,
             pending_authorities=pending_authorities,
+            pharmacies_for_link=Pharmacy.objects.order_by("name"),
         ),
     )
 
@@ -1479,6 +1490,25 @@ def admin_authorities(request):
 
 @role_required(*admin_roles)
 def admin_pharmacies(request):
+    from core.pharmacy_access import ensure_owner_membership
+
+    pharmacist_users = User.objects.filter(
+        role=User.Role.PHARMACIST,
+        status=User.Status.ACTIVE,
+    ).order_by("last_name", "first_name", "username")
+
+    def _assign_owner(pharmacy, owner_id: str):
+        owner_id = (owner_id or "").strip()
+        if not owner_id:
+            return
+        owner = pharmacist_users.filter(pk=owner_id).first()
+        if not owner:
+            messages.warning(request, "Titulaire introuvable ou rôle invalide.")
+            return
+        pharmacy.owner = owner
+        pharmacy.save(update_fields=["owner", "updated_at"])
+        ensure_owner_membership(pharmacy)
+
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "create":
@@ -1500,6 +1530,7 @@ def admin_pharmacies(request):
                 )
                 if _set_image(p, "logo", request.FILES):
                     p.save(update_fields=["logo"])
+                _assign_owner(p, request.POST.get("owner_id"))
                 _audit(request, "create_pharmacy", "pharmacies", name)
                 messages.success(request, "Pharmacie créée.")
         elif action == "update":
@@ -1516,6 +1547,7 @@ def admin_pharmacies(request):
             p.is_on_duty = bool(request.POST.get("is_on_duty"))
             _set_image(p, "logo", request.FILES)
             p.save()
+            _assign_owner(p, request.POST.get("owner_id"))
             _audit(request, "update_pharmacy", "pharmacies", p.name)
             messages.success(request, "Pharmacie mise à jour.")
         elif action == "delete":
@@ -1526,7 +1558,7 @@ def admin_pharmacies(request):
             messages.success(request, "Pharmacie supprimée.")
         return redirect("bo_admin_pharmacies")
 
-    qs = Pharmacy.objects.all().order_by("-created_at")
+    qs = Pharmacy.objects.select_related("owner").all().order_by("-created_at")
     q = request.GET.get("q", "").strip()
     status = request.GET.get("status", "")
     if q:
@@ -1550,6 +1582,7 @@ def admin_pharmacies(request):
             edit_obj=edit_obj,
             statuses=Pharmacy.Status.choices,
             show_create=request.GET.get("new") == "1",
+            pharmacist_users=pharmacist_users,
         ),
     )
 

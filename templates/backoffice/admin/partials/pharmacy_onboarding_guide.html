@@ -1,0 +1,76 @@
+{# Guide admin — rattacher une officine à un compte titulaire et activer l'abonnement #}
+<details class="bg-sky-50 border border-sky-200 rounded-2xl p-4 mb-5 group" {% if expanded %}open{% endif %}>
+  <summary class="font-extrabold text-sky-900 cursor-pointer flex items-center gap-2 list-none select-none">
+    <span class="material-symbols-rounded sm text-sky-700">menu_book</span>
+    {% if compact %}
+    Guide — Connexion &amp; mise en service pharmacie
+    {% else %}
+    Guide — Comment une pharmacie accède à son espace
+    {% endif %}
+    <span class="ml-auto text-[10px] font-bold uppercase text-sky-700/80 group-open:hidden">Afficher</span>
+    <span class="ml-auto text-[10px] font-bold uppercase text-sky-700/80 hidden group-open:inline">Masquer</span>
+  </summary>
+
+  <div class="mt-4 text-sm text-sky-950 space-y-4">
+    <p class="text-xs text-sky-800 leading-relaxed">
+      La <strong>fiche pharmacie</strong> (officine) et le <strong>compte utilisateur</strong> (titulaire ou personnel) sont distincts.
+      Sans titulaire rattaché, le pharmacien peut se connecter mais n'accède à aucun portail.
+    </p>
+
+    <ol class="list-decimal pl-5 space-y-3 text-sm">
+      <li>
+        <p class="font-bold">Créer le compte titulaire</p>
+        <p class="text-xs text-sky-800 mt-0.5">
+          <a href="{% url 'bo_admin_users' %}?new=1" class="text-primary font-bold underline">Utilisateurs → Ajouter</a>
+          — rôle <strong>Pharmacien</strong>, e-mail obligatoire (identifiants envoyés par mail).
+          Optionnel : sélectionner la pharmacie dans « Pharmacie titulaire ».
+        </p>
+      </li>
+      <li>
+        <p class="font-bold">Créer ou compléter la fiche officine</p>
+        <p class="text-xs text-sky-800 mt-0.5">
+          <a href="{% url 'bo_admin_pharmacies' %}?new=1" class="text-primary font-bold underline">Pharmacies → Ajouter</a>
+          ou <strong>Modifier</strong> une officine existante — choisir le <strong>Titulaire</strong> dans la liste.
+          Colonne « Titulaire » : <span class="text-amber-800 font-bold">Non rattachée</span> = aucun accès portail.
+        </p>
+      </li>
+      <li>
+        <p class="font-bold">Activer l'officine sur le site</p>
+        <p class="text-xs text-sky-800 mt-0.5">
+          Statut de la pharmacie : <strong>Active</strong> (visible catalogue / commandes).
+          <strong>En attente</strong> tant que le dossier n'est pas validé.
+        </p>
+      </li>
+      <li>
+        <p class="font-bold">Activer l'abonnement plateforme</p>
+        <p class="text-xs text-sky-800 mt-0.5">
+          <a href="{% url 'bo_admin_subscriptions' %}?tab=pharmacies" class="text-primary font-bold underline">Abonnements plateforme</a>
+          — onglet Pharmacies — choisir l'officine, le forfait, puis <strong>Activer</strong>.
+          Le titulaire reçoit une notification dans son espace.
+        </p>
+      </li>
+      <li>
+        <p class="font-bold">Connexion côté pharmacie</p>
+        <p class="text-xs text-sky-800 mt-0.5">
+          URL : <a href="{% url 'login' %}" class="text-primary font-bold underline" target="_blank" rel="noopener">{% url 'login' %}</a>
+          (identifiant = e-mail ou nom d'utilisateur + mot de passe reçu).
+          Après connexion → <strong>/espace/pharmacie/</strong> (tableau de bord).
+          Si la 2FA est active : cocher « Se souvenir de cet appareil » pour éviter le code à chaque visite.
+        </p>
+      </li>
+    </ol>
+
+    {% if not compact %}
+    <div class="rounded-xl bg-white/70 border border-sky-200 px-3 py-2.5 text-xs text-sky-900 space-y-2">
+      <p class="font-bold flex items-center gap-1.5">
+        <span class="material-symbols-rounded sm text-amber-600">warning</span> Dépannage fréquent
+      </p>
+      <ul class="list-disc pl-4 space-y-1 text-sky-800">
+        <li><strong>Portail vide après connexion</strong> — vérifier le titulaire sur la fiche pharmacie.</li>
+        <li><strong>Erreur CSRF à la connexion</strong> — recharger la page (F5) et réessayer en HTTPS.</li>
+        <li><strong>Personnel supplémentaire</strong> — le titulaire peut ajouter des employés depuis <em>Personnel</em> dans son espace, ou via un compte Pharmacien rattaché en employé.</li>
+      </ul>
+    </div>
+    {% endif %}
+  </div>
+</details>

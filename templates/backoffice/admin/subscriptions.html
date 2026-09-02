@@ -15,6 +15,7 @@
 </div>
 
 {% if tab == 'pharmacies' %}
+{% include "backoffice/admin/partials/pharmacy_onboarding_guide.html" with compact=True %}
 <div class="grid sm:grid-cols-2 gap-4 mb-6">
   <div class="bg-primary-50 border border-primary/20 rounded-2xl p-4">
     <p class="text-xs font-bold text-ink-muted uppercase">MRR pharmacies (actifs)</p>

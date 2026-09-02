@@ -89,3 +89,7 @@ django.db.utils.OperationalError: could not connect to server
 ## Volume persistant (médias)
 
 Montez un volume Dokploy sur `/app/media` pour conserver les fichiers uploadés (ordonnances, logos).
+
+## Onboarding pharmacie
+
+Voir [PHARMACIE_ONBOARDING.md](PHARMACIE_ONBOARDING.md) — rattachement titulaire, abonnement, connexion portail.

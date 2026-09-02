@@ -15,6 +15,12 @@
     <select name="role" class="border rounded-xl px-3 py-2">
       {% for val, label in create_roles %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
     </select>
+    <select name="pharmacy_id" class="border rounded-xl px-3 py-2 sm:col-span-2" title="Rattacher le titulaire à une officine">
+      <option value="">Pharmacie titulaire (si rôle Pharmacien)</option>
+      {% for ph in pharmacies_for_link %}
+      <option value="{{ ph.id }}">{{ ph.name }} ({{ ph.code }}){% if ph.owner %} — titulaire actuel : {{ ph.owner.get_full_name|default:ph.owner.username }}{% endif %}</option>
+      {% endfor %}
+    </select>
     <input name="institution" placeholder="Institution (autorité)" class="border rounded-xl px-3 py-2">
     <input name="password" type="password" placeholder="MDP (vide = généré)" class="border rounded-xl px-3 py-2">
     <label class="flex items-center gap-2 text-xs font-semibold border rounded-xl px-3 py-2">

@@ -123,5 +123,4 @@ def notify_pharmacy_subscription(pharmacy, subscription, *, event: str = "activa
             "url": url,
         },
         permission=None,
-        transactional=True,
     )
