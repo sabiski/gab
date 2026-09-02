@@ -1,6 +1,8 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -221,35 +223,107 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 class PaymentChargeView(APIView):
+    """Alias mobile — délègue au flux E-Billing quand configuré."""
+
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        from core.payment_settlement import PaymentLimitError, check_daily_transaction_cap, ensure_order_settlement
-        from core.payment_settlement import cod_deposit_amount
+        checkout = PaymentCheckoutView()
+        checkout.request = request
+        checkout.format_kwarg = None
+        return checkout.post(request)
+
+
+class PaymentCheckoutView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from core.payments_web import PaymentLimitError, create_order_payment
+        from payments.ebilling import EbillingError
 
         order = get_object_or_404(Order, pk=request.data.get("order_id"), client=request.user)
         method = request.data.get("method", Payment.Method.MOOV)
-        amount = int(request.data.get("amount", order.total))
-        is_deposit = bool(request.data.get("is_deposit", False))
+        return_url = (request.data.get("return_url") or "").strip()
+        if not return_url:
+            return_url = request.build_absolute_uri(f"/commande/{order.code}/confirmation/")
         try:
-            check_daily_transaction_cap(request.user, order.total if not is_deposit else amount)
-        except PaymentLimitError as exc:
+            flow = create_order_payment(order, method, return_url=return_url)
+        except (PaymentLimitError, EbillingError) as exc:
             return Response({"detail": str(exc)}, status=400)
-        if is_deposit and method == Payment.Method.COD:
-            amount = cod_deposit_amount(order.total)
-        payment = Payment.objects.create(
-            order=order,
-            method=method,
-            amount=amount,
-            status=Payment.Status.SUCCESS,  # stub — intégration Moov/Airtel v2
-            reference=f"GP-{order.code}-{Payment.objects.count()+1}",
-            is_deposit=is_deposit,
+
+        payment = flow.payment
+        if not payment:
+            return Response({"detail": "Aucun paiement à traiter."}, status=400)
+
+        payload = PaymentSerializer(payment).data
+        payload["pending_online"] = flow.pending_online
+        if flow.redirect_url:
+            payload["payment_url"] = flow.redirect_url
+            provider = payment.provider_response or {}
+            payload["bill_id"] = provider.get("ebilling_bill_id")
+        return Response(payload, status=status.HTTP_201_CREATED)
+
+
+class PaymentStatusView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, reference):
+        payment = get_object_or_404(
+            Payment.objects.select_related("order"),
+            reference=reference,
+            order__client=request.user,
         )
-        if order.status == Order.Status.PENDING:
-            order.status = Order.Status.CONFIRMED
-            order.save(update_fields=["status"])
-        ensure_order_settlement(order)
-        return Response(PaymentSerializer(payment).data, status=201)
+        return Response(
+            {
+                "reference": payment.reference,
+                "status": payment.status,
+                "amount": payment.amount,
+                "method": payment.method,
+                "order_id": payment.order_id,
+                "order_code": payment.order.code,
+                "order_status": payment.order.status,
+                "bill_id": (payment.provider_response or {}).get("ebilling_bill_id"),
+            }
+        )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class EbillingCallbackView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        import logging
+
+        from payments.ebilling import verify_webhook_signature
+        from payments.ebilling_handlers import apply_ebilling_callback
+
+        logger = logging.getLogger("gabpharma.ebilling")
+        raw_body = request.body
+        header_map = {k: v for k, v in request.headers.items()}
+        if not verify_webhook_signature(
+            method="POST",
+            path=request.path,
+            raw_body=raw_body,
+            headers=header_map,
+        ):
+            logger.warning("Callback E-Billing rejeté : signature invalide.")
+            return Response({"detail": "Signature invalide."}, status=401)
+
+        content_type = (request.content_type or "").lower()
+        if "json" in content_type:
+            payload = request.data
+            if hasattr(payload, "dict"):
+                payload = payload.dict()
+        else:
+            payload = request.POST.dict()
+
+        ok, message = apply_ebilling_callback(payload)
+        if not ok:
+            if "introuvable" in message.lower():
+                return Response({"success": False, "message": message}, status=404)
+            return Response({"success": False, "message": message}, status=400)
+        return Response({"success": True, "message": message})
 
 
 class DeliveryViewSet(viewsets.ReadOnlyModelViewSet):

@@ -308,8 +308,37 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        "gabpharma.ebilling": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
+
+
+def _env_signing_keys() -> dict[str, str]:
+    raw = (os.environ.get("EBILLING_SIGNING_KEYS") or "").strip()
+    if not raw:
+        return {}
+    if raw.startswith("{"):
+        import json
+
+        try:
+            data = json.loads(raw)
+            return {str(k): str(v) for k, v in data.items()}
+        except json.JSONDecodeError:
+            return {}
+    keys: dict[str, str] = {}
+    for part in raw.split(","):
+        if ":" not in part:
+            continue
+        key_id, secret = part.split(":", 1)
+        key_id = key_id.strip()
+        secret = secret.strip()
+        if key_id and secret:
+            keys[key_id] = secret
+    return keys
 
 # --- Brand Gab'Pharma ---
 GABPHARMA = {
@@ -362,5 +391,20 @@ EMAIL_BACKEND = os.environ.get(
 VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_CLAIMS = {"sub": os.environ.get("VAPID_CONTACT", "mailto:noreply@gabpharma.ga")}
+
+# --- E-Billing (Digitech Africa — PAYIN) ---
+EBILLING_CLIENT_ID = os.environ.get("EBILLING_CLIENT_ID", "")
+EBILLING_CLIENT_SECRET = os.environ.get("EBILLING_CLIENT_SECRET", "")
+EBILLING_ENV = os.environ.get("EBILLING_ENV", "lab")
+EBILLING_FLOW = os.environ.get("EBILLING_FLOW", "redirect")
+EBILLING_USE_SIMU = _env_bool("EBILLING_USE_SIMU", default=False)
+EBILLING_EXPIRY_PERIOD = int(os.environ.get("EBILLING_EXPIRY_PERIOD", "30") or "30")
+EBILLING_WEBHOOK_SIGNING_KEY = os.environ.get("EBILLING_WEBHOOK_SIGNING_KEY", "")
+EBILLING_SIGNING_KEYS = _env_signing_keys()
+EBILLING_SCOPES = os.environ.get(
+    "EBILLING_SCOPES",
+    "ebilling-api/invoice:create ebilling-api/invoice:read "
+    "ebilling-api/payment:create ebilling-api/payment:read",
+)
 
 

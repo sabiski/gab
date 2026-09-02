@@ -34,6 +34,23 @@ DB_HOST=gabpharmavps-sabi-p7vvry
 DB_PORT=3306
 ```
 
+### E-Billing (paiements Mobile Money / carte)
+
+```env
+EBILLING_CLIENT_ID=<client_id Cognito (portail LAB)>
+EBILLING_CLIENT_SECRET=<client_secret>
+EBILLING_ENV=lab
+EBILLING_FLOW=redirect
+EBILLING_USE_SIMU=0
+EBILLING_EXPIRY_PERIOD=30
+```
+
+URL de callback à enregistrer chez Digitech :
+
+`https://gabpharma.online/api/v1/payments/ebilling/callback/`
+
+Tests LAB avec `EBILLING_USE_SIMU=1` et MSISDN `077000001` (succès) / `077010001` (échec).
+
 > `DB_HOST` : dans Dokploy, créez une base **PostgreSQL** dans le même projet. Copiez le hostname interne (ex. `gabpharma-db-xxxxx`).
 
 ### Domaine

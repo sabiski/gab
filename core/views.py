@@ -49,11 +49,13 @@ from core.loyalty import (
 from core.payments_web import (
     PAYMENT_METHODS,
     PaymentLimitError,
+    ONLINE_PAYMENT_METHODS,
     create_order_payment,
     default_payment_method,
     valid_client_payment_method,
     valid_payment_method,
 )
+from payments.ebilling import EbillingError
 from core.payment_settlement import client_paid_today, load_payment_settings
 from core.pharmacy_notifications import check_stock_alert, notify_pharmacy_new_order
 from orders.models import Order, OrderItem, Prescription
@@ -1359,18 +1361,34 @@ def checkout_view(request):
         if order.total > 0 and not valid_client_payment_method(payment_method):
             payment_method = default_payment_method()
         _set_payment_method(request, payment_method)
+        return_url = request.build_absolute_uri(
+            reverse("payment_confirmed", kwargs={"code": order.code})
+        )
         try:
-            payment = create_order_payment(order, payment_method)
-        except PaymentLimitError as exc:
+            flow = create_order_payment(
+                order,
+                payment_method,
+                return_url=return_url,
+            )
+        except (PaymentLimitError, EbillingError) as exc:
             order.delete()
             messages.error(request, str(exc))
             return _p_redirect(request, "checkout")
+        payment = flow.payment
         cart_clear(request)
+
+        if flow.redirect_url:
+            messages.info(
+                request,
+                "Commande enregistrée. Finalisez votre paiement sur la page sécurisée E-Billing.",
+            )
+            return redirect(flow.redirect_url)
+
         from notifications.models import Notification
         from notifications.services import notify_user
 
         awaiting_insurance = order_awaiting_insurance(order)
-        if not awaiting_insurance:
+        if not awaiting_insurance and not flow.pending_online:
             notify_pharmacy_new_order(order)
 
         if needs_rx:
@@ -1408,15 +1426,29 @@ def checkout_view(request):
                     f"{insurance_provider.name} avant envoi à la pharmacie.",
                 )
             else:
-                notify_user(
-                    request.user,
-                    f"Commande {order.code} enregistrée",
-                    f"Votre commande a été transmise à {pharmacy.name}.",
-                    notification_type=Notification.Type.ORDER,
-                    data={"order_id": order.id, "code": order.code},
-                    transactional=True,
-                )
-                messages.success(request, f"Commande {order.code} enregistrée.")
+                if flow.pending_online:
+                    notify_user(
+                        request.user,
+                        f"Commande {order.code} — paiement en cours",
+                        "Validez le paiement sur votre téléphone. Vous serez notifié dès confirmation.",
+                        notification_type=Notification.Type.ORDER,
+                        data={"order_id": order.id, "code": order.code},
+                        transactional=True,
+                    )
+                    messages.info(
+                        request,
+                        "Paiement en cours de validation. Validez l'opération sur votre téléphone.",
+                    )
+                else:
+                    notify_user(
+                        request.user,
+                        f"Commande {order.code} enregistrée",
+                        f"Votre commande a été transmise à {pharmacy.name}.",
+                        notification_type=Notification.Type.ORDER,
+                        data={"order_id": order.id, "code": order.code},
+                        transactional=True,
+                    )
+                    messages.success(request, f"Commande {order.code} enregistrée.")
         pay_label = dict(Payment.Method.choices).get(payment.method, payment.method) if payment else "Assurance"
         if order.insurance_coverage > 0 and insurance_provider:
             if awaiting_insurance:
@@ -1635,6 +1667,12 @@ def payment_confirmed(request, code):
     )
     insurance_pending = order_awaiting_insurance(order)
     insurance_claim = get_pending_insurance_claim(order)
+    online_payment = (
+        order.payments.filter(method__in=ONLINE_PAYMENT_METHODS).order_by("-created_at").first()
+    )
+    payment_pending_online = bool(
+        online_payment and online_payment.status == Payment.Status.PROCESSING
+    )
 
     return _render(
         request,
@@ -1667,6 +1705,8 @@ def payment_confirmed(request, code):
             "tracking_auto_open": tracking_auto_open,
             "insurance_pending": insurance_pending,
             "insurance_claim": insurance_claim,
+            "payment_pending_online": payment_pending_online,
+            "online_payment": online_payment,
         },
     )
 

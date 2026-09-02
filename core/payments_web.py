@@ -1,6 +1,12 @@
 """Création paiement web lors du checkout."""
-import secrets
+from __future__ import annotations
 
+import secrets
+from dataclasses import dataclass
+
+from django.conf import settings
+
+from payments.ebilling import EbillingError, create_ebill, ebilling_configured
 from payments.models import Payment
 from orders.models import Order
 from core.payment_settlement import (
@@ -20,6 +26,18 @@ PAYMENT_METHODS = [
 ]
 
 CLIENT_PAYMENT_METHODS = {m[0] for m in PAYMENT_METHODS}
+ONLINE_PAYMENT_METHODS = {
+    Payment.Method.MOOV,
+    Payment.Method.AIRTEL,
+    Payment.Method.CARD,
+}
+
+
+@dataclass
+class PaymentFlowResult:
+    payment: Payment | None = None
+    redirect_url: str | None = None
+    pending_online: bool = False
 
 
 def default_payment_method():
@@ -53,10 +71,49 @@ def create_insurance_payment(order):
     )
 
 
-def create_order_payment(order, method):
+def _payer_contact(user):
+    email = (getattr(user, "email", "") or "").strip()
+    name = (user.get_full_name() or user.username or "Client").strip()
+    phone = (getattr(user, "phone", "") or "").strip()
+    return email, name, phone
+
+
+def _start_ebilling_payment(payment, user, *, method: str, return_url: str) -> str | None:
+    email, name, phone = _payer_contact(user)
+    if not email:
+        raise EbillingError("Ajoutez une adresse e-mail à votre profil pour payer en ligne.")
+
+    bill = create_ebill(
+        amount=int(payment.amount),
+        reference=payment.reference,
+        payer_email=email,
+        payer_name=name,
+        payer_msisdn=phone,
+        description=f"Commande Gab'Pharma {payment.order.code}",
+        return_url=return_url,
+        payment_method=method,
+    )
+    provider = dict(payment.provider_response or {})
+    provider.update(
+        {
+            "channel": "ebilling",
+            "ebilling_bill_id": bill.bill_id,
+            "ebilling_env": getattr(settings, "EBILLING_ENV", "lab"),
+            "ebilling_flow": getattr(settings, "EBILLING_FLOW", "redirect"),
+        }
+    )
+    if bill.raw:
+        provider["ebilling_create"] = bill.raw
+    payment.provider_response = provider
+    payment.status = Payment.Status.PROCESSING
+    payment.save(update_fields=["status", "provider_response", "updated_at"])
+    return bill.redirect_url
+
+
+def create_order_payment(order, method, *, return_url: str = "") -> PaymentFlowResult:
     """Enregistre le paiement client (reste à charge après assurance)."""
     client_total = order.total
-    payments = []
+    payments: list[Payment] = []
 
     ins = create_insurance_payment(order)
     if ins:
@@ -67,7 +124,7 @@ def create_order_payment(order, method):
             order.status = Order.Status.CONFIRMED
             order.save(update_fields=["status", "updated_at"])
         ensure_order_settlement(order)
-        return payments[0] if payments else None
+        return PaymentFlowResult(payment=payments[0] if payments else None)
 
     check_daily_transaction_cap(order.client, client_total)
 
@@ -79,7 +136,7 @@ def create_order_payment(order, method):
     if is_deposit:
         amount = cod_deposit_amount(client_total)
 
-    if method in {Payment.Method.MOOV, Payment.Method.AIRTEL, Payment.Method.CARD}:
+    if method in ONLINE_PAYMENT_METHODS:
         status = Payment.Status.PROCESSING
     elif method == Payment.Method.COD:
         status = Payment.Status.PENDING
@@ -96,16 +153,41 @@ def create_order_payment(order, method):
         status=status,
         reference=ref,
         is_deposit=is_deposit,
-        provider_response={"channel": "web", "simulated": True, "client_share": client_total},
+        provider_response={"channel": "web"},
     )
     payments.append(payment)
 
-    if method in {Payment.Method.MOOV, Payment.Method.AIRTEL, Payment.Method.CARD}:
+    if method in ONLINE_PAYMENT_METHODS:
+        if ebilling_configured():
+            try:
+                redirect = _start_ebilling_payment(
+                    payment,
+                    order.client,
+                    method=method,
+                    return_url=return_url,
+                )
+                return PaymentFlowResult(
+                    payment=payment,
+                    redirect_url=redirect,
+                    pending_online=True,
+                )
+            except EbillingError:
+                payment.status = Payment.Status.FAILED
+                payment.save(update_fields=["status", "updated_at"])
+                raise
+        # Secours développement sans credentials E-Billing
         payment.status = Payment.Status.SUCCESS
-        payment.save(update_fields=["status", "updated_at"])
+        payment.provider_response = {
+            "channel": "web",
+            "simulated": True,
+            "client_share": client_total,
+        }
+        payment.save(update_fields=["status", "provider_response", "updated_at"])
         if order.status == Order.Status.PENDING:
             order.status = Order.Status.CONFIRMED
             order.save(update_fields=["status", "updated_at"])
+        ensure_order_settlement(order)
+        return PaymentFlowResult(payment=payment)
 
     ensure_order_settlement(order)
-    return payment
+    return PaymentFlowResult(payment=payment)

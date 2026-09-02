@@ -10,11 +10,22 @@
       <a href="{% portal_url 'orders' %}" class="absolute left-0 h-10 w-10 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#6B7280] hover:text-[#6C3AED]">
         <span class="material-symbols-rounded">arrow_back</span>
       </a>
-      <h1 class="text-base font-bold text-[#374151] text-center px-12">{% if insurance_pending %}Commande en attente{% else %}Code de retrait / livraison{% endif %}</h1>
+      <h1 class="text-base font-bold text-[#374151] text-center px-12">{% if payment_pending_online or insurance_pending %}Commande en attente{% else %}Code de retrait / livraison{% endif %}</h1>
     </header>
 
     <div class="text-center mb-6 otl-animate-in">
-      {% if insurance_pending %}
+      {% if payment_pending_online %}
+      <div class="relative inline-flex items-center justify-center mb-4 otl-success-icon">
+        <div class="h-24 w-24 rounded-full bg-amber-50 flex items-center justify-center">
+          <span class="material-symbols-rounded text-amber-600 text-5xl">hourglass_top</span>
+        </div>
+      </div>
+      <h2 class="text-xl font-extrabold text-[#374151]">Paiement en cours de validation</h2>
+      <p class="text-sm text-[#6B7280] mt-2 max-w-sm mx-auto">
+        Votre commande est enregistrée. Le paiement Mobile Money ou carte est en attente de confirmation par l'opérateur.
+        Cette page se mettra à jour dès réception de la confirmation.
+      </p>
+      {% elif insurance_pending %}
       <div class="relative inline-flex items-center justify-center mb-4 otl-success-icon">
         <div class="h-24 w-24 rounded-full bg-amber-50 flex items-center justify-center">
           <span class="material-symbols-rounded text-amber-600 text-5xl">hourglass_top</span>
@@ -76,7 +87,7 @@
     <section id="track-courier-card" class="otl-courier-card mb-4 hidden"></section>
     {% endif %}
 
-    {% if not insurance_pending %}
+    {% if not insurance_pending and not payment_pending_online %}
     <section class="card p-5 mb-4 otl-animate-in otl-animate-in-delay-1">
       <p class="text-sm font-bold text-[#374151] mb-3">Votre code de retrait / livraison</p>
       <p id="pickup-code" class="pay-code-digit text-center text-3xl sm:text-4xl font-extrabold text-[#6C3AED] py-2 tracking-widest" data-code="{{ code_raw }}">{{ code_spaced }}</p>
@@ -94,7 +105,7 @@
     </section>
 
     {% include "web/partials/client_delivery_qr.html" %}
-    {% else %}
+    {% elif insurance_pending %}
     <section class="card p-5 mb-4 otl-animate-in otl-animate-in-delay-1 border-amber-200 bg-amber-50/50">
       <div class="flex items-start gap-3">
         <span class="material-symbols-rounded text-amber-600 shrink-0">health_and_safety</span>
@@ -104,6 +115,20 @@
             Montant demandé :
             <strong>{% if insurance_claim %}{{ insurance_claim.amount }}{% else %}{{ order.insurance_coverage }}{% endif %} FCFA</strong>.
             Vous serez notifié dès que votre assureur aura statué. Le code de retrait sera alors disponible ici.
+          </p>
+        </div>
+      </div>
+    </section>
+    {% elif payment_pending_online %}
+    <section class="card p-5 mb-4 otl-animate-in otl-animate-in-delay-1 border-amber-200 bg-amber-50/50">
+      <div class="flex items-start gap-3">
+        <span class="material-symbols-rounded text-amber-600 shrink-0">payments</span>
+        <div>
+          <p class="text-sm font-bold text-[#374151]">Paiement en cours de validation</p>
+          <p class="text-xs text-[#6B7280] mt-1">
+            Référence :
+            <strong>{% if online_payment %}{{ online_payment.reference }}{% else %}—{% endif %}</strong>.
+            Le code de retrait sera disponible ici dès confirmation du paiement par l'opérateur.
           </p>
         </div>
       </div>
@@ -222,7 +247,7 @@
 
       <div class="rounded-xl bg-[#F0FDF4] border border-[#16A34A]/20 px-3 py-2.5 flex gap-2 text-xs text-[#166534]">
         <span class="material-symbols-rounded text-[#16A34A] text-base shrink-0">verified_user</span>
-        <p><strong>Conseil :</strong> {% if insurance_pending %}Ne partagez pas vos informations de commande tant que l'assurance n'a pas validé la prise en charge.{% else %}Ne partagez pas ce code avec une autre personne. Il est strictement personnel et sécurisé.{% endif %}</p>
+        <p><strong>Conseil :</strong> {% if insurance_pending %}Ne partagez pas vos informations de commande tant que l'assurance n'a pas validé la prise en charge.{% elif payment_pending_online %}Ne quittez pas cette page : le statut se met à jour automatiquement après confirmation du paiement.{% else %}Ne partagez pas ce code avec une autre personne. Il est strictement personnel et sécurisé.{% endif %}</p>
       </div>
     </section>
 
@@ -244,7 +269,7 @@
     </section>
     {% endif %}
 
-    {% if not insurance_pending %}
+    {% if not insurance_pending and not payment_pending_online %}
     <div class="grid grid-cols-2 gap-3 mb-4">
       <button type="button" id="btn-download" class="inline-flex items-center justify-center gap-1.5 border-2 border-[#6C3AED] text-[#6C3AED] font-bold text-sm py-3 rounded-full hover:bg-[#F5F3FF]">
         <span class="material-symbols-rounded sm">download</span> Télécharger

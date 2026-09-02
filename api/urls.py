@@ -27,5 +27,16 @@ urlpatterns = [
     path("medicines/search/", views.MedicineViewSet.as_view({"get": "search"}), name="api-medicine-search"),
     # Paiements
     path("payments/charge/", views.PaymentChargeView.as_view(), name="api-payment-charge"),
+    path("payments/checkout/", views.PaymentCheckoutView.as_view(), name="api-payment-checkout"),
+    path(
+        "payments/status/<str:reference>/",
+        views.PaymentStatusView.as_view(),
+        name="api-payment-status",
+    ),
+    path(
+        "payments/ebilling/callback/",
+        views.EbillingCallbackView.as_view(),
+        name="api-ebilling-callback",
+    ),
     path("", include(router.urls)),
 ]
