@@ -41,6 +41,17 @@ def _render(request, section, template, profile, **extra):
     from core.platform_access import partner_portal_permissions
     from core.partner_subscription import partner_has_platform_access, partner_subscription_summary
 
+    if profile.account_incomplete:
+        ctx = _ctx(
+            request,
+            section,
+            partner_profile=profile,
+            portal_permissions=partner_portal_permissions(request.user),
+            insurer_notif_count=0,
+            **extra,
+        )
+        return render(request, "backoffice/insurer/account_setup_required.html", ctx)
+
     if not profile.preview and request.user.role not in admin_roles:
         partner = profile._partner
         if partner and not partner_has_platform_access(partner):

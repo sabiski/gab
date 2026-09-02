@@ -1,0 +1,16 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% block ins_page_title %}Compte à finaliser{% endblock %}
+{% block ins_content %}
+<div class="ins-panel ins-coming-soon max-w-xl mx-auto mt-8">
+  <span class="material-symbols-rounded ins-coming-soon__icon">health_and_safety</span>
+  <h2 class="text-xl font-extrabold text-ink mb-2">Profil assureur incomplet</h2>
+  <p class="text-sm text-ink-muted font-medium leading-relaxed">
+    Votre compte est connecté, mais aucun profil de compagnie d'assurance n'est rattaché.
+    Finalisez votre inscription ou contactez Gab'Pharma pour activer votre accès au portail.
+  </p>
+  <div class="flex flex-wrap gap-3 justify-center mt-6">
+    <a href="{% url 'insurer_register' %}" class="ins-btn-primary">Compléter l'inscription</a>
+    <a href="{% url 'bo_my_profile' %}" class="ins-btn-outline">Mon profil</a>
+  </div>
+</div>
+{% endblock %}

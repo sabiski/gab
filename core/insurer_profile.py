@@ -4,8 +4,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from django.http import Http404
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from accounts.models import PartnerProfile
@@ -22,6 +20,7 @@ class InsurerPortalProfile:
     headquarters_address: str = ""
     rep_job_title: str = ""
     preview: bool = False
+    account_incomplete: bool = False
     _partner: PartnerProfile | None = None
 
     @classmethod
@@ -99,14 +98,23 @@ def resolve_insurer_profile(user, request=None) -> InsurerPortalProfile:
             provider = InsuranceProvider.objects.order_by("name").first()
         if provider:
             return InsurerPortalProfile.from_provider(provider, user)
-        raise Http404(
-            "Aucun assureur en base. Ajoutez CNAMGS ou un autre organisme dans "
-            "Assurances — pilotage, ou créez un compte via /auth/inscription-assurance/."
+        return InsurerPortalProfile(
+            organization_name="Organisme assurance (à configurer)",
+            acronym="DEMO",
+            preview=True,
+            user=user,
         )
 
-    partner = get_object_or_404(
-        PartnerProfile.objects.select_related("insurance_provider"),
-        user=user,
-        partner_type=PartnerProfile.PartnerType.INSURER,
+    partner = (
+        PartnerProfile.objects.select_related("insurance_provider")
+        .filter(user=user, partner_type=PartnerProfile.PartnerType.INSURER)
+        .first()
     )
+    if not partner:
+        return InsurerPortalProfile(
+            organization_name="Compte assureur incomplet",
+            acronym="",
+            user=user,
+            account_incomplete=True,
+        )
     return InsurerPortalProfile.from_partner(partner)

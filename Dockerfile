@@ -21,6 +21,8 @@ COPY . .
 RUN mkdir -p /app/media /app/logs /app/staticfiles \
     && chmod +x /app/docker/entrypoint.sh
 
+# Volume Dokploy recommandé : /app/media (ordonnances, logos, avatars…)
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
