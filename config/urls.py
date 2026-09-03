@@ -5,8 +5,9 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import FileResponse, JsonResponse
 from django.urls import include, path, re_path
-from django.views.static import serve as serve_media
 from pathlib import Path
+
+from core.media_views import serve_durable_media
 
 
 def health_check(_request):
@@ -28,16 +29,11 @@ urlpatterns = [
     path("", include("core.urls")),
 ]
 
-# Fichiers uploadés (logos, ordonnances, avatars…)
-# static() ne crée aucune route si DEBUG=False — serve explicite pour Dokploy/Gunicorn.
+# Fichiers uploadés : disque du conteneur + copie MySQL (DurableMediaStorage).
 _serve_media = settings.DEBUG or os.environ.get("DJANGO_SERVE_MEDIA", "1") == "1"
 if _serve_media:
     urlpatterns += [
-        re_path(
-            r"^media/(?P<path>.*)$",
-            serve_media,
-            {"document_root": settings.MEDIA_ROOT},
-        ),
+        re_path(r"^media/(?P<path>.*)$", serve_durable_media),
     ]
 elif settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

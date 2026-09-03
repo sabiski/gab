@@ -222,3 +222,20 @@ class HealthCampaign(models.Model):
             return False
         today = timezone.now().date()
         return self.start_date <= today <= self.end_date
+
+
+class StoredMedia(models.Model):
+    """Copie persistante des fichiers uploadés (MySQL survit aux redéploiements Docker)."""
+
+    name = models.CharField(max_length=500, unique=True, db_index=True)
+    data = models.BinaryField()
+    content_type = models.CharField(max_length=120, blank=True)
+    size = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Fichier média"
+        verbose_name_plural = "Fichiers médias"
+
+    def __str__(self):
+        return self.name

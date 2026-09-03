@@ -9,6 +9,9 @@ if [ -n "${SUPERADMIN_PASSWORD:-}" ]; then
   python manage.py ensure_superadmin
 fi
 
+echo "==> Restauration des médias (MySQL → disque)"
+python manage.py restore_media || true
+
 echo "==> Fichiers statiques"
 python manage.py collectstatic --noinput
 

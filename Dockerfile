@@ -21,7 +21,9 @@ COPY . .
 RUN mkdir -p /app/media /app/logs /app/staticfiles \
     && chmod +x /app/docker/entrypoint.sh
 
-# Volume Dokploy recommandé : /app/media (ordonnances, logos, avatars…)
+# Disque du conteneur = cache. La copie MySQL survit aux redéploiements.
+# Volume Dokploy recommandé en plus : /app/media
+VOLUME ["/app/media"]
 
 EXPOSE 8000
 

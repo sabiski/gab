@@ -200,7 +200,7 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "default": {"BACKEND": "core.media_storage.DurableMediaStorage"},
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"
         if not DEBUG
@@ -209,7 +209,7 @@ STORAGES = {
 }
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_ROOT = Path(os.environ.get("DJANGO_MEDIA_ROOT", str(BASE_DIR / "media")))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -309,6 +309,11 @@ LOGGING = {
             "propagate": False,
         },
         "gabpharma.ebilling": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "gabpharma.media": {
             "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": False,

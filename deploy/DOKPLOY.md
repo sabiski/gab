@@ -86,9 +86,25 @@ django.db.utils.OperationalError: could not connect to server
 3. Attendre 1–2 min (migrations + collectstatic)
 4. Tester : https://gabpharma.online/health/ → `{"status": "ok"}`
 
-## Volume persistant (médias)
+## Volume persistant (médias) — obligatoire côté Dokploy
 
-Montez un volume Dokploy sur `/app/media` pour conserver les fichiers uploadés (ordonnances, logos).
+Les images (avatar, logos, ordonnances) étaient perdues **5–15 min après l’upload** parce que Dokploy recrée le conteneur : le disque `/app/media` est vidé. Le navigateur garde l’image en cache, puis affiche un trou.
+
+**1. Dans le code (déjà en place)** : chaque upload est aussi copié dans **MySQL Hostinger**. Au démarrage, les fichiers sont restaurés sur disque. Re-téléversez une fois les photos déjà perdues : ensuite elles restent.
+
+**2. Dans Dokploy** (ceinture + bretelles) :
+
+Advanced → **Mounts** → Add volume
+
+| Champ | Valeur |
+|-------|--------|
+| Type | Volume |
+| Volume name | `gabpharma-media` |
+| Mount path | `/app/media` |
+
+Puis **Redeploy**.
+
+Sans ce volume, MySQL suffit déjà à faire réapparaître les images après un redémarrage.
 
 ## Onboarding pharmacie
 
