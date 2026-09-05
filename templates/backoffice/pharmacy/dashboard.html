@@ -6,7 +6,21 @@
 
 {% block bo_content %}
 
-
+{% if not pharmacy %}
+<div class="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 max-w-3xl">
+  <div class="flex gap-3 items-start">
+    <span class="material-symbols-rounded text-amber-600 text-3xl shrink-0">link_off</span>
+    <div>
+      <p class="font-extrabold text-amber-950">Aucune pharmacie rattachée à votre compte</p>
+      <p class="text-sm text-amber-900/80 mt-1 leading-relaxed">
+        Le rôle <strong>Pharmacien</strong> ne suffit pas : un administrateur Gab'Pharma doit
+        vous désigner comme <strong>titulaire</strong> (ou membre du personnel) sur une fiche
+        officine via <em>Admin → Pharmacies → Modifier → Titulaire</em>.
+      </p>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 {% if pharmacy_permissions.settings and sub_summary.is_active %}
 

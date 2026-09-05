@@ -50,22 +50,34 @@ def ensure_owner_membership(pharmacy):
     if not pharmacy or not pharmacy.owner_id:
         return None
     owner = pharmacy.owner
-    emp, created = PharmacyEmployee.objects.get_or_create(
+    emp = (
+        PharmacyEmployee.objects.filter(pharmacy=pharmacy, user=owner)
+        .select_related("user", "pharmacy")
+        .first()
+    )
+    if emp:
+        updates = []
+        if emp.job_role != PharmacyEmployee.JobRole.OWNER:
+            emp.job_role = PharmacyEmployee.JobRole.OWNER
+            updates.append("job_role")
+        if not emp.is_active:
+            emp.is_active = True
+            updates.append("is_active")
+        if updates:
+            updates.append("updated_at")
+            emp.save(update_fields=updates)
+        return emp
+
+    # Ne pas forcer TIT-001 : déjà pris par un autre employé → IntegrityError / 500.
+    return PharmacyEmployee.objects.create(
         pharmacy=pharmacy,
         user=owner,
-        defaults={
-            "employee_code": "TIT-001",
-            "job_role": PharmacyEmployee.JobRole.OWNER,
-            "job_title": "Titulaire",
-            "contract_type": PharmacyEmployee.ContractType.CDI,
-            "is_active": True,
-        },
+        employee_code=allocate_employee_code(pharmacy, "TIT-001"),
+        job_role=PharmacyEmployee.JobRole.OWNER,
+        job_title="Titulaire",
+        contract_type=PharmacyEmployee.ContractType.CDI,
+        is_active=True,
     )
-    if not created and emp.job_role != PharmacyEmployee.JobRole.OWNER:
-        emp.job_role = PharmacyEmployee.JobRole.OWNER
-        emp.is_active = True
-        emp.save(update_fields=["job_role", "is_active", "updated_at"])
-    return emp
 
 
 def pharmacy_for_user(user, request=None):

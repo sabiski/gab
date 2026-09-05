@@ -1492,10 +1492,12 @@ def admin_authorities(request):
 def admin_pharmacies(request):
     from core.pharmacy_access import ensure_owner_membership
 
-    pharmacist_users = User.objects.filter(
-        role=User.Role.PHARMACIST,
-        status=User.Status.ACTIVE,
-    ).order_by("last_name", "first_name", "username")
+    # Inclure les comptes actifs / en attente (pas seulement ACTIVE) pour pouvoir rattacher.
+    pharmacist_users = (
+        User.objects.filter(role=User.Role.PHARMACIST)
+        .exclude(status=User.Status.SUSPENDED)
+        .order_by("last_name", "first_name", "username")
+    )
 
     def _assign_owner(pharmacy, owner_id: str):
         owner_id = (owner_id or "").strip()
@@ -1503,8 +1505,14 @@ def admin_pharmacies(request):
             return
         owner = pharmacist_users.filter(pk=owner_id).first()
         if not owner:
-            messages.warning(request, "Titulaire introuvable ou rôle invalide.")
+            messages.warning(
+                request,
+                "Titulaire introuvable : le compte doit avoir le rôle Pharmacien.",
+            )
             return
+        if owner.status != User.Status.ACTIVE:
+            owner.status = User.Status.ACTIVE
+            owner.save(update_fields=["status"])
         pharmacy.owner = owner
         pharmacy.save(update_fields=["owner", "updated_at"])
         ensure_owner_membership(pharmacy)
@@ -1530,9 +1538,17 @@ def admin_pharmacies(request):
                 )
                 if _set_image(p, "logo", request.FILES):
                     p.save(update_fields=["logo"])
-                _assign_owner(p, request.POST.get("owner_id"))
-                _audit(request, "create_pharmacy", "pharmacies", name)
-                messages.success(request, "Pharmacie créée.")
+                try:
+                    _assign_owner(p, request.POST.get("owner_id"))
+                except Exception:
+                    messages.error(
+                        request,
+                        "Pharmacie créée, mais le rattachement du titulaire a échoué. "
+                        "Réessayez via Modifier.",
+                    )
+                else:
+                    _audit(request, "create_pharmacy", "pharmacies", name)
+                    messages.success(request, "Pharmacie créée.")
         elif action == "update":
             p = get_object_or_404(Pharmacy, pk=request.POST.get("pharmacy_id"))
             p.name = request.POST.get("name", p.name)
@@ -1542,14 +1558,42 @@ def admin_pharmacies(request):
             p.district = request.POST.get("district", p.district)
             p.region = request.POST.get("region", p.region)
             p.status = request.POST.get("status", p.status)
-            p.compliance_score = int(request.POST.get("compliance_score") or p.compliance_score)
+            raw_score = (request.POST.get("compliance_score") or "").strip()
+            if raw_score:
+                try:
+                    p.compliance_score = max(0, min(100, int(raw_score)))
+                except (TypeError, ValueError):
+                    pass
             p.is_24h = bool(request.POST.get("is_24h"))
             p.is_on_duty = bool(request.POST.get("is_on_duty"))
             _set_image(p, "logo", request.FILES)
-            p.save()
-            _assign_owner(p, request.POST.get("owner_id"))
-            _audit(request, "update_pharmacy", "pharmacies", p.name)
-            messages.success(request, "Pharmacie mise à jour.")
+            try:
+                p.save()
+                _assign_owner(p, request.POST.get("owner_id"))
+            except Exception:
+                import logging
+
+                logging.getLogger("gabpharma").exception(
+                    "Échec enregistrement pharmacie id=%s", p.pk
+                )
+                messages.error(
+                    request,
+                    "Impossible d'enregistrer la pharmacie ou le titulaire. "
+                    "Vérifiez que le compte a le rôle Pharmacien, puis réessayez.",
+                )
+            else:
+                _audit(request, "update_pharmacy", "pharmacies", p.name)
+                if p.owner_id:
+                    messages.success(
+                        request,
+                        f"Pharmacie mise à jour — titulaire : "
+                        f"{p.owner.get_full_name() or p.owner.username}.",
+                    )
+                else:
+                    messages.success(
+                        request,
+                        "Pharmacie mise à jour. Aucun titulaire : le compte pharmacien ne verra pas cette officine.",
+                    )
         elif action == "delete":
             p = get_object_or_404(Pharmacy, pk=request.POST.get("pharmacy_id"))
             name = p.name

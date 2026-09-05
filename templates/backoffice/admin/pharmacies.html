@@ -34,7 +34,7 @@
     <select name="owner_id" class="border rounded-xl px-3 py-2 sm:col-span-2">
       <option value="">Titulaire (compte pharmacien)</option>
       {% for u in pharmacist_users %}
-      <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }} — {{ u.email }}</option>
+      <option value="{{ u.id }}">{{ u.get_full_name|default:u.username }} — {{ u.email }}{% if u.status != "active" %} ({{ u.get_status_display }}){% endif %}</option>
       {% endfor %}
     </select>
     {% include "backoffice/partials/image_field.html" with name="logo" label="Logo pharmacie" %}
@@ -61,7 +61,7 @@
     <select name="owner_id" class="border rounded-xl px-3 py-2 sm:col-span-2">
       <option value="">Titulaire (compte pharmacien)</option>
       {% for u in pharmacist_users %}
-      <option value="{{ u.id }}" {% if edit_obj.owner_id == u.id %}selected{% endif %}>{{ u.get_full_name|default:u.username }} — {{ u.email }}</option>
+      <option value="{{ u.id }}" {% if edit_obj.owner_id == u.id %}selected{% endif %}>{{ u.get_full_name|default:u.username }} — {{ u.email }}{% if u.status != "active" %} ({{ u.get_status_display }}){% endif %}</option>
       {% endfor %}
     </select>
     {% include "backoffice/partials/image_field.html" with name="logo" label="Logo pharmacie" current=edit_obj.logo %}
