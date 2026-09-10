@@ -12,3 +12,27 @@ logs/
 .idea/
 .vscode/
 node_modules/
+
+# ── Flutter (app mobile créée par erreur dans ce dépôt Django) ──
+# Conserver localement ; ne plus versionner ici. Projet mobile = dépôt séparé.
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.metadata
+analysis_options.yaml
+pubspec.yaml
+pubspec.lock
+gabpharma.iml
+*.iml
+android/
+ios/
+linux/
+macos/
+windows/
+web/
+lib/
+test/widget_test.dart
+build/
