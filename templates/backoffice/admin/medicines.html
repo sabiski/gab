@@ -15,7 +15,30 @@
   <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl">Filtrer</button>
   <a href="?new=1" class="bg-primary text-white font-bold text-sm px-4 py-2 rounded-xl inline-flex items-center gap-1"><span class="material-symbols-rounded sm">add</span> Ajouter</a>
 </form>
-<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} résultat{{ total_count|pluralize }}</p>
+<p class="text-xs text-ink-muted font-medium mb-3">{{ total_count }} résultat{{ total_count|pluralize }} · {{ categories|length }} catégorie{{ categories|length|pluralize }}</p>
+
+<section class="bg-white rounded-2xl border p-4 mb-4">
+  <div class="flex flex-wrap items-end gap-3">
+    <div class="flex-1 min-w-[200px]">
+      <p class="text-xs font-bold text-ink-muted mb-1">Créer une catégorie rapidement</p>
+      <form method="post" class="flex flex-wrap gap-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_category">
+        <input name="category_name" required placeholder="Ex. Antipaludiques, Vitamines…" class="border rounded-xl px-3 py-2 text-sm flex-1 min-w-[180px]">
+        <button class="bg-canvas border font-bold text-sm px-4 py-2 rounded-xl inline-flex items-center gap-1">
+          <span class="material-symbols-rounded sm">category</span> Ajouter la catégorie
+        </button>
+      </form>
+    </div>
+    {% if categories %}
+    <div class="flex flex-wrap gap-1.5 max-w-xl">
+      {% for c in categories %}
+      <span class="text-[11px] font-semibold bg-primary-50 text-primary px-2.5 py-1 rounded-full">{{ c.name }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
 
 {% if show_create %}
 <section class="bg-white rounded-2xl border p-5 mb-4">
@@ -27,7 +50,11 @@
     <input name="dci" placeholder="DCI" class="border rounded-xl px-3 py-2">
     <input name="laboratory" placeholder="Laboratoire" class="border rounded-xl px-3 py-2">
     <select name="form" class="border rounded-xl px-3 py-2">{% for val, label in forms %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select>
-    <select name="category" class="border rounded-xl px-3 py-2"><option value="">Catégorie</option>{% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+    <select name="category" class="border rounded-xl px-3 py-2">
+      <option value="">Catégorie existante…</option>
+      {% for c in categories %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+    </select>
+    <input name="new_category" placeholder="Ou créer une catégorie (ex. Diabète)" class="border rounded-xl px-3 py-2 sm:col-span-2">
     {% include "backoffice/partials/image_field.html" with name="image" label="Photo médicament" %}
     <label class="text-xs flex gap-2 items-center"><input type="checkbox" name="requires_prescription"> Ordonnance</label>
     <label class="text-xs flex gap-2 items-center"><input type="checkbox" name="is_featured"> Featured</label>
@@ -52,7 +79,11 @@
     <input name="dci" value="{{ edit_obj.dci }}" class="border rounded-xl px-3 py-2">
     <input name="laboratory" value="{{ edit_obj.laboratory }}" class="border rounded-xl px-3 py-2">
     <select name="form" class="border rounded-xl px-3 py-2">{% for val, label in forms %}<option value="{{ val }}" {% if edit_obj.form == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
-    <select name="category" class="border rounded-xl px-3 py-2"><option value="">—</option>{% for c in categories %}<option value="{{ c.id }}" {% if edit_obj.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select>
+    <select name="category" class="border rounded-xl px-3 py-2">
+      <option value="">— Sans catégorie —</option>
+      {% for c in categories %}<option value="{{ c.id }}" {% if edit_obj.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+    <input name="new_category" placeholder="Ou créer / changer vers une nouvelle catégorie" class="border rounded-xl px-3 py-2 sm:col-span-2">
     {% include "backoffice/partials/image_field.html" with name="image" label="Photo médicament" current=edit_obj.image %}
     <label class="text-xs flex gap-2"><input type="checkbox" name="requires_prescription" {% if edit_obj.requires_prescription %}checked{% endif %}> Ordonnance</label>
     <label class="text-xs flex gap-2"><input type="checkbox" name="is_featured" {% if edit_obj.is_featured %}checked{% endif %}> Featured</label>

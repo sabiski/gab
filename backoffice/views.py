@@ -1633,64 +1633,162 @@ def admin_pharmacies(request):
 
 @role_required(*admin_roles)
 def admin_medicines(request):
+    import logging
+
+    logger = logging.getLogger("gabpharma")
+
+    def _ensure_default_categories():
+        if Category.objects.exists():
+            return
+        defaults = [
+            ("Analgésiques", "analgesiques", "thermometer", "rose", "rose", 1),
+            ("Antipaludiques", "antipaludiques", "bug", "green", "green", 2),
+            ("Digestion", "digestion", "stomach", "orange", "orange", 3),
+            ("Soins de la peau", "soins-peau", "lotion", "blue", "blue", 4),
+            ("Hygiène & Soins", "hygiene", "soap", "pink", "pink", 5),
+            ("Maternité & Bébé", "maternite", "baby", "purple", "purple", 6),
+            ("Vitamines & Compléments", "vitamines", "pills", "amber", "amber", 7),
+            ("Antibiotiques", "antibiotiques", "pill", "purple", "purple", 8),
+            ("Cardiovasculaire", "cardiovasculaire", "heart", "red", "red", 9),
+            ("Respiratoire", "respiratoire", "lungs", "sky", "sky", 10),
+            ("Parapharmacie", "parapharmacie", "sparkles", "teal", "teal", 11),
+            ("Autre", "autre", "medication", "slate", "slate", 99),
+        ]
+        for name, slug, icon, color, bg, order in defaults:
+            Category.objects.get_or_create(
+                slug=slug,
+                defaults={
+                    "name": name,
+                    "icon": icon,
+                    "color": color,
+                    "bg_color": bg,
+                    "order": order,
+                    "is_active": True,
+                },
+            )
+
+    def _resolve_category():
+        new_cat = (request.POST.get("new_category") or "").strip()
+        if new_cat:
+            cat, created = Category.objects.get_or_create(
+                slug=_unique_category_slug(new_cat),
+                defaults={"name": new_cat, "is_active": True, "order": 50},
+            )
+            if not created and not cat.is_active:
+                cat.is_active = True
+                cat.save(update_fields=["is_active"])
+            return cat
+        raw = (request.POST.get("category") or "").strip()
+        if not raw:
+            return None
+        return Category.objects.filter(pk=raw, is_active=True).first()
+
+    def _safe_form():
+        form = (request.POST.get("form") or Medicine.Form.TABLET).strip()
+        if form not in dict(Medicine.Form.choices):
+            return Medicine.Form.TABLET
+        return form
+
     if request.method == "POST":
         action = request.POST.get("action")
+        if action == "create_category":
+            name = (request.POST.get("category_name") or "").strip()
+            if not name:
+                messages.error(request, "Nom de catégorie obligatoire.")
+            else:
+                cat, created = Category.objects.get_or_create(
+                    slug=_unique_category_slug(name),
+                    defaults={"name": name, "is_active": True, "order": 50},
+                )
+                if created:
+                    messages.success(request, f"Catégorie « {cat.name} » créée.")
+                else:
+                    if not cat.is_active:
+                        cat.is_active = True
+                        cat.name = name
+                        cat.save(update_fields=["is_active", "name"])
+                    messages.info(request, f"Catégorie « {cat.name} » déjà existante.")
+            return redirect(f"{reverse('bo_admin_medicines')}?new=1")
         if action == "create":
             name = request.POST.get("name", "").strip()
             dosage = request.POST.get("dosage", "").strip()
-            if name:
-                base = slugify(f"{name}-{dosage}") or "med"
-                slug = base
-                i = 1
-                while Medicine.objects.filter(slug=slug).exists():
-                    slug = f"{base}-{i}"
-                    i += 1
-                cat_id = request.POST.get("category") or None
-                m = Medicine.objects.create(
-                    name=name,
-                    slug=slug,
-                    dosage=dosage,
-                    dci=request.POST.get("dci", ""),
-                    laboratory=request.POST.get("laboratory", ""),
-                    form=request.POST.get("form", Medicine.Form.TABLET),
-                    category_id=cat_id or None,
-                    requires_prescription=bool(request.POST.get("requires_prescription")),
-                    is_featured=bool(request.POST.get("is_featured")),
-                    description=request.POST.get("description", "").strip(),
-                    presentation=request.POST.get("presentation", "").strip(),
-                    composition=request.POST.get("composition", "").strip(),
-                    usage_advice=request.POST.get("usage_advice", "").strip(),
-                    pharmacist_advice=request.POST.get("pharmacist_advice", "").strip(),
-                    recommended_by=request.POST.get("recommended_by", "").strip(),
-                )
-                if _set_image(m, "image", request.FILES):
-                    m.save(update_fields=["image"])
-                messages.success(request, "Médicament ajouté.")
+            if not name:
+                messages.error(request, "Le nom du médicament est obligatoire.")
+            else:
+                try:
+                    cat = _resolve_category()
+                    m = Medicine.objects.create(
+                        name=name,
+                        slug=_unique_medicine_slug(f"{name}-{dosage}"),
+                        dosage=dosage,
+                        dci=request.POST.get("dci", "").strip(),
+                        laboratory=request.POST.get("laboratory", "").strip(),
+                        form=_safe_form(),
+                        category=cat,
+                        requires_prescription=bool(request.POST.get("requires_prescription")),
+                        is_featured=bool(request.POST.get("is_featured")),
+                        description=request.POST.get("description", "").strip(),
+                        presentation=request.POST.get("presentation", "").strip(),
+                        composition=request.POST.get("composition", "").strip(),
+                        usage_advice=request.POST.get("usage_advice", "").strip(),
+                        pharmacist_advice=request.POST.get("pharmacist_advice", "").strip(),
+                        recommended_by=request.POST.get("recommended_by", "").strip(),
+                    )
+                    try:
+                        if _set_image(m, "image", request.FILES):
+                            m.save(update_fields=["image"])
+                    except Exception:
+                        logger.exception("Image médicament non enregistrée id=%s", m.pk)
+                        messages.warning(
+                            request,
+                            "Médicament créé, mais la photo n'a pas pu être enregistrée.",
+                        )
+                    else:
+                        messages.success(request, f"Médicament « {m.name} » ajouté.")
+                    _audit(request, "create_medicine", "medicines", m.name)
+                except Exception:
+                    logger.exception("Échec création médicament")
+                    messages.error(
+                        request,
+                        "Impossible de créer le médicament. Vérifiez les champs et réessayez.",
+                    )
         elif action == "update":
             m = get_object_or_404(Medicine, pk=request.POST.get("medicine_id"))
-            m.name = request.POST.get("name", m.name)
-            m.dosage = request.POST.get("dosage", m.dosage)
-            m.dci = request.POST.get("dci", m.dci)
-            m.laboratory = request.POST.get("laboratory", m.laboratory)
-            m.form = request.POST.get("form", m.form)
-            cat = request.POST.get("category")
-            m.category_id = cat or None
-            m.requires_prescription = bool(request.POST.get("requires_prescription"))
-            m.is_featured = bool(request.POST.get("is_featured"))
-            m.description = request.POST.get("description", m.description).strip()
-            m.presentation = request.POST.get("presentation", m.presentation).strip()
-            m.composition = request.POST.get("composition", m.composition).strip()
-            m.usage_advice = request.POST.get("usage_advice", m.usage_advice).strip()
-            m.pharmacist_advice = request.POST.get("pharmacist_advice", m.pharmacist_advice).strip()
-            m.recommended_by = request.POST.get("recommended_by", m.recommended_by).strip()
-            _set_image(m, "image", request.FILES)
-            m.save()
-            messages.success(request, "Médicament mis à jour.")
+            try:
+                m.name = request.POST.get("name", m.name).strip() or m.name
+                m.dosage = request.POST.get("dosage", m.dosage).strip()
+                m.dci = request.POST.get("dci", m.dci).strip()
+                m.laboratory = request.POST.get("laboratory", m.laboratory).strip()
+                m.form = _safe_form()
+                m.category = _resolve_category()
+                m.requires_prescription = bool(request.POST.get("requires_prescription"))
+                m.is_featured = bool(request.POST.get("is_featured"))
+                m.description = request.POST.get("description", m.description).strip()
+                m.presentation = request.POST.get("presentation", m.presentation).strip()
+                m.composition = request.POST.get("composition", m.composition).strip()
+                m.usage_advice = request.POST.get("usage_advice", m.usage_advice).strip()
+                m.pharmacist_advice = request.POST.get("pharmacist_advice", m.pharmacist_advice).strip()
+                m.recommended_by = request.POST.get("recommended_by", m.recommended_by).strip()
+                try:
+                    _set_image(m, "image", request.FILES)
+                except Exception:
+                    logger.exception("Image médicament non mise à jour id=%s", m.pk)
+                    messages.warning(request, "Fiche enregistrée, mais la photo a échoué.")
+                m.save()
+                messages.success(request, "Médicament mis à jour.")
+                _audit(request, "update_medicine", "medicines", m.name)
+            except Exception:
+                logger.exception("Échec mise à jour médicament id=%s", m.pk)
+                messages.error(request, "Impossible d'enregistrer le médicament.")
         elif action == "delete":
             m = get_object_or_404(Medicine, pk=request.POST.get("medicine_id"))
+            name = m.name
             m.delete()
+            _audit(request, "delete_medicine", "medicines", name, True)
             messages.success(request, "Médicament supprimé.")
         return redirect("bo_admin_medicines")
+
+    _ensure_default_categories()
 
     qs = Medicine.objects.select_related("category").order_by("name")
     q = request.GET.get("q", "").strip()
@@ -1714,7 +1812,7 @@ def admin_medicines(request):
             q=q,
             filter_category=category,
             edit_obj=edit_obj,
-            categories=Category.objects.filter(is_active=True),
+            categories=Category.objects.filter(is_active=True).order_by("order", "name"),
             forms=Medicine.Form.choices,
             show_create=request.GET.get("new") == "1",
         ),

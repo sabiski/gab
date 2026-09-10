@@ -1,0 +1,284 @@
+{# Guide d'utilisation complet — Super Admin Gab'Pharma #}
+<details class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-6 group" open>
+  <summary class="font-extrabold text-emerald-950 cursor-pointer flex items-center gap-2 list-none select-none">
+    <span class="material-symbols-rounded text-emerald-700">menu_book</span>
+    Guide d'utilisation — Gab'Pharma de A à Z
+    <span class="ml-auto text-[10px] font-bold uppercase text-emerald-700/80 group-open:hidden">Afficher</span>
+    <span class="ml-auto text-[10px] font-bold uppercase text-emerald-700/80 hidden group-open:inline">Masquer</span>
+  </summary>
+
+  <div class="mt-4 text-sm text-emerald-950 space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+
+    <p class="text-xs text-emerald-900/80 leading-relaxed">
+      Gab'Pharma est la plateforme nationale du médicament au Gabon : patients, pharmacies,
+      livreurs, assureurs et autorités sanitaires. Ce guide décrit <strong>tout ce que vous pilotez
+      depuis ce tableau de bord</strong>, dans l'ordre logique de mise en service.
+    </p>
+
+    {# ── 1. Vue d'ensemble ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">hub</span> 1. Vue d'ensemble
+      </h3>
+      <ul class="list-disc pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li><strong>Site public</strong> — catalogue, recherche, panier, checkout, suivi commande.</li>
+        <li><strong>Espace patient</strong> — <code>/espace/client/</code> (commandes, ordonnances, messages, fidélité).</li>
+        <li><strong>Espace pharmacie</strong> — <code>/espace/pharmacie/</code> (commandes, stocks, personnel, abonnement).</li>
+        <li><strong>Espace livreur</strong> — <code>/espace/livreur/</code> (courses, QR, incidents).</li>
+        <li><strong>Espace assurance</strong> — <code>/espace/assurance/</code> (contrats, demandes, paiements).</li>
+        <li><strong>Espace autorité</strong> — <code>/espace/autorite/</code> (pharmacies, stocks, campagnes, conformité).</li>
+        <li><strong>Connexion unique</strong> — <a href="{% url 'login' %}" class="text-primary font-bold underline" target="_blank" rel="noopener">/auth/connexion/</a> (e-mail ou identifiant + 2FA si activée).</li>
+      </ul>
+    </section>
+
+    {# ── 2. Rôles ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">badge</span> 2. Rôles plateforme
+      </h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-xs text-left">
+          <thead class="text-[10px] uppercase text-emerald-800/70">
+            <tr><th class="py-1.5 pr-3">Rôle</th><th class="py-1.5 pr-3">Qui</th><th class="py-1.5">Création</th></tr>
+          </thead>
+          <tbody class="text-emerald-950/90">
+            <tr class="border-t border-emerald-100"><td class="py-1.5 pr-3 font-bold">Superadmin / Admin</td><td class="pr-3">Pilotage Gab'Pharma</td><td>Compte technique / Utilisateurs</td></tr>
+            <tr class="border-t border-emerald-100"><td class="py-1.5 pr-3 font-bold">Pharmacien</td><td class="pr-3">Titulaire ou personnel d'officine</td><td><a href="{% url 'bo_admin_users' %}?new=1" class="text-primary font-bold underline">Utilisateurs</a> + rattachement fiche pharmacie</td></tr>
+            <tr class="border-t border-emerald-100"><td class="py-1.5 pr-3 font-bold">Livreur</td><td class="pr-3">Coursier partenaire</td><td><a href="{% url 'bo_admin_couriers' %}" class="text-primary font-bold underline">Livreurs</a></td></tr>
+            <tr class="border-t border-emerald-100"><td class="py-1.5 pr-3 font-bold">Partenaire (assureur)</td><td class="pr-3">CNAMGS, NSIA, ASSINCO…</td><td>Inscription publique puis validation Assurances</td></tr>
+            <tr class="border-t border-emerald-100"><td class="py-1.5 pr-3 font-bold">Autorité sanitaire</td><td class="pr-3">MSNS / directions régionales</td><td>Inscription ou Utilisateurs → validation</td></tr>
+            <tr class="border-t border-emerald-100"><td class="py-1.5 pr-3 font-bold">Client / Patient</td><td class="pr-3">Grand public</td><td>Inscription libre sur le site</td></tr>
+            <tr class="border-t border-emerald-100"><td class="py-1.5 pr-3 font-bold">Support</td><td class="pr-3">Hotline / tickets</td><td>Utilisateurs</td></tr>
+            <tr class="border-t border-emerald-100"><td class="py-1.5 pr-3 font-bold">Superviseur régional</td><td class="pr-3">Pilotage par province</td><td>Utilisateurs + région assignée</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-[11px] text-emerald-800/80 mt-2">
+        Droits fins : <a href="{% url 'bo_admin_access_config' %}" class="text-primary font-bold underline">Rôles &amp; permissions</a>.
+      </p>
+    </section>
+
+    {# ── 3. Pharmacies ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">local_pharmacy</span> 3. Mettre une pharmacie en service
+      </h3>
+      <ol class="list-decimal pl-5 text-xs text-emerald-900/85 space-y-2">
+        <li>
+          <strong>Compte titulaire</strong> —
+          <a href="{% url 'bo_admin_users' %}?new=1" class="text-primary font-bold underline">Utilisateurs → Ajouter</a>,
+          rôle <em>Pharmacien</em>, e-mail obligatoire (identifiants envoyés).
+        </li>
+        <li>
+          <strong>Fiche officine</strong> —
+          <a href="{% url 'bo_admin_pharmacies' %}?new=1" class="text-primary font-bold underline">Pharmacies → Ajouter</a>
+          (ou Modifier) : choisir le <em>Titulaire</em>, statut <em>Active</em>.
+          Colonne « Non rattachée » = le pharmacien se connecte mais ne voit rien.
+        </li>
+        <li>
+          <strong>Abonnement plateforme</strong> —
+          <a href="{% url 'bo_admin_subscriptions' %}?tab=pharmacies" class="text-primary font-bold underline">Abonnements → Pharmacies</a>
+          (Essentiel / Professionnel / Entreprise).
+        </li>
+        <li>
+          <strong>Connexion pharmacie</strong> —
+          <a href="{% url 'login' %}" class="text-primary font-bold underline">/auth/connexion/</a>
+          → redirection <code>/espace/pharmacie/</code>.
+          Le titulaire gère ensuite stocks, commandes, personnel, messages.
+        </li>
+      </ol>
+    </section>
+
+    {# ── 4. Catalogue ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">medication</span> 4. Médicaments &amp; catalogue
+      </h3>
+      <ul class="list-disc pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li>
+          Référentiel national :
+          <a href="{% url 'bo_admin_medicines' %}" class="text-primary font-bold underline">Médicaments</a>
+          (DCI, dosage, forme, ordonnance obligatoire, image).
+        </li>
+        <li>Chaque pharmacie gère <strong>ses stocks</strong> (prix, quantités, alertes, péremption) dans son espace.</li>
+        <li>Le patient compare les disponibilités sur le site public puis commande chez une officine.</li>
+      </ul>
+    </section>
+
+    {# ── 5. Parcours patient ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">person</span> 5. Parcours patient (commande)
+      </h3>
+      <ol class="list-decimal pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li>Inscription / connexion patient → recherche médicament ou pharmacie.</li>
+        <li>Ajout au panier → checkout (livraison domicile / express / retrait).</li>
+        <li>Ordonnance : upload si médicament soumis à prescription.</li>
+        <li>Paiement : Moov Money, Airtel Money, carte, COD, ou en pharmacie (+ assurance éventuelle).</li>
+        <li>Confirmation → code de retrait / QR livraison → suivi temps réel.</li>
+        <li>Suivi admin : <a href="{% url 'bo_admin_orders' %}" class="text-primary font-bold underline">Commandes</a>.</li>
+      </ol>
+    </section>
+
+    {# ── 6. Pharmacie opérationnelle ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">storefront</span> 6. Côté pharmacie (après connexion)
+      </h3>
+      <ul class="list-disc pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li><strong>Commandes</strong> — accepter, préparer, valider / refuser ordonnance, marquer prête.</li>
+        <li><strong>Stocks</strong> — inventaire, seuils bas, dates de péremption.</li>
+        <li><strong>Personnel</strong> — caissier, préparateur, pharmacien adjoint (droits ERP).</li>
+        <li><strong>Messages / notifications</strong> — chat patient, urgences SOS.</li>
+        <li><strong>Remise livreur</strong> — QR / code de traçabilité.</li>
+      </ul>
+    </section>
+
+    {# ── 7. Livraison ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">local_shipping</span> 7. Livreurs &amp; livraison
+      </h3>
+      <ol class="list-decimal pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li>Créer le compte via <a href="{% url 'bo_admin_couriers' %}" class="text-primary font-bold underline">Livreurs</a> (profil véhicule, documents).</li>
+        <li>Le livreur se connecte → voit les courses assignées / à prendre.</li>
+        <li>Scan QR patient ou code → livraison validée.</li>
+        <li>Incidents (casse, retard, client absent) :
+          <a href="{% url 'bo_admin_incidents' %}" class="text-primary font-bold underline">Incidents / Support</a>
+          — réaffectation possible.
+        </li>
+      </ol>
+    </section>
+
+    {# ── 8. Paiements ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">payments</span> 8. Paiements
+      </h3>
+      <ul class="list-disc pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li>Suivi global : <a href="{% url 'bo_admin_payments' %}" class="text-primary font-bold underline">Paiements</a>.</li>
+        <li>Mobile Money / carte via <strong>E-Billing</strong> (Digitech) — une commande n'est « payée » qu'après <em>callback</em> définitif (pas sur un simple PENDING).</li>
+        <li>COD : acompte + solde à la livraison ; paiement en pharmacie au retrait.</li>
+        <li>Part assurance : enregistrée séparément, validée par l'assureur.</li>
+      </ul>
+    </section>
+
+    {# ── 9. Assurances ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">health_and_safety</span> 9. Compagnies d'assurance
+      </h3>
+      <ol class="list-decimal pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li>La compagnie s'inscrit sur le formulaire public (pas de création manuelle admin).</li>
+        <li>
+          Vous examinez le dossier (RCCM, NIF, enquête) dans
+          <a href="{% url 'bo_admin_insurance' %}" class="text-primary font-bold underline">Assurances — pilotage</a>
+          → Valider ou Refuser.
+        </li>
+        <li>
+          Activer l'abonnement :
+          <a href="{% url 'bo_admin_subscriptions' %}?tab=insurers" class="text-primary font-bold underline">Abonnements → Assurances</a>
+          (accès portail bloqué tant que non payé / activé).
+        </li>
+        <li>Ensuite l'assureur gère assurés, contrats, demandes de prise en charge, fraudes, stats.</li>
+      </ol>
+    </section>
+
+    {# ── 10. Autorités ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">account_balance</span> 10. Autorités sanitaires
+      </h3>
+      <ul class="list-disc pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li>Comptes : <a href="{% url 'bo_admin_authorities' %}" class="text-primary font-bold underline">Autorités sanitaires</a> (validation des inscriptions en attente).</li>
+        <li>Portail : pharmacies connectées, ruptures de stock, conformité, campagnes de santé, rapports.</li>
+        <li>Vous pouvez aussi consulter ces vues depuis le menu « Espace Autorités » de cette sidebar.</li>
+      </ul>
+    </section>
+
+    {# ── 11. Abonnements ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">card_membership</span> 11. Abonnements plateforme
+      </h3>
+      <ul class="list-disc pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li><strong>Pharmacies</strong> — forfaits Essentiel / Professionnel / Entreprise (mensuel ou annuel −20 %).</li>
+        <li><strong>Assureurs</strong> — Standard / Professionnel / Entreprise ; enregistrement du paiement puis activation.</li>
+        <li>Page : <a href="{% url 'bo_admin_subscriptions' %}" class="text-primary font-bold underline">Abonnements</a>.</li>
+      </ul>
+    </section>
+
+    {# ── 12. Support ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">support_agent</span> 12. Support, tickets &amp; notifications
+      </h3>
+      <ul class="list-disc pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li><a href="{% url 'bo_support_tickets' %}" class="text-primary font-bold underline">Réclamations</a> — tickets patients / partenaires.</li>
+        <li><a href="{% url 'bo_admin_incidents' %}" class="text-primary font-bold underline">Incidents livraison</a> — suivi et réaffectation.</li>
+        <li><a href="{% url 'bo_admin_notifications' %}" class="text-primary font-bold underline">Notifications</a> — campagnes / messages plateforme.</li>
+      </ul>
+    </section>
+
+    {# ── 13. Site public ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">web</span> 13. Contenu du site public
+      </h3>
+      <ul class="list-disc pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li><a href="{% url 'bo_admin_hero' %}" class="text-primary font-bold underline">Hero accueil</a> — titres, CTA, image.</li>
+        <li><a href="{% url 'bo_admin_ads' %}" class="text-primary font-bold underline">Publicités</a> — bannières.</li>
+        <li><a href="{% url 'bo_admin_tips' %}" class="text-primary font-bold underline">Conseils</a> — articles santé / conseils pharmacien.</li>
+      </ul>
+    </section>
+
+    {# ── 14. Paramètres & sécurité ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">settings</span> 14. Paramètres &amp; sécurité
+      </h3>
+      <ul class="list-disc pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li><a href="{% url 'bo_admin_platform_settings' %}" class="text-primary font-bold underline">Paramètres</a> — plafonds paiement, 2FA, options plateforme.</li>
+        <li><a href="{% url 'bo_admin_access_config' %}" class="text-primary font-bold underline">Rôles &amp; permissions</a> — modules admin + droits ERP pharmacie.</li>
+        <li><a href="{% url 'bo_admin_audit' %}" class="text-primary font-bold underline">Journal d'audit</a> — actions sensibles (créations, suspensions…).</li>
+      </ul>
+    </section>
+
+    {# ── 15. Checklist démarrage ── #}
+    <section class="bg-white/70 border border-emerald-100 rounded-xl p-4">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2">
+        <span class="material-symbols-rounded sm text-emerald-700">checklist</span> 15. Checklist de démarrage (ordre recommandé)
+      </h3>
+      <ol class="list-decimal pl-5 text-xs text-emerald-900/85 space-y-1.5">
+        <li>Paramètres plateforme + SMTP (envoi des identifiants).</li>
+        <li>Médicaments du référentiel (ou import).</li>
+        <li>1re pharmacie : compte pharmacien → fiche → titulaire → Active → abonnement.</li>
+        <li>1er livreur (profil + documents).</li>
+        <li>Hero / conseils / pub pour le site public.</li>
+        <li>Tester un parcours patient complet (commande + paiement simulé ou E-Billing LAB).</li>
+        <li>Valider une inscription assureur de test + abonnement.</li>
+        <li>Valider un compte autorité de test.</li>
+      </ol>
+    </section>
+
+    {# ── 16. Dépannage ── #}
+    <section class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+      <h3 class="font-extrabold flex items-center gap-2 mb-2 text-amber-950">
+        <span class="material-symbols-rounded sm text-amber-600">warning</span> Dépannage fréquent
+      </h3>
+      <ul class="list-disc pl-5 text-xs text-amber-900/90 space-y-1.5">
+        <li><strong>Pharmacien connecté mais dashboard vide</strong> — pas de titulaire sur la fiche Pharmacies.</li>
+        <li><strong>Assureur ne peut pas entrer</strong> — inscription non validée ou abonnement non activé.</li>
+        <li><strong>Images qui disparaissent</strong> — volume Dokploy <code>/app/media</code> + stockage MySQL (re-téléverser une fois après déploiement).</li>
+        <li><strong>CSRF à la connexion</strong> — recharger la page en HTTPS ; vérifier <code>DJANGO_CSRF_TRUSTED_ORIGINS</code>.</li>
+        <li><strong>Paiement « réussi » trop tôt</strong> — ne jamais confirmer sur PENDING ; attendre le callback E-Billing.</li>
+        <li><strong>2FA à chaque fois</strong> — cocher « Se souvenir de cet appareil » (30 jours).</li>
+      </ul>
+    </section>
+
+    <p class="text-[11px] text-emerald-800/70 text-center pt-1">
+      Support : support@gabpharma.online · Connexion :
+      <a href="{% url 'login' %}" class="text-primary font-bold underline" target="_blank" rel="noopener">/auth/connexion/</a>
+    </p>
+  </div>
+</details>
