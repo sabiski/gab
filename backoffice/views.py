@@ -647,6 +647,74 @@ def login_view(request):
     return render(request, "auth/login.html", {"error": error})
 
 
+def password_reset_request_view(request):
+    """Demande de lien de réinitialisation (e-mail / identifiant)."""
+    if request.user.is_authenticated:
+        return redirect(request.user.backoffice_home())
+
+    from accounts.password_reset import request_password_reset
+
+    error = None
+    info = None
+    sent = False
+    login_id = ""
+    if request.method == "POST":
+        login_id = request.POST.get("login_id", "").strip()
+        client_ip = request.META.get("REMOTE_ADDR", "")
+        ok, message = request_password_reset(
+            login_id, request=request, client_ip=client_ip
+        )
+        if ok:
+            info = message
+            sent = True
+        else:
+            error = message
+    return render(
+        request,
+        "auth/password_reset_request.html",
+        {"error": error, "info": info, "sent": sent, "login_id": login_id},
+    )
+
+
+def password_reset_confirm_view(request, uidb64, token):
+    """Choix du nouveau mot de passe via le lien e-mail."""
+    from accounts.password_reset import (
+        token_is_valid,
+        user_from_uid,
+        validate_new_password,
+    )
+
+    if request.user.is_authenticated:
+        return redirect(request.user.backoffice_home())
+
+    user = user_from_uid(uidb64)
+    valid = bool(user and token_is_valid(user, token))
+    error = None
+
+    if request.method == "POST" and valid:
+        err = validate_new_password(
+            request.POST.get("password1", ""),
+            request.POST.get("password2", ""),
+        )
+        if err:
+            error = err
+        else:
+            user.set_password(request.POST.get("password1"))
+            user.save(update_fields=["password"])
+            # Invalide les sessions / tokens précédents via update du hash
+            return redirect("password_reset_complete")
+
+    return render(
+        request,
+        "auth/password_reset_confirm.html",
+        {"valid": valid, "error": error},
+    )
+
+
+def password_reset_complete_view(request):
+    return render(request, "auth/password_reset_complete.html")
+
+
 def two_factor_verify_view(request):
     import logging
 

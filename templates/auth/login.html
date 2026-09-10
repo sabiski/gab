@@ -24,6 +24,9 @@
         <label class="block text-xs font-bold text-ink-muted mb-1.5">Mot de passe</label>
         <input type="password" name="password" required autocomplete="current-password"
           class="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 font-medium">
+        <p class="text-right mt-1.5">
+          <a href="{% url 'password_reset' %}" class="text-xs font-bold text-primary hover:underline">Mot de passe oublié ?</a>
+        </p>
       </div>
       <button type="submit" class="w-full bg-primary hover:bg-primary-600 text-white font-bold text-sm py-3 rounded-full transition">Se connecter</button>
     </form>
@@ -33,7 +36,9 @@
     </p>
     <p class="text-center text-xs text-ink-muted mt-3 leading-relaxed">
       <strong>Pharmacie partenaire ?</strong> Utilisez l'e-mail et le mot de passe reçus lors de l'activation de votre compte par Gab'Pharma.
-      En cas d'oubli, contactez <a href="mailto:support@gabpharma.online" class="text-primary font-bold hover:underline">support@gabpharma.online</a>.
+      En cas d'oubli, utilisez
+      <a href="{% url 'password_reset' %}" class="text-primary font-bold hover:underline">mot de passe oublié</a>
+      ou contactez <a href="mailto:support@gabpharma.online" class="text-primary font-bold hover:underline">support@gabpharma.online</a>.
     </p>
 
     <div class="mt-6 pt-5 border-t border-slate-100">
