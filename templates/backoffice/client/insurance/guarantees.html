@@ -1,0 +1,106 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% load humanize %}
+
+{% block portal_title %}Mes garanties{% endblock %}
+{% block portal_heading %}Mes garanties{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Taux de prise en charge, plafond annuel et ayants droit rattachés à votre contrat.</p>
+{% endblock %}
+
+{% block portal_body %}
+<nav class="flex flex-wrap gap-2 mb-5" aria-label="Assurance">
+  <a href="{% url 'bo_client_insurance_home' %}" class="c-btn c-btn--ghost text-xs">Mon assurance</a>
+  <a href="{% url 'bo_client_insurance_card' %}" class="c-btn c-btn--ghost text-xs">Ma carte</a>
+  <a href="{% url 'bo_client_insurance_guarantees' %}" class="c-btn c-btn--primary text-xs">Mes garanties</a>
+  <a href="{% url 'bo_client_insurance_requests' %}" class="c-btn c-btn--ghost text-xs">Mes demandes</a>
+  <a href="{% url 'bo_client_insurance_invoices' %}" class="c-btn c-btn--ghost text-xs">Factures</a>
+</nav>
+
+{% if not insurance.has_insurance %}
+<section class="c-card c-empty p-8">
+  <div class="c-empty__icon"><span class="material-symbols-rounded">shield</span></div>
+  <p class="text-sm font-bold text-[#374151]">Garanties non renseignées</p>
+  <p class="text-xs text-[#6B7280] mt-1 mb-4">Associez un organisme d'assurance à votre profil pour consulter vos garanties.</p>
+  <a href="{% url 'bo_client_profile_personal' %}" class="c-btn c-btn--primary">Compléter mon profil</a>
+</section>
+{% else %}
+
+<div class="grid sm:grid-cols-3 gap-4 mb-5">
+  <div class="c-card p-5 text-center">
+    <p class="c-label">Taux de couverture</p>
+    <p class="text-3xl font-extrabold text-[#6C3AED] mt-2">{{ insurance.coverage_rate }} %</p>
+    <p class="text-xs text-[#6B7280] mt-1 font-medium">Part prise en charge par l'assureur</p>
+  </div>
+  <div class="c-card p-5 text-center">
+    <p class="c-label">Plafond disponible</p>
+    <p class="text-2xl font-extrabold text-[#374151] mt-2">{% if insurance.available_ceiling != None %}{{ insurance.available_ceiling|intcomma }}{% else %}—{% endif %}</p>
+    <p class="text-xs text-[#6B7280] mt-1 font-medium">FCFA restants cette année</p>
+  </div>
+  <div class="c-card p-5 text-center">
+    <p class="c-label">Type de couverture</p>
+    <p class="text-sm font-extrabold text-[#374151] mt-3 leading-snug">{{ insurance.coverage_type }}</p>
+    {% if insurance.provider %}
+    <p class="text-xs text-[#6B7280] mt-1">{{ insurance.provider.name }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<section class="c-card p-5 mb-5">
+  <h2 class="c-card__title mb-1">Période de validité</h2>
+  <p class="c-card__sub mb-4">Dates de votre contrat ou abonnement actif</p>
+  <dl class="grid sm:grid-cols-2 gap-4 text-sm">
+    <div>
+      <dt class="c-label">Début</dt>
+      <dd class="font-bold text-[#374151] mt-0.5">{% if insurance.starts_at %}{{ insurance.starts_at|date:"d/m/Y" }}{% else %}—{% endif %}</dd>
+    </div>
+    <div>
+      <dt class="c-label">Fin</dt>
+      <dd class="font-bold text-[#374151] mt-0.5">{% if insurance.ends_at %}{{ insurance.ends_at|date:"d/m/Y" }}{% else %}—{% endif %}</dd>
+    </div>
+    <div>
+      <dt class="c-label">Statut carte</dt>
+      <dd class="mt-0.5">
+        <span class="c-pill {% if insurance.card_status == 'active' %}c-pill--success{% elif insurance.card_status == 'expired' %}c-pill--danger{% elif insurance.card_status == 'suspended' %}c-pill--warn{% else %}c-pill--muted{% endif %}">{{ insurance.card_status_label }}</span>
+      </dd>
+    </div>
+    <div>
+      <dt class="c-label">N° contrat</dt>
+      <dd class="font-mono font-bold text-[#374151] mt-0.5">{{ insurance.contract_number|default:"—" }}</dd>
+    </div>
+  </dl>
+</section>
+
+<section class="c-card p-5">
+  <div class="c-card__head">
+    <div>
+      <h2 class="c-card__title">Ayants droit</h2>
+      <p class="c-card__sub">Personnes couvertes par votre contrat</p>
+    </div>
+    <span class="c-pill">{{ insurance.dependents|length }} bénéficiaire{{ insurance.dependents|length|pluralize }}</span>
+  </div>
+
+  {% if insurance.dependents %}
+  <ul class="divide-y divide-[#F3F4F6]">
+    {% for dep in insurance.dependents %}
+    <li class="py-3 flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <p class="font-bold text-sm text-[#374151]">{{ dep.full_name }}</p>
+        <p class="text-xs text-[#6B7280] mt-0.5">
+          {{ dep.get_relationship_display }}
+          {% if dep.date_of_birth %} · {{ dep.date_of_birth|date:"d/m/Y" }}{% endif %}
+        </p>
+      </div>
+      {% if dep.insurance_number %}
+      <span class="text-xs font-mono font-bold text-[#6B7280]">{{ dep.insurance_number }}</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <div class="c-empty py-6">
+    <p class="text-sm text-[#6B7280]">Aucun ayant droit enregistré sur votre dossier.</p>
+  </div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

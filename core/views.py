@@ -301,10 +301,12 @@ def search(request):
     list_limit = 24 if (paywall and not explicit_search and not category) else 40
 
     if not search_blocked:
+        from core.pharmacy_boost import apply_boost_ordering
+
         if sort == "price_asc":
-            results = results.order_by("price", "medicine__name")
+            results = apply_boost_ordering(results, "price", "medicine__name")
         elif sort == "price_desc":
-            results = results.order_by("-price", "medicine__name")
+            results = apply_boost_ordering(results, "-price", "medicine__name")
         elif explicit_search:
             results = results.annotate(
                 relevance=Case(
@@ -315,9 +317,10 @@ def search(request):
                     default=Value(4),
                     output_field=IntegerField(),
                 )
-            ).order_by("relevance", "price", "medicine__name")
+            )
+            results = apply_boost_ordering(results, "relevance", "price", "medicine__name")
         else:
-            results = results.order_by("medicine__name", "price")
+            results = apply_boost_ordering(results, "medicine__name", "price")
         results = results[:list_limit]
 
     show_availability = can_show_availability(request, explicit_search=explicit_search)
@@ -1022,11 +1025,20 @@ def cart_add_view(request, stock_id):
     cart_count = sum(get_cart(request).values())
 
     if err:
+        needs_plan = "Abonnement requis" in (err or "")
         if is_ajax:
-            return JsonResponse(
-                {"ok": False, "message": err, "level": "error", "cart_count": cart_count}
-            )
+            payload = {
+                "ok": False,
+                "message": err,
+                "level": "error",
+                "cart_count": cart_count,
+            }
+            if needs_plan:
+                payload["redirect"] = portal_reverse(request, "subscription_plans")
+            return JsonResponse(payload)
         messages.error(request, err)
+        if needs_plan:
+            return redirect(portal_reverse(request, "subscription_plans"))
     elif stock and stock.medicine.requires_prescription:
         msg = (
             f"{stock.medicine.name} ajouté — médicament sur ordonnance : "
@@ -1883,7 +1895,18 @@ def emergency_page(request):
 
 @login_required(login_url="login")
 def message_inbox(request):
+    from core.patient_access import STAFF_BYPASS_ROLES, user_needs_paywall
     from notifications.models import PharmacyConversation
+
+    if (
+        getattr(request.user, "role", None) not in STAFF_BYPASS_ROLES
+        and user_needs_paywall(request.user)
+    ):
+        messages.warning(
+            request,
+            "La messagerie est réservée aux abonnés. Souscrivez à un forfait pour contacter une pharmacie.",
+        )
+        return redirect(portal_reverse(request, "subscription_plans"))
 
     convs = (
         PharmacyConversation.objects.filter(client=request.user)
@@ -1900,8 +1923,19 @@ def message_inbox(request):
 
 @login_required(login_url="login")
 def pharmacy_chat(request, slug):
+    from core.patient_access import STAFF_BYPASS_ROLES, user_needs_paywall
     from core.pharmacy_chat import get_or_create_conversation, send_pharmacy_message
     from notifications.models import Notification, PharmacyMessage
+
+    if (
+        getattr(request.user, "role", None) not in STAFF_BYPASS_ROLES
+        and user_needs_paywall(request.user)
+    ):
+        messages.warning(
+            request,
+            "La messagerie est réservée aux abonnés. Souscrivez à un forfait pour écrire à la pharmacie.",
+        )
+        return redirect(portal_reverse(request, "subscription_plans"))
 
     pharmacy = get_object_or_404(Pharmacy, slug=slug, status=Pharmacy.Status.ACTIVE)
     alert = None

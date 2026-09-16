@@ -16,6 +16,10 @@
 <a href="{% url 'bo_insurer_claims' %}" class="{{ link_class }}">
   <span class="material-symbols-rounded sm">description</span> Demandes de prise en charge
 </a>
+{% insurer_nav_link_class "coverage_pc" bo_nav_active_section nav_variant as link_class %}
+<a href="{% url 'bo_insurer_coverage_list' %}" class="{{ link_class }}">
+  <span class="material-symbols-rounded sm">medical_information</span> Dossiers patient (PC)
+</a>
 {% endif %}
 {% if portal_permissions.members %}
 {% insurer_nav_link_class "members" bo_nav_active_section nav_variant as link_class %}

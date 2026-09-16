@@ -85,6 +85,9 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body class="bo-shell font-sans bg-canvas text-ink antialiased min-h-screen{% if bo_role == 'client' %} bo-client-theme{% endif %}{% if bo_role == 'authority' or bo_insurer_portal %} bo-authority-theme{% endif %}{% if bo_role == 'partner' or bo_insurer_portal %} bo-insurer-theme{% endif %}">
+  {% if bo_role == "client" %}
+  {% include "partials/boost_popup.html" %}
+  {% endif %}
   <div id="bo-overlay" class="bo-overlay lg:hidden" hidden></div>
   {% include "backoffice/partials/sidebar.html" %}
   <div class="bo-shell__main">

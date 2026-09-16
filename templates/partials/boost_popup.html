@@ -1,0 +1,129 @@
+{# Popup publicité boost pharmacie — visible ~30 s, fermable #}
+{% if boost_popup_ad %}
+<div id="gp-boost-popup" class="gp-boost-popup" role="dialog" aria-modal="true" aria-labelledby="gp-boost-title" hidden>
+  <div class="gp-boost-popup__backdrop" data-boost-close></div>
+  <div class="gp-boost-popup__card">
+    <button type="button" class="gp-boost-popup__close" data-boost-close aria-label="Fermer">
+      <span class="material-symbols-rounded">close</span>
+    </button>
+    <div class="gp-boost-popup__media">
+      {% if boost_popup_ad.image %}
+      <img src="{{ boost_popup_ad.image.url }}" alt="{{ boost_popup_ad.title }}" loading="eager">
+      {% endif %}
+      <span class="gp-boost-popup__badge">Sponsorisé · {{ boost_popup_ad.pharmacy.name }}</span>
+    </div>
+    <div class="gp-boost-popup__body">
+      <h2 id="gp-boost-title" class="gp-boost-popup__title">{{ boost_popup_ad.title }}</h2>
+      {% if boost_popup_ad.description %}
+      <p class="gp-boost-popup__desc">{{ boost_popup_ad.description }}</p>
+      {% endif %}
+      <div class="gp-boost-popup__actions">
+        {% if boost_popup_ad.cta_url %}
+        <a href="{{ boost_popup_ad.cta_url }}" class="gp-boost-popup__cta" data-boost-cta>
+          {{ boost_popup_ad.cta_label|default:"Voir l'offre" }}
+        </a>
+        {% else %}
+        <button type="button" class="gp-boost-popup__cta" data-boost-close>
+          {{ boost_popup_ad.cta_label|default:"Découvrir" }}
+        </button>
+        {% endif %}
+        <button type="button" class="gp-boost-popup__skip" data-boost-close>Passer</button>
+      </div>
+      <div class="gp-boost-popup__timer" aria-hidden="true">
+        <div class="gp-boost-popup__timer-bar" id="gp-boost-timer-bar"></div>
+      </div>
+      <p class="gp-boost-popup__hint">Cette publicité se ferme automatiquement dans <span id="gp-boost-secs">30</span> s</p>
+    </div>
+  </div>
+</div>
+<style>
+  .gp-boost-popup { position: fixed; inset: 0; z-index: 99990; display: flex; align-items: flex-start; justify-content: center; padding: 4.5rem 1rem 1rem; pointer-events: none; }
+  .gp-boost-popup:not([hidden]) { pointer-events: auto; }
+  .gp-boost-popup[hidden] { display: none !important; }
+  .gp-boost-popup__backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, .45); backdrop-filter: blur(2px); }
+  .gp-boost-popup__card {
+    position: relative; z-index: 1; width: min(420px, 100%);
+    background: #fff; border-radius: 1.25rem; overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,.35);
+    animation: gpBoostIn .35s ease-out;
+  }
+  @keyframes gpBoostIn { from { opacity: 0; transform: translateY(-16px) scale(.97); } to { opacity: 1; transform: none; } }
+  .gp-boost-popup__close {
+    position: absolute; top: .75rem; right: .75rem; z-index: 2;
+    width: 2.25rem; height: 2.25rem; border-radius: 999px; border: 0;
+    background: rgba(15,23,42,.55); color: #fff; display: grid; place-items: center; cursor: pointer;
+  }
+  .gp-boost-popup__media { position: relative; aspect-ratio: 16/9; background: #0f172a; }
+  .gp-boost-popup__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gp-boost-popup__badge {
+    position: absolute; left: .75rem; bottom: .75rem;
+    background: rgba(15,23,42,.75); color: #fff; font-size: .65rem; font-weight: 700;
+    letter-spacing: .04em; text-transform: uppercase; padding: .35rem .6rem; border-radius: 999px;
+  }
+  .gp-boost-popup__body { padding: 1rem 1.15rem 1.15rem; }
+  .gp-boost-popup__title { font-size: 1.125rem; font-weight: 800; color: #1f2937; line-height: 1.3; margin: 0; }
+  .gp-boost-popup__desc { margin: .5rem 0 0; font-size: .875rem; color: #6b7280; line-height: 1.45; }
+  .gp-boost-popup__actions { display: flex; gap: .5rem; margin-top: 1rem; flex-wrap: wrap; }
+  .gp-boost-popup__cta {
+    flex: 1; min-width: 8rem; text-align: center; background: #6C3AED; color: #fff;
+    font-weight: 700; font-size: .875rem; padding: .7rem 1rem; border-radius: .85rem; border: 0; cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .gp-boost-popup__skip {
+    background: #f3f4f6; color: #4b5563; font-weight: 700; font-size: .8rem;
+    padding: .7rem 1rem; border-radius: .85rem; border: 0; cursor: pointer;
+  }
+  .gp-boost-popup__timer { margin-top: .9rem; height: 4px; background: #ede9fe; border-radius: 999px; overflow: hidden; }
+  .gp-boost-popup__timer-bar { height: 100%; width: 100%; background: linear-gradient(90deg,#8b5cf6,#6C3AED); transform-origin: left center; }
+  .gp-boost-popup__hint { margin: .45rem 0 0; font-size: .7rem; color: #9ca3af; text-align: center; }
+</style>
+<script>
+(function () {
+  var root = document.getElementById('gp-boost-popup');
+  if (!root) return;
+  var adId = '{{ boost_popup_ad.id }}';
+  var key = 'gp_boost_dismiss_' + adId;
+  try {
+    if (sessionStorage.getItem(key)) return;
+  } catch (e) {}
+
+  var DURATION = 30000;
+  var secsEl = document.getElementById('gp-boost-secs');
+  var bar = document.getElementById('gp-boost-timer-bar');
+  var closed = false;
+  var start = Date.now();
+
+  function closePopup() {
+    if (closed) return;
+    closed = true;
+    root.hidden = true;
+    try { sessionStorage.setItem(key, '1'); } catch (e) {}
+  }
+
+  root.hidden = false;
+  root.querySelectorAll('[data-boost-close]').forEach(function (el) {
+    el.addEventListener('click', closePopup);
+  });
+  var cta = root.querySelector('[data-boost-cta]');
+  if (cta) {
+    cta.addEventListener('click', function () {
+      try { sessionStorage.setItem(key, '1'); } catch (e) {}
+    });
+  }
+
+  function tick() {
+    if (closed) return;
+    var elapsed = Date.now() - start;
+    var left = Math.max(0, DURATION - elapsed);
+    if (secsEl) secsEl.textContent = String(Math.ceil(left / 1000));
+    if (bar) bar.style.transform = 'scaleX(' + (left / DURATION) + ')';
+    if (left <= 0) {
+      closePopup();
+      return;
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
+{% endif %}

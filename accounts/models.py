@@ -88,6 +88,11 @@ class User(AbstractUser):
 
 
 class ClientProfile(models.Model):
+    class InsuranceCardStatus(models.TextChoices):
+        ACTIVE = "active", "Active"
+        EXPIRED = "expired", "Expirée"
+        SUSPENDED = "suspended", "Suspendue"
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="client_profile")
     date_of_birth = models.DateField(null=True, blank=True)
     insurance_number = models.CharField(max_length=50, blank=True)
@@ -98,11 +103,75 @@ class ClientProfile(models.Model):
         blank=True,
         related_name="client_profiles",
     )
+    insurance_contract_number = models.CharField(
+        max_length=80,
+        blank=True,
+        help_text="Numéro de contrat / police",
+    )
+    insurance_coverage_type = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Type de couverture affiché sur la carte",
+    )
+    insurance_starts_at = models.DateField(null=True, blank=True)
+    insurance_ends_at = models.DateField(null=True, blank=True)
+    insurance_card_status = models.CharField(
+        max_length=12,
+        choices=InsuranceCardStatus.choices,
+        default=InsuranceCardStatus.ACTIVE,
+        blank=True,
+    )
+    insurance_available_ceiling = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Plafond disponible transmis par l'assureur (FCFA)",
+    )
     emergency_contact = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
 
     def __str__(self):
         return f"Profil client — {self.user}"
+
+
+class InsuranceDependent(models.Model):
+    """Ayant droit rattaché à un profil patient / abonnement assurance."""
+
+    class Relationship(models.TextChoices):
+        SPOUSE = "spouse", "Conjoint(e)"
+        CHILD = "child", "Enfant"
+        PARENT = "parent", "Parent"
+        OTHER = "other", "Autre"
+
+    client_profile = models.ForeignKey(
+        ClientProfile,
+        on_delete=models.CASCADE,
+        related_name="insurance_dependents",
+    )
+    subscription = models.ForeignKey(
+        "InsuranceMemberSubscription",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dependents",
+    )
+    full_name = models.CharField(max_length=200)
+    relationship = models.CharField(
+        max_length=20,
+        choices=Relationship.choices,
+        default=Relationship.OTHER,
+    )
+    date_of_birth = models.DateField(null=True, blank=True)
+    insurance_number = models.CharField(max_length=50, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["full_name"]
+        verbose_name = "Ayant droit"
+        verbose_name_plural = "Ayants droit"
+
+    def __str__(self):
+        return self.full_name
 
 
 class CourierProfile(models.Model):

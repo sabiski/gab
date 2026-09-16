@@ -77,7 +77,14 @@
     {% if not show_availability and not search_blocked %}
     <div class="c-alert c-alert--warn">
       <span class="material-symbols-rounded sm">info</span>
-      <span>Stocks masqués — lancez une recherche ou vérifiez la disponibilité sur une fiche produit.</span>
+      <span>Stocks masqués — lancez une recherche ou vérifiez la disponibilité sur une fiche produit. Sans forfait actif, l'ajout au panier est aussi bloqué.</span>
+    </div>
+    {% endif %}
+
+    {% if search_paywall and not search_blocked %}
+    <div class="c-alert c-alert--danger">
+      <span class="material-symbols-rounded sm">lock</span>
+      <span>Aucun forfait actif — <a href="{% portal_url 'subscription_plans' %}?next={{ request.get_full_path|urlencode }}" class="underline font-bold">souscrivez</a> pour voir les stocks et ajouter au panier.</span>
     </div>
     {% endif %}
 

@@ -690,7 +690,9 @@ def insurer_contracts(request):
 def insurer_subscription(request):
     import json
 
+    from accounts.models import InsuranceMemberSubscription
     from core.insurer_subscription import (
+        create_provider_plan,
         enrich_subscription,
         provider_plans,
         subscribe_user,
@@ -702,6 +704,7 @@ def insurer_subscription(request):
         subscriptions_filter_tab,
         subscriptions_stats,
         toggle_plan_active,
+        update_provider_plan,
         update_subscription_status,
     )
     from payments.models import InsuranceSubscriptionPlan
@@ -726,26 +729,65 @@ def insurer_subscription(request):
             plan = InsuranceSubscriptionPlan.objects.filter(
                 pk=request.POST.get("plan_id"),
                 provider=provider,
+                is_active=True,
             ).first()
             user = _resolve_user(request.POST.get("member_identifier", ""))
             if not plan:
-                messages.error(request, "Formule invalide.")
+                messages.error(request, "Formule invalide ou désactivée.")
             elif not user:
                 messages.error(request, "Bénéficiaire introuvable (e-mail, identifiant ou n° assuré).")
             else:
-                subscribe_user(
+                sub = subscribe_user(
                     user,
                     provider,
                     plan,
+                    status=request.POST.get("status") or None,
                     employer_name=(request.POST.get("employer_name") or "").strip(),
+                    insurance_number=(request.POST.get("insurance_number") or "").strip(),
                 )
-                messages.success(request, f"Abonnement créé pour {user.get_full_name() or user.username}.")
+                messages.success(
+                    request,
+                    f"Abonnement {sub.reference} créé pour {user.get_full_name() or user.username}.",
+                )
+        elif action == "create_plan" and provider:
+            try:
+                plan = create_provider_plan(
+                    provider,
+                    name=request.POST.get("name", ""),
+                    code=request.POST.get("code", ""),
+                    premium_amount=int(request.POST.get("premium_amount") or 0),
+                    coverage_rate=int(request.POST.get("coverage_rate") or 80),
+                    billing_period=request.POST.get("billing_period")
+                    or InsuranceSubscriptionPlan.BillingPeriod.MONTHLY,
+                    description=request.POST.get("description", ""),
+                )
+                messages.success(request, f"Formule « {plan.name} » créée.")
+            except (TypeError, ValueError) as exc:
+                messages.error(request, str(exc) or "Impossible de créer la formule.")
+        elif action == "update_plan" and profile.insurance_provider_id:
+            try:
+                plan = update_provider_plan(
+                    int(request.POST.get("plan_id") or 0),
+                    profile.insurance_provider_id,
+                    name=request.POST.get("name"),
+                    premium_amount=int(request.POST.get("premium_amount") or 0),
+                    coverage_rate=int(request.POST.get("coverage_rate") or 80),
+                    billing_period=request.POST.get("billing_period"),
+                    description=request.POST.get("description"),
+                )
+                if plan:
+                    messages.success(request, f"Formule « {plan.name} » mise à jour.")
+                else:
+                    messages.error(request, "Formule introuvable.")
+            except (TypeError, ValueError) as exc:
+                messages.error(request, str(exc) or "Mise à jour impossible.")
         elif action == "toggle_plan" and profile.insurance_provider_id:
             plan_id = request.POST.get("plan_id")
             if plan_id and toggle_plan_active(int(plan_id), profile.insurance_provider_id):
                 messages.success(request, "Formule mise à jour.")
         return redirect(request.get_full_path())
 
+    plans = list(provider_plans(profile))
     qs = subscriptions_base_queryset(profile)
     q = (request.GET.get("q") or "").strip()
     tab = (request.GET.get("tab") or "all").strip()
@@ -784,6 +826,8 @@ def insurer_subscription(request):
         per_page=per_page,
         page_title="Abonnements assurance",
         provider_plans=plans,
+        billing_periods=InsuranceSubscriptionPlan.BillingPeriod.choices,
+        sub_status_choices=InsuranceMemberSubscription.Status.choices,
     )
 
 
@@ -1042,6 +1086,120 @@ def insurer_settings(request):
 def insurer_support(request):
     profile = _insurer_profile(request.user, request)
     return _render(request, "support", "backoffice/insurer/support.html", profile)
+
+
+# ─── Demandes PC (module Mon Assurance patient) ─────────────────────
+
+
+def _coverage_qs(profile):
+    from payments.models import CoverageRequest
+
+    if not profile.insurance_provider_id:
+        return CoverageRequest.objects.none()
+    return (
+        CoverageRequest.objects.filter(provider_id=profile.insurance_provider_id)
+        .select_related("client", "pharmacy", "invoice")
+        .order_by("-created_at")
+    )
+
+
+@role_required(*insurer_access_roles)
+@portal_permission_required("claims")
+def insurer_coverage_list(request):
+    from core.coverage_requests import status_ui
+    from payments.models import CoverageRequest
+
+    profile = _insurer_profile(request.user, request)
+    status_filter = (request.GET.get("status") or "").strip()
+    qs = _coverage_qs(profile)
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    items = list(qs[:100])
+    for item in items:
+        item.status_ui = status_ui(item.status)
+    return _render(
+        request,
+        "coverage_pc",
+        "backoffice/insurer/coverage_list.html",
+        profile,
+        coverage_requests=items,
+        status_filter=status_filter,
+        status_choices=CoverageRequest.Status.choices,
+    )
+
+
+@role_required(*insurer_access_roles)
+@portal_permission_required("claims")
+def insurer_coverage_detail(request, pk):
+    from core.coverage_requests import (
+        accept_coverage,
+        log_access,
+        mark_under_review,
+        reject_coverage,
+        request_more_info,
+        status_ui,
+    )
+    from payments.models import CoverageAccessLog, CoverageRequest
+
+    profile = _insurer_profile(request.user, request)
+    req = get_object_or_404(_coverage_qs(profile), pk=pk)
+    log_access(req, request.user, CoverageAccessLog.Action.VIEW, request=request)
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "review" and req.status == CoverageRequest.Status.SENT:
+            mark_under_review(req, actor=request.user)
+            messages.success(request, "Demande passée en vérification.")
+        elif action == "info":
+            msg = request.POST.get("info_message", "").strip()
+            if not msg:
+                messages.error(request, "Précisez les informations demandées.")
+            else:
+                request_more_info(req, msg, actor=request.user)
+                messages.success(request, "Demande d'informations envoyée au patient.")
+        elif action == "accept":
+            try:
+                rate = int(request.POST.get("coverage_rate") or req.coverage_rate)
+            except (TypeError, ValueError):
+                rate = req.coverage_rate
+            try:
+                amount = int(request.POST.get("estimated_amount") or req.estimated_amount)
+            except (TypeError, ValueError):
+                amount = req.estimated_amount
+            try:
+                uncovered = int(request.POST.get("uncovered_amount") or 0)
+            except (TypeError, ValueError):
+                uncovered = 0
+            accept_coverage(
+                req,
+                coverage_rate=rate,
+                estimated_amount=amount,
+                uncovered_amount=uncovered,
+                actor=request.user,
+            )
+            _audit(request, "coverage_accept", "insurance", req.reference, True)
+            messages.success(request, f"{req.reference} acceptée — facture générée.")
+        elif action == "reject":
+            reason = request.POST.get("rejection_reason", "").strip()
+            try:
+                reject_coverage(req, reason, actor=request.user)
+                _audit(request, "coverage_reject", "insurance", req.reference, True)
+                messages.success(request, "Demande refusée.")
+            except ValueError as exc:
+                messages.error(request, str(exc))
+        return redirect("bo_insurer_coverage_detail", pk=req.pk)
+
+    req.status_ui = status_ui(req.status)
+    events = req.events.select_related("actor").all()[:40]
+    return _render(
+        request,
+        "coverage_pc",
+        "backoffice/insurer/coverage_detail.html",
+        profile,
+        coverage_request=req,
+        events=events,
+        invoice=getattr(req, "invoice", None),
+    )
 
 
 partner_dashboard = insurer_dashboard

@@ -26,6 +26,36 @@
   <span class="bo-client-nav__label">Urgence SOS</span>
 </a>
 
+<p class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/40">🛡️ Mon assurance</p>
+<a href="{% url 'bo_client_insurance_home' %}" class="bo-client-nav {% if bo_section == 'insurance' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">health_and_safety</span>
+  <span class="bo-client-nav__label">Mon assurance</span>
+</a>
+<a href="{% url 'bo_client_insurance_card' %}" class="bo-client-nav {% if bo_section == 'insurance_card' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">badge</span>
+  <span class="bo-client-nav__label">Ma carte d'assurance</span>
+</a>
+<a href="{% url 'bo_client_insurance_guarantees' %}" class="bo-client-nav {% if bo_section == 'insurance_guarantees' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">verified_user</span>
+  <span class="bo-client-nav__label">Mes garanties</span>
+</a>
+<a href="{% url 'bo_client_insurance_request_create' %}" class="bo-client-nav {% if bo_section == 'insurance_request' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">add_circle</span>
+  <span class="bo-client-nav__label">Demander une prise en charge</span>
+</a>
+<a href="{% url 'bo_client_insurance_requests' %}" class="bo-client-nav {% if bo_section == 'insurance_requests' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">folder_open</span>
+  <span class="bo-client-nav__label">Mes demandes</span>
+</a>
+<a href="{% url 'bo_client_insurance_invoices' %}" class="bo-client-nav {% if bo_section == 'insurance_invoices' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">receipt</span>
+  <span class="bo-client-nav__label">Mes factures</span>
+</a>
+<a href="{% url 'bo_client_insurance_history' %}" class="bo-client-nav {% if bo_section == 'insurance_history' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">history_edu</span>
+  <span class="bo-client-nav__label">Historique</span>
+</a>
+
 <p class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/40">Mon compte</p>
 <a href="{% url 'bo_client_settings' %}" class="bo-client-nav {% if bo_section == 'client_settings' %}is-active{% endif %}">
   <span class="material-symbols-rounded sm" aria-hidden="true">manage_accounts</span>

@@ -1,0 +1,28 @@
+{% extends "backoffice/base_bo.html" %}
+{% load humanize %}
+{% block title %}Prises en charge{% endblock %}
+{% block bo_label %}Espace pharmacie{% endblock %}
+{% block bo_title %}Prises en charge assurance{% endblock %}
+{% block bo_content %}
+<div class="max-w-5xl space-y-4">
+  <p class="text-sm text-[#6B7280]">Demandes validées par l'assureur concernant votre officine. Vous ne pouvez pas modifier le taux de couverture.</p>
+  {% for req in coverage_requests %}
+  <a href="{% url 'bo_pharmacy_coverage_detail' req.pk %}" class="block bg-white border border-[#E5E7EB] rounded-2xl p-4 hover:border-[#6C3AED] transition">
+    <div class="flex flex-wrap justify-between gap-2">
+      <div>
+        <p class="font-extrabold text-[#374151]">{{ req.reference }}</p>
+        <p class="text-xs text-[#6B7280] mt-0.5">{{ req.client.get_full_name|default:req.client.username }} · {{ req.provider.name }} · {{ req.created_at|date:"d/m/Y H:i" }}</p>
+      </div>
+      <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100">{{ req.status_ui.label }}</span>
+    </div>
+    <div class="grid grid-cols-3 gap-2 mt-3 text-xs">
+      <div><p class="text-[#6B7280]">Total</p><p class="font-bold">{{ req.total_amount|intcomma }} F</p></div>
+      <div><p class="text-[#6B7280]">Assurance</p><p class="font-bold text-emerald-700">{{ req.insurance_amount|intcomma }} F</p></div>
+      <div><p class="text-[#6B7280]">Patient</p><p class="font-bold">{{ req.patient_amount|intcomma }} F</p></div>
+    </div>
+  </a>
+  {% empty %}
+  <div class="bg-white border border-dashed border-[#E5E7EB] rounded-2xl p-8 text-center text-sm text-[#6B7280]">Aucune prise en charge pour le moment.</div>
+  {% endfor %}
+</div>
+{% endblock %}

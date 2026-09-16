@@ -1,0 +1,35 @@
+{% extends "backoffice/insurer/base_insurer.html" %}
+{% load humanize %}
+{% block ins_page_title %}Prises en charge patient (PC){% endblock %}
+{% block ins_content %}
+<header class="ins-claims-page-header mb-4">
+  <div>
+    <h1>Demandes patient — Mon Assurance</h1>
+    <p>Recevoir, vérifier, accepter ou refuser les dossiers PC-XXXXXX.</p>
+  </div>
+</header>
+
+<div class="flex flex-wrap gap-2 mb-4">
+  <a href="?status=" class="ins-btn-outline ins-btn-outline--sm {% if not status_filter %}is-active{% endif %}">Toutes</a>
+  {% for value, label in status_choices %}
+  <a href="?status={{ value }}" class="ins-btn-outline ins-btn-outline--sm {% if status_filter == value %}is-active{% endif %}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<div class="space-y-3">
+  {% for req in coverage_requests %}
+  <a href="{% url 'bo_insurer_coverage_detail' req.pk %}" class="block bg-white border border-slate-200 rounded-xl p-4 hover:border-violet-400">
+    <div class="flex flex-wrap justify-between gap-2">
+      <div>
+        <p class="font-bold font-mono">{{ req.reference }}</p>
+        <p class="text-sm text-slate-500">{{ req.client.get_full_name|default:req.client.username }} · {{ req.pharmacy.name }} · {{ req.created_at|date:"d/m/Y H:i" }}</p>
+      </div>
+      <span class="text-xs font-bold px-2 py-1 rounded-full bg-slate-100">{{ req.status_ui.label }}</span>
+    </div>
+    <p class="text-sm mt-2">Estimé {{ req.estimated_amount|intcomma }} F · Assurance {{ req.insurance_amount|intcomma }} F · Patient {{ req.patient_amount|intcomma }} F</p>
+  </a>
+  {% empty %}
+  <p class="text-sm text-slate-500">Aucune demande PC pour le moment.</p>
+  {% endfor %}
+</div>
+{% endblock %}

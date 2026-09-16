@@ -70,7 +70,14 @@ def _period_end(start: date, billing_period: str) -> date:
 
 
 def ensure_provider_plans(provider: InsuranceProvider) -> list[InsuranceSubscriptionPlan]:
-    """Garantit le catalogue de formules pour un organisme."""
+    """Seed initial uniquement si l'organisme n'a encore aucune formule."""
+    existing = list(
+        InsuranceSubscriptionPlan.objects.filter(provider=provider).order_by(
+            "sort_order", "name"
+        )
+    )
+    if existing:
+        return existing
     plans = []
     for spec in DEFAULT_PLANS:
         plan, _ = InsuranceSubscriptionPlan.objects.get_or_create(
@@ -87,6 +94,99 @@ def ensure_provider_plans(provider: InsuranceProvider) -> list[InsuranceSubscrip
         )
         plans.append(plan)
     return plans
+
+
+def _slug_plan_code(name: str, provider_id: int) -> str:
+    from django.utils.text import slugify
+
+    base = slugify(name)[:28] or "formule"
+    code = base
+    i = 2
+    while InsuranceSubscriptionPlan.objects.filter(provider_id=provider_id, code=code).exists():
+        code = f"{base}-{i}"[:32]
+        i += 1
+    return code
+
+
+def create_provider_plan(
+    provider: InsuranceProvider,
+    *,
+    name: str,
+    premium_amount: int,
+    coverage_rate: int = 80,
+    billing_period: str = InsuranceSubscriptionPlan.BillingPeriod.MONTHLY,
+    description: str = "",
+    code: str = "",
+    sort_order: int | None = None,
+) -> InsuranceSubscriptionPlan:
+    name = (name or "").strip()
+    if not name:
+        raise ValueError("Le nom de la formule est obligatoire.")
+    premium_amount = max(0, int(premium_amount))
+    coverage_rate = max(0, min(100, int(coverage_rate)))
+    if billing_period not in dict(InsuranceSubscriptionPlan.BillingPeriod.choices):
+        billing_period = InsuranceSubscriptionPlan.BillingPeriod.MONTHLY
+    code = (code or "").strip().lower() or _slug_plan_code(name, provider.pk)
+    if InsuranceSubscriptionPlan.objects.filter(provider=provider, code=code).exists():
+        raise ValueError(f"Une formule avec le code « {code} » existe déjà.")
+    if sort_order is None:
+        last = (
+            InsuranceSubscriptionPlan.objects.filter(provider=provider)
+            .order_by("-sort_order")
+            .values_list("sort_order", flat=True)
+            .first()
+        )
+        sort_order = int(last or 0) + 1
+    return InsuranceSubscriptionPlan.objects.create(
+        provider=provider,
+        code=code[:32],
+        name=name[:120],
+        premium_amount=premium_amount,
+        coverage_rate=coverage_rate,
+        billing_period=billing_period,
+        description=(description or "").strip(),
+        sort_order=sort_order,
+        is_active=True,
+    )
+
+
+def update_provider_plan(
+    plan_id: int,
+    provider_id: int,
+    *,
+    name: str | None = None,
+    premium_amount: int | None = None,
+    coverage_rate: int | None = None,
+    billing_period: str | None = None,
+    description: str | None = None,
+    is_active: bool | None = None,
+) -> InsuranceSubscriptionPlan | None:
+    plan = InsuranceSubscriptionPlan.objects.filter(pk=plan_id, provider_id=provider_id).first()
+    if not plan:
+        return None
+    fields = ["updated_at"]
+    if name is not None:
+        plan.name = name.strip()[:120] or plan.name
+        fields.append("name")
+    if premium_amount is not None:
+        plan.premium_amount = max(0, int(premium_amount))
+        fields.append("premium_amount")
+    if coverage_rate is not None:
+        plan.coverage_rate = max(0, min(100, int(coverage_rate)))
+        fields.append("coverage_rate")
+    if billing_period is not None and billing_period in dict(
+        InsuranceSubscriptionPlan.BillingPeriod.choices
+    ):
+        plan.billing_period = billing_period
+        fields.append("billing_period")
+    if description is not None:
+        plan.description = description.strip()
+        fields.append("description")
+    if is_active is not None:
+        plan.is_active = bool(is_active)
+        fields.append("is_active")
+    plan.save(update_fields=fields)
+    return plan
 
 
 def provider_plans(profile: InsurerPortalProfile, *, active_only: bool = False):
@@ -143,17 +243,49 @@ def subscribe_user(
     *,
     status: str | None = None,
     employer_name: str = "",
+    insurance_number: str = "",
 ) -> InsuranceMemberSubscription:
     """Souscrit un utilisateur à une formule — met à jour son profil client."""
     profile, _ = ClientProfile.objects.get_or_create(user=user)
-    if not profile.insurance_number:
+    number = (insurance_number or "").strip().upper()
+    if number:
+        profile.insurance_number = number
+    elif not profile.insurance_number:
         profile.insurance_number = f"{provider.code}-{user.pk:06d}"
     profile.insurance_provider = provider
-    profile.save(update_fields=["insurance_number", "insurance_provider"])
-
+    profile.insurance_coverage_type = plan.name
+    profile.insurance_card_status = ClientProfile.InsuranceCardStatus.ACTIVE
     today = timezone.localdate()
+    ends = _period_end(today, plan.billing_period)
+    profile.insurance_starts_at = today
+    profile.insurance_ends_at = ends
+    profile.save(
+        update_fields=[
+            "insurance_number",
+            "insurance_provider",
+            "insurance_coverage_type",
+            "insurance_card_status",
+            "insurance_starts_at",
+            "insurance_ends_at",
+        ]
+    )
+
     sub_status = status or InsuranceMemberSubscription.Status.ACTIVE
-    plan_code = plan.code if plan.code in dict(InsuranceMemberSubscription.Plan.choices) else "entreprise"
+    if sub_status not in dict(InsuranceMemberSubscription.Status.choices):
+        sub_status = InsuranceMemberSubscription.Status.ACTIVE
+    plan_code = (
+        plan.code if plan.code in dict(InsuranceMemberSubscription.Plan.choices) else "entreprise"
+    )
+
+    # Réactive / remplace un abonnement actif existant pour ce provider
+    InsuranceMemberSubscription.objects.filter(
+        user=user,
+        insurance_provider=provider,
+        status=InsuranceMemberSubscription.Status.ACTIVE,
+    ).update(
+        status=InsuranceMemberSubscription.Status.CANCELLED,
+        updated_at=timezone.now(),
+    )
 
     return InsuranceMemberSubscription.objects.create(
         user=user,
@@ -167,7 +299,7 @@ def subscribe_user(
         employer_name=employer_name,
         status=sub_status,
         starts_at=today,
-        ends_at=_period_end(today, plan.billing_period),
+        ends_at=ends,
     )
 
 

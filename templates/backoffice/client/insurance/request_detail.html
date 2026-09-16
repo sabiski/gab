@@ -1,0 +1,227 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% load humanize %}
+
+{% block portal_title %}Demande {{ coverage_request.reference }}{% endblock %}
+{% block portal_heading %}Demande {{ coverage_request.reference }}{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Suivi de votre prise en charge — pharmacie {{ coverage_request.pharmacy.name }}, assureur {{ coverage_request.provider.name }}.</p>
+{% endblock %}
+
+{% block portal_body %}
+<p class="mb-4">
+  <a href="{% url 'bo_client_insurance_requests' %}" class="text-sm font-bold text-[#6C3AED] hover:underline">← Mes demandes</a>
+</p>
+
+<div class="grid lg:grid-cols-3 gap-5">
+  <div class="lg:col-span-2 space-y-5">
+
+    <section class="c-card p-5">
+      <div class="flex flex-wrap justify-between gap-3 items-start mb-4">
+        <div>
+          <p class="c-label">Référence prise en charge</p>
+          <p class="text-2xl font-extrabold font-mono text-[#374151]">{{ coverage_request.reference }}</p>
+          <p class="text-xs text-[#6B7280] mt-1">Créée le {{ coverage_request.created_at|date:"d/m/Y à H:i" }}</p>
+        </div>
+        <span class="c-pill {% if coverage_request.status_ui.tone == 'accepted' or coverage_request.status_ui.tone == 'completed' %}c-pill--success{% elif coverage_request.status_ui.tone == 'rejected' %}c-pill--danger{% elif coverage_request.status_ui.tone == 'sent' or coverage_request.status_ui.tone == 'info' %}c-pill--warn{% elif coverage_request.status_ui.tone == 'expired' %}c-pill--muted{% endif %}">
+          <span class="material-symbols-rounded" style="font-size:14px">{{ coverage_request.status_ui.icon }}</span>
+          {{ coverage_request.status_ui.label }}
+        </span>
+      </div>
+
+      {% if coverage_request.rejection_reason %}
+      <div class="c-alert c-alert--danger mb-4">
+        <span class="material-symbols-rounded sm shrink-0">cancel</span>
+        <div>
+          <p class="font-extrabold">Motif de refus</p>
+          <p class="font-medium mt-1">{{ coverage_request.rejection_reason }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if coverage_request.status == 'info_needed' and coverage_request.info_request_message %}
+      <div class="c-alert c-alert--warn mb-4">
+        <span class="material-symbols-rounded sm shrink-0">help</span>
+        <div>
+          <p class="font-extrabold">Informations demandées par l'assureur</p>
+          <p class="font-medium mt-1">{{ coverage_request.info_request_message }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      <h3 class="c-card__title mb-3">Répartition des montants</h3>
+      <div class="overflow-x-auto rounded-xl border border-[#E5E7EB]">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-[#FAF8FF] text-[11px] font-bold uppercase text-[#6B7280]">
+              <th class="px-4 py-2.5 text-left">Libellé</th>
+              <th class="px-4 py-2.5 text-right">Montant (FCFA)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#F3F4F6]">
+            <tr>
+              <td class="px-4 py-3 font-semibold text-[#374151]">Total</td>
+              <td class="px-4 py-3 text-right font-extrabold">
+                {% if coverage_request.delivered_amount %}{{ coverage_request.delivered_amount|intcomma }}
+                {% elif coverage_request.insurance_amount or coverage_request.patient_amount or coverage_request.uncovered_amount %}{{ coverage_request.insurance_amount|add:coverage_request.patient_amount|add:coverage_request.uncovered_amount|intcomma }}
+                {% else %}{{ coverage_request.estimated_amount|intcomma }}{% if coverage_request.estimated_amount %} <span class="text-xs font-normal text-[#9CA3AF]">(estimé)</span>{% endif %}{% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 text-[#6C3AED] font-semibold">Part assurance ({{ coverage_request.coverage_rate }} %)</td>
+              <td class="px-4 py-3 text-right font-bold text-[#6C3AED]">{{ coverage_request.insurance_amount|intcomma }}</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 font-semibold">Reste patient</td>
+              <td class="px-4 py-3 text-right font-bold">{{ coverage_request.patient_amount|intcomma }}</td>
+            </tr>
+            <tr>
+              <td class="px-4 py-3 font-semibold text-[#6B7280]">Non couverts</td>
+              <td class="px-4 py-3 text-right font-semibold text-[#6B7280]">{{ coverage_request.uncovered_amount|intcomma }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    {% if coverage_request.status == 'info_needed' %}
+    <section class="c-card p-5">
+      <h2 class="c-card__title mb-1">Répondre à l'assureur</h2>
+      <p class="c-card__sub mb-4">Transmettez les informations complémentaires demandées.</p>
+      <form method="post" class="space-y-4 text-sm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reply_info">
+        <div class="c-field">
+          <label class="c-label" for="patient_info_reply">Votre réponse *</label>
+          <textarea name="patient_info_reply" id="patient_info_reply" rows="4" required class="c-textarea" placeholder="Décrivez les éléments demandés…">{{ coverage_request.patient_info_reply }}</textarea>
+        </div>
+        <button type="submit" class="c-btn c-btn--primary">
+          <span class="material-symbols-rounded sm">reply</span> Envoyer ma réponse
+        </button>
+      </form>
+    </section>
+    {% endif %}
+
+    {% if invoice %}
+    <section class="c-card p-5">
+      <div class="flex flex-wrap justify-between gap-3 items-start mb-4">
+        <div>
+          <h2 class="c-card__title">Facture {{ invoice.reference }}</h2>
+          <p class="c-card__sub">Liée à la demande {{ coverage_request.reference }}</p>
+        </div>
+        <span class="c-pill {% if invoice.payment_status == 'paid' or invoice.payment_status == 'waived' %}c-pill--success{% elif invoice.payment_status == 'partial' %}c-pill--warn{% else %}c-pill--muted{% endif %}">
+          {{ invoice.get_payment_status_display }}
+        </span>
+      </div>
+      <dl class="grid sm:grid-cols-2 gap-3 text-sm mb-4">
+        <div>
+          <dt class="c-label">Total facture</dt>
+          <dd class="font-bold mt-0.5">{{ invoice.total|intcomma }} FCFA</dd>
+        </div>
+        <div>
+          <dt class="c-label">Reste à charge patient</dt>
+          <dd class="font-extrabold text-[#6C3AED] mt-0.5">{{ invoice.patient_share|intcomma }} FCFA</dd>
+        </div>
+      </dl>
+      <a href="{% url 'bo_client_coverage_invoice_pdf' invoice.pk %}" class="c-btn c-btn--ghost text-xs">
+        <span class="material-symbols-rounded sm">download</span> Télécharger le PDF
+      </a>
+
+      {% if invoice.patient_share > 0 and invoice.payment_status != 'paid' and invoice.payment_status != 'waived' %}
+      <form method="post" class="mt-5 pt-5 border-t border-[#F3F4F6] space-y-4 text-sm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="pay">
+        <h3 class="font-extrabold text-[#374151]">Régler ma part patient</h3>
+        <div class="c-field">
+          <label class="c-label" for="payment_method">Mode de paiement</label>
+          <select name="payment_method" id="payment_method" class="c-select">
+            {% for value, label in payment_methods %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="c-field">
+          <label class="c-label" for="payment_reference">Référence de paiement (optionnel)</label>
+          <input type="text" name="payment_reference" id="payment_reference" class="c-input" placeholder="N° transaction Moov / Airtel…">
+        </div>
+        <button type="submit" class="c-btn c-btn--primary w-full sm:w-auto">
+          <span class="material-symbols-rounded sm">payments</span> Confirmer le paiement de {{ invoice.patient_share|intcomma }} FCFA
+        </button>
+      </form>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <section class="c-card p-5">
+      <h2 class="c-card__title mb-4">Historique</h2>
+      <ol class="space-y-4">
+        {% for ev in events %}
+        <li class="flex gap-3 items-start">
+          <span class="h-8 w-8 rounded-full bg-[#F5F3FF] text-[#6C3AED] flex items-center justify-center shrink-0">
+            <span class="material-symbols-rounded sm">history</span>
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="font-bold text-sm text-[#374151]">{{ ev.action }}</p>
+            {% if ev.message %}<p class="text-sm text-[#6B7280] mt-0.5">{{ ev.message }}</p>{% endif %}
+            <p class="text-[11px] text-[#9CA3AF] mt-1 font-semibold">{{ ev.created_at|date:"d/m/Y H:i" }}{% if ev.actor %} · {{ ev.actor.get_full_name|default:ev.actor.username }}{% endif %}</p>
+          </div>
+        </li>
+        {% empty %}
+        <li class="text-sm text-[#6B7280]">Aucun événement enregistré.</li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+
+  <aside class="space-y-5">
+    <section class="c-card p-5 text-sm">
+      <h2 class="c-card__title mb-3">Détails</h2>
+      <dl class="space-y-3">
+        <div>
+          <dt class="c-label">Assureur</dt>
+          <dd class="font-bold text-[#374151] mt-0.5">{{ coverage_request.provider.name }}</dd>
+        </div>
+        <div>
+          <dt class="c-label">Pharmacie</dt>
+          <dd class="font-bold text-[#374151] mt-0.5">{{ coverage_request.pharmacy.name }}</dd>
+        </div>
+        <div>
+          <dt class="c-label">N° assuré</dt>
+          <dd class="font-mono font-bold mt-0.5">{{ coverage_request.insured_number }}</dd>
+        </div>
+        <div>
+          <dt class="c-label">Type</dt>
+          <dd class="font-medium mt-0.5">{{ coverage_request.get_request_type_display }}</dd>
+        </div>
+        {% if coverage_request.desired_date %}
+        <div>
+          <dt class="c-label">Date souhaitée</dt>
+          <dd class="font-medium mt-0.5">{{ coverage_request.desired_date|date:"d/m/Y" }}</dd>
+        </div>
+        {% endif %}
+        {% if coverage_request.doctor_name %}
+        <div>
+          <dt class="c-label">Médecin</dt>
+          <dd class="font-medium mt-0.5">{{ coverage_request.doctor_name }}</dd>
+        </div>
+        {% endif %}
+        {% if coverage_request.comment %}
+        <div>
+          <dt class="c-label">Commentaire</dt>
+          <dd class="font-medium mt-0.5 text-[#6B7280]">{{ coverage_request.comment }}</dd>
+        </div>
+        {% endif %}
+      </dl>
+    </section>
+
+    {% if coverage_request.prescription_file %}
+    <section class="c-card p-5">
+      <h2 class="c-card__title mb-2">Ordonnance</h2>
+      <p class="c-card__sub mb-3">{% if coverage_request.prescription_date %}Datée du {{ coverage_request.prescription_date|date:"d/m/Y" }}{% else %}Document joint à la demande{% endif %}</p>
+      <a href="{% url 'bo_client_coverage_prescription' coverage_request.pk %}" target="_blank" rel="noopener" class="c-btn c-btn--ghost w-full">
+        <span class="material-symbols-rounded sm">visibility</span> Voir l'ordonnance
+      </a>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

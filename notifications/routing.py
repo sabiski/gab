@@ -78,6 +78,17 @@ def resolve_notification_url(notif):
     if event == "subscription":
         return reverse("bo_pharmacy_subscription")
 
+    if event == "coverage_request" and data.get("coverage_request_id"):
+        return reverse(
+            "bo_client_insurance_request_detail",
+            kwargs={"pk": data["coverage_request_id"]},
+        )
+    if event == "coverage_pharmacy" and data.get("coverage_request_id"):
+        return reverse(
+            "bo_pharmacy_coverage_detail",
+            kwargs={"pk": data["coverage_request_id"]},
+        )
+
     url = data.get("url")
     if url:
         if order_id and url.rstrip("/") == reverse("bo_pharmacy_orders").rstrip("/"):

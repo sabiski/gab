@@ -138,6 +138,125 @@ class Advertisement(models.Model):
         return True
 
 
+class PharmacyBoostPurchase(models.Model):
+    """Forfait publicitaire / boost pour une pharmacie (type Facebook Ads)."""
+
+    class Plan(models.TextChoices):
+        BOOST_7 = "boost_7", "Boost 7 jours"
+        BOOST_15 = "boost_15", "Boost 15 jours"
+        BOOST_30 = "boost_30", "Boost 30 jours"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Actif"
+        EXPIRED = "expired", "Expiré"
+        CANCELLED = "cancelled", "Annulé"
+
+    pharmacy = models.ForeignKey(
+        Pharmacy,
+        on_delete=models.CASCADE,
+        related_name="boost_purchases",
+    )
+    plan = models.CharField(max_length=20, choices=Plan.choices)
+    amount = models.PositiveIntegerField(help_text="Montant payé (FCFA)")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    reference = models.CharField(max_length=40, blank=True)
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Forfait boost pharmacie"
+        verbose_name_plural = "Forfaits boost pharmacie"
+
+    def __str__(self):
+        return f"{self.pharmacy} — {self.get_plan_display()}"
+
+    @property
+    def is_live(self):
+        now = timezone.now()
+        return (
+            self.status == self.Status.ACTIVE
+            and self.starts_at <= now <= self.ends_at
+        )
+
+
+class PharmacyBoostAd(models.Model):
+    """Publicité ciblée créée par une pharmacie (popup + priorité catalogue)."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Brouillon"
+        ACTIVE = "active", "Active"
+        PAUSED = "paused", "En pause"
+        ENDED = "ended", "Terminée"
+
+    pharmacy = models.ForeignKey(
+        Pharmacy,
+        on_delete=models.CASCADE,
+        related_name="boost_ads",
+    )
+    purchase = models.ForeignKey(
+        PharmacyBoostPurchase,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ads",
+    )
+    title = models.CharField(max_length=150)
+    description = models.TextField(max_length=500, blank=True)
+    image = models.ImageField(upload_to="pharmacy/boost/")
+    cta_label = models.CharField(max_length=60, default="Voir l'offre", blank=True)
+    cta_url = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Lien vers fiche produit, catalogue ou page pharmacie",
+    )
+    show_popup = models.BooleanField(
+        default=True,
+        help_text="Afficher en popup header ~30 secondes",
+    )
+    boost_catalog = models.BooleanField(
+        default=True,
+        help_text="Prioriser les produits de cette pharmacie dans le catalogue",
+    )
+    priority = models.PositiveIntegerField(default=10)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    impressions = models.PositiveIntegerField(default=0)
+    clicks = models.PositiveIntegerField(default=0)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pharmacy_boost_ads",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-priority", "-created_at"]
+        verbose_name = "Publicité boost pharmacie"
+        verbose_name_plural = "Publicités boost pharmacie"
+
+    def __str__(self):
+        return f"{self.title} ({self.pharmacy})"
+
+    @property
+    def is_currently_active(self):
+        if self.status != self.Status.ACTIVE:
+            return False
+        now = timezone.now()
+        if self.starts_at and now < self.starts_at:
+            return False
+        if self.ends_at and now > self.ends_at:
+            return False
+        if self.purchase_id and not self.purchase.is_live:
+            return False
+        return True
+
+
 class HealthCampaign(models.Model):
     """Campagne nationale de santé publique (pilotage MSNS / OMS — contexte Gabon)."""
 

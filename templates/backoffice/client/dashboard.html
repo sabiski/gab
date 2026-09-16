@@ -27,6 +27,9 @@
     <a href="{% url 'bo_client_notifications' %}" class="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-[#374151] hover:border-[#6C3AED] hover:bg-[#F5F3FF]">
       <span class="material-symbols-rounded sm text-[#6C3AED]">notifications</span> Notifications{% if unread_notifs %} ({{ unread_notifs }}){% endif %}
     </a>
+    <a href="{% url 'bo_client_insurance_home' %}" class="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-[#374151] hover:border-[#6C3AED] hover:bg-[#F5F3FF]">
+      <span class="material-symbols-rounded sm text-[#6C3AED]">health_and_safety</span> Mon assurance
+    </a>
     <a href="{% url 'bo_client_settings' %}" class="flex items-center gap-2 rounded-xl border border-[#E5E7EB] px-3 py-2.5 text-[#374151] hover:border-[#6C3AED] hover:bg-[#F5F3FF]">
       <span class="material-symbols-rounded sm text-[#6C3AED]">manage_accounts</span> Mon profil
     </a>

@@ -1,0 +1,142 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% load humanize %}
+
+{% block portal_title %}Demande de prise en charge{% endblock %}
+{% block portal_heading %}Demander une prise en charge{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Transmettez votre ordonnance et les informations nécessaires. Votre assureur examinera la demande avant validation en pharmacie.</p>
+{% endblock %}
+
+{% block portal_body %}
+<p class="mb-4">
+  <a href="{% url 'bo_client_insurance_home' %}" class="text-sm font-bold text-[#6C3AED] hover:underline">← Mon assurance</a>
+</p>
+
+<section class="c-card p-5">
+  <ol class="flex gap-2 mb-6 text-xs font-bold">
+    <li class="flex-1 flex items-center gap-2 rounded-xl px-3 py-2 bg-[#F5F3FF] border border-[#DDD6FE] text-[#6C3AED]">
+      <span class="h-6 w-6 rounded-full bg-[#6C3AED] text-white flex items-center justify-center text-[11px]">1</span>
+      Informations
+    </li>
+    <li class="flex-1 flex items-center gap-2 rounded-xl px-3 py-2 bg-[#FAFAFA] border border-[#E5E7EB] text-[#6B7280]">
+      <span class="h-6 w-6 rounded-full bg-[#E5E7EB] text-[#374151] flex items-center justify-center text-[11px]">2</span>
+      Ordonnance
+    </li>
+  </ol>
+
+  <form method="post" enctype="multipart/form-data" class="space-y-6 text-sm" id="pc-request-form">
+    {% csrf_token %}
+
+    <div>
+      <h2 class="c-card__title mb-1">Étape 1 — Informations</h2>
+      <p class="c-card__sub mb-4">Assureur, pharmacie et détails de la demande</p>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="c-field sm:col-span-2">
+          <label class="c-label" for="provider_id">Organisme d'assurance *</label>
+          <select name="provider_id" id="provider_id" required class="c-select">
+            <option value="">— Choisir —</option>
+            {% for p in providers %}
+            <option value="{{ p.id }}" {% if insurance.provider and insurance.provider.id == p.id %}selected{% endif %}>{{ p.name }} ({{ p.coverage_rate }} %)</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="c-field">
+          <label class="c-label" for="insured_number">N° assuré *</label>
+          <input type="text" name="insured_number" id="insured_number" required class="c-input font-mono" value="{{ insurance.insured_number|default:'' }}" placeholder="Numéro d'assuré">
+        </div>
+        <div class="c-field">
+          <label class="c-label" for="request_type">Type de demande</label>
+          <select name="request_type" id="request_type" class="c-select">
+            {% for value, label in request_types %}
+            <option value="{{ value }}" {% if value == 'pharmacy' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="c-field sm:col-span-2">
+          <label class="c-label" for="pharmacy_id">Pharmacie concernée *</label>
+          <select name="pharmacy_id" id="pharmacy_id" required class="c-select">
+            <option value="">— Choisir une pharmacie —</option>
+            {% for ph in pharmacies %}
+            <option value="{{ ph.id }}">{{ ph.name }}{% if ph.city %} · {{ ph.city }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="c-field">
+          <label class="c-label" for="desired_date">Date souhaitée</label>
+          <input type="date" name="desired_date" id="desired_date" class="c-input">
+        </div>
+        <div class="c-field">
+          <label class="c-label" for="estimated_amount">Montant estimé (FCFA)</label>
+          <input type="number" name="estimated_amount" id="estimated_amount" min="0" step="1" class="c-input" placeholder="Ex. 25000">
+        </div>
+        <div class="c-field sm:col-span-2">
+          <label class="c-label" for="comment">Commentaire (optionnel)</label>
+          <textarea name="comment" id="comment" rows="2" class="c-textarea" placeholder="Précisions pour l'assureur…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="pt-4 border-t border-[#F3F4F6]">
+      <h2 class="c-card__title mb-1">Étape 2 — Ordonnance</h2>
+      <p class="c-card__sub mb-4">PDF ou photo (JPG, JPEG, PNG)</p>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div class="c-field sm:col-span-2">
+          <label class="c-label" for="pc-rx-file">Fichier ordonnance *</label>
+          <input type="file" name="prescription_file" id="pc-rx-file" required accept=".pdf,.jpg,.jpeg,.png,image/*" class="c-file w-full border border-dashed border-[#DDD6FE] rounded-xl p-3 bg-[#FAF8FF]">
+        </div>
+        <div class="sm:col-span-2 hidden" id="pc-rx-preview-wrap">
+          <p class="c-label mb-2">Prévisualisation</p>
+          <div class="c-rx-preview rounded-xl border border-[#E5E7EB] min-h-[140px] p-2" id="pc-rx-preview-box"></div>
+          <button type="button" class="text-xs font-bold text-[#6B7280] mt-2 hover:text-rose-600" id="pc-rx-clear">Retirer le fichier</button>
+        </div>
+        <div class="c-field">
+          <label class="c-label" for="prescription_date">Date de l'ordonnance</label>
+          <input type="date" name="prescription_date" id="prescription_date" class="c-input">
+        </div>
+        <div class="c-field">
+          <label class="c-label" for="doctor_name">Médecin prescripteur</label>
+          <input type="text" name="doctor_name" id="doctor_name" class="c-input" placeholder="Dr. …">
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="c-btn c-btn--primary w-full sm:w-auto">
+      <span class="material-symbols-rounded sm">send</span> Envoyer la demande
+    </button>
+  </form>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var input = document.getElementById('pc-rx-file');
+  var wrap = document.getElementById('pc-rx-preview-wrap');
+  var box = document.getElementById('pc-rx-preview-box');
+  var clearBtn = document.getElementById('pc-rx-clear');
+  function clearPreview() {
+    if (input) input.value = '';
+    if (box) box.innerHTML = '';
+    if (wrap) wrap.classList.add('hidden');
+  }
+  if (input) {
+    input.addEventListener('change', function () {
+      box.innerHTML = '';
+      wrap.classList.add('hidden');
+      var f = input.files && input.files[0];
+      if (!f) return;
+      var url = URL.createObjectURL(f);
+      if (f.type === 'application/pdf') {
+        box.innerHTML = '<iframe src="' + url + '" class="w-full h-56 rounded-lg"></iframe>';
+      } else if ((f.type || '').indexOf('image/') === 0) {
+        box.innerHTML = '<img src="' + url + '" class="max-h-56 mx-auto object-contain" alt="Aperçu ordonnance">';
+      } else {
+        box.innerHTML = '<p class="p-3 text-xs text-[#6B7280]">' + f.name + '</p>';
+      }
+      wrap.classList.remove('hidden');
+    });
+  }
+  if (clearBtn) clearBtn.addEventListener('click', clearPreview);
+})();
+</script>
+{% endblock %}

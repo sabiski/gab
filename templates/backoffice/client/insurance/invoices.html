@@ -1,0 +1,94 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% load humanize %}
+
+{% block portal_title %}Mes factures{% endblock %}
+{% block portal_heading %}Mes factures{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Factures de prise en charge (FAC) générées après validation de vos demandes.</p>
+{% endblock %}
+
+{% block portal_body %}
+<nav class="flex flex-wrap gap-2 mb-5" aria-label="Assurance">
+  <a href="{% url 'bo_client_insurance_home' %}" class="c-btn c-btn--ghost text-xs">Mon assurance</a>
+  <a href="{% url 'bo_client_insurance_card' %}" class="c-btn c-btn--ghost text-xs">Ma carte</a>
+  <a href="{% url 'bo_client_insurance_guarantees' %}" class="c-btn c-btn--ghost text-xs">Mes garanties</a>
+  <a href="{% url 'bo_client_insurance_requests' %}" class="c-btn c-btn--ghost text-xs">Mes demandes</a>
+  <a href="{% url 'bo_client_insurance_invoices' %}" class="c-btn c-btn--primary text-xs">Factures</a>
+</nav>
+
+<div class="hidden md:block c-card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="bg-[#FAF8FF] text-left text-[11px] font-bold uppercase tracking-wide text-[#6B7280]">
+          <th class="px-4 py-3">Réf. facture</th>
+          <th class="px-4 py-3">Demande PC</th>
+          <th class="px-4 py-3">Date</th>
+          <th class="px-4 py-3 text-right">Total</th>
+          <th class="px-4 py-3 text-right">Part assurance</th>
+          <th class="px-4 py-3 text-right">Reste patient</th>
+          <th class="px-4 py-3">Paiement</th>
+          <th class="px-4 py-3">PDF</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-[#F3F4F6]">
+        {% for inv in invoices %}
+        <tr class="hover:bg-[#FAF8FF]">
+          <td class="px-4 py-3 font-mono font-bold text-[#374151]">{{ inv.reference }}</td>
+          <td class="px-4 py-3">
+            <a href="{% url 'bo_client_insurance_request_detail' inv.coverage_request.pk %}" class="font-bold text-[#6C3AED] hover:underline font-mono">{{ inv.coverage_request.reference }}</a>
+          </td>
+          <td class="px-4 py-3 text-[#6B7280] whitespace-nowrap">{{ inv.created_at|date:"d/m/Y" }}</td>
+          <td class="px-4 py-3 text-right font-semibold">{{ inv.total|intcomma }} F</td>
+          <td class="px-4 py-3 text-right text-[#6C3AED] font-bold">{{ inv.insurance_share|intcomma }} F</td>
+          <td class="px-4 py-3 text-right">{{ inv.patient_share|intcomma }} F</td>
+          <td class="px-4 py-3">
+            <span class="c-pill {% if inv.payment_status == 'paid' or inv.payment_status == 'waived' %}c-pill--success{% elif inv.payment_status == 'partial' %}c-pill--warn{% else %}c-pill--muted{% endif %}">
+              {{ inv.get_payment_status_display }}
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <a href="{% url 'bo_client_coverage_invoice_pdf' inv.pk %}" class="c-btn c-btn--ghost text-xs py-1 px-2" title="Télécharger">
+              <span class="material-symbols-rounded sm">download</span>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="px-4 py-10 text-center text-[#6B7280]">Aucune facture pour le moment.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="md:hidden space-y-3">
+  {% for inv in invoices %}
+  <article class="c-card p-4">
+    <div class="flex flex-wrap justify-between gap-2 items-start mb-2">
+      <div>
+        <p class="font-mono font-extrabold text-[#374151]">{{ inv.reference }}</p>
+        <a href="{% url 'bo_client_insurance_request_detail' inv.coverage_request.pk %}" class="text-xs font-bold text-[#6C3AED] hover:underline">{{ inv.coverage_request.reference }}</a>
+      </div>
+      <span class="c-pill {% if inv.payment_status == 'paid' or inv.payment_status == 'waived' %}c-pill--success{% elif inv.payment_status == 'partial' %}c-pill--warn{% else %}c-pill--muted{% endif %}">{{ inv.get_payment_status_display }}</span>
+    </div>
+    <p class="text-xs text-[#6B7280] mb-3">{{ inv.created_at|date:"d/m/Y" }} · {{ inv.coverage_request.provider.name }}</p>
+    <div class="grid grid-cols-3 gap-2 text-[11px] font-bold mb-3">
+      <div><span class="text-[#9CA3AF] block font-semibold">Total</span>{{ inv.total|intcomma }} F</div>
+      <div><span class="text-[#9CA3AF] block font-semibold">Assurance</span><span class="text-[#6C3AED]">{{ inv.insurance_share|intcomma }} F</span></div>
+      <div><span class="text-[#9CA3AF] block font-semibold">Reste</span>{{ inv.patient_share|intcomma }} F</div>
+    </div>
+    <a href="{% url 'bo_client_coverage_invoice_pdf' inv.pk %}" class="c-btn c-btn--ghost w-full text-xs">
+      <span class="material-symbols-rounded sm">download</span> Télécharger le PDF
+    </a>
+  </article>
+  {% empty %}
+  <div class="c-card c-empty">
+    <div class="c-empty__icon"><span class="material-symbols-rounded">receipt_long</span></div>
+    <p class="text-sm font-bold text-[#374151]">Aucune facture</p>
+    <p class="text-xs text-[#6B7280] mt-1">Les factures apparaissent après validation d'une prise en charge.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

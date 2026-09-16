@@ -10,6 +10,8 @@ from accounts.models import (
 
     CourierProfile,
 
+    InsuranceDependent,
+
     LoyaltyProgramSettings,
 
     LoyaltyReward,
@@ -85,8 +87,8 @@ class UserAdmin(BaseUserAdmin):
 
 
 admin.site.register(ClientProfile)
-
 admin.site.register(CourierProfile)
+admin.site.register(InsuranceDependent)
 
 
 

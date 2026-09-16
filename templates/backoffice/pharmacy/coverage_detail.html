@@ -1,0 +1,60 @@
+{% extends "backoffice/base_bo.html" %}
+{% load humanize %}
+{% block title %}{{ coverage_request.reference }}{% endblock %}
+{% block bo_label %}Espace pharmacie{% endblock %}
+{% block bo_title %}Prise en charge {{ coverage_request.reference }}{% endblock %}
+{% block bo_content %}
+<div class="max-w-3xl space-y-5">
+  <a href="{% url 'bo_pharmacy_coverage_list' %}" class="text-sm font-bold text-[#6C3AED]">← Retour</a>
+
+  <section class="bg-white border border-[#E5E7EB] rounded-2xl p-5">
+    <div class="flex flex-wrap justify-between gap-2 mb-4">
+      <div>
+        <p class="text-xs uppercase tracking-wide text-[#6B7280]">Nouvelle prise en charge</p>
+        <h2 class="text-xl font-extrabold text-[#374151]">{{ coverage_request.reference }}</h2>
+      </div>
+      <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 h-fit">{{ coverage_request.status_ui.label }}</span>
+    </div>
+    <ul class="text-sm space-y-1.5 text-[#374151]">
+      <li><strong>Patient :</strong> {{ coverage_request.client.get_full_name|default:coverage_request.client.username }}</li>
+      <li><strong>Assurance :</strong> {{ coverage_request.provider.name }}</li>
+      <li><strong>N° assuré :</strong> {{ coverage_request.insured_number }}</li>
+      <li><strong>Ordonnance :</strong>
+        {% if coverage_request.prescription_file %}
+        <a class="text-[#6C3AED] font-bold" href="{% url 'bo_pharmacy_coverage_prescription' coverage_request.pk %}" target="_blank">📎 disponible</a>
+        {% else %}—{% endif %}
+      </li>
+    </ul>
+    <div class="grid sm:grid-cols-3 gap-3 mt-4 text-sm">
+      <div class="rounded-xl bg-[#F9FAFB] p-3"><p class="text-xs text-[#6B7280]">Total estimé</p><p class="font-extrabold">{{ coverage_request.total_amount|intcomma }} F</p></div>
+      <div class="rounded-xl bg-emerald-50 p-3"><p class="text-xs text-emerald-700">Part assurance</p><p class="font-extrabold text-emerald-800">{{ coverage_request.insurance_amount|intcomma }} F</p></div>
+      <div class="rounded-xl bg-amber-50 p-3"><p class="text-xs text-amber-700">Part patient</p><p class="font-extrabold text-amber-900">{{ coverage_request.patient_amount|intcomma }} F</p></div>
+    </div>
+    <p class="text-xs text-[#6B7280] mt-3">Taux de couverture fixé par l'assureur : <strong>{{ coverage_request.coverage_rate }} %</strong> (non modifiable).</p>
+  </section>
+
+  {% if coverage_request.status == "accepted" or coverage_request.status == "ready" %}
+  <section class="bg-white border border-[#E5E7EB] rounded-2xl p-5">
+    <h3 class="font-extrabold text-[#374151] mb-2">Validation finale — délivrance</h3>
+    <p class="text-sm text-[#6B7280] mb-4">Confirmez le montant réellement délivré. Le système recalcule automatiquement la part assurance et le reste patient.</p>
+    <form method="post" class="space-y-3">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="confirm_delivery">
+      <div>
+        <label class="text-xs font-bold text-[#6B7280] uppercase">Montant prévu</label>
+        <p class="font-bold">{{ coverage_request.estimated_amount|intcomma }} FCFA</p>
+      </div>
+      <div>
+        <label class="text-xs font-bold text-[#6B7280] uppercase" for="delivered_amount">Montant réellement délivré (FCFA)</label>
+        <input id="delivered_amount" name="delivered_amount" type="number" min="1" required
+               value="{{ coverage_request.delivered_amount|default:coverage_request.estimated_amount }}"
+               class="mt-1 w-full border border-[#E5E7EB] rounded-xl px-3 py-2.5 text-sm">
+      </div>
+      <button type="submit" class="inline-flex items-center gap-2 bg-[#6C3AED] text-white font-bold text-sm px-4 py-2.5 rounded-xl">
+        Confirmer la délivrance
+      </button>
+    </form>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

@@ -6229,6 +6229,9 @@ def _reject_insurer_registration(request, profile, notes):
 
 @role_required(*admin_roles)
 def admin_insurance(request):
+    from core.coverage_requests import admin_coverage_stats
+    from payments.models import CoverageInvoice, CoverageRequest
+
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "claim_status":
@@ -6269,6 +6272,13 @@ def admin_insurance(request):
             providers=InsuranceProvider.objects.filter(is_active=True).order_by("name"),
             claims=InsuranceClaim.objects.select_related("client", "provider", "order")[:40],
             claim_statuses=InsuranceClaim.Status.choices,
+            coverage_stats=admin_coverage_stats(),
+            coverage_requests=CoverageRequest.objects.select_related(
+                "client", "provider", "pharmacy"
+            ).order_by("-created_at")[:30],
+            coverage_invoices=CoverageInvoice.objects.select_related(
+                "coverage_request"
+            ).order_by("-created_at")[:20],
         ),
     )
 

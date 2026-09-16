@@ -68,8 +68,28 @@
         {% if not p.is_active %}<span class="ins-sub-plan__off">Désactivée</span>{% endif %}
       </div>
       <p class="ins-sub-plan__price">{{ p.premium_amount|intcomma }} <small>FCFA / {{ p.get_billing_period_display|lower }}</small></p>
-      <p class="text-xs text-ink-muted">Couverture {{ p.coverage_rate }} %</p>
+      <p class="text-xs text-ink-muted">Code {{ p.code }} · Couverture {{ p.coverage_rate }} %</p>
       {% if p.description %}<p class="text-xs mt-1">{{ p.description }}</p>{% endif %}
+      <details class="mt-3">
+        <summary class="text-xs font-bold text-violet-700 cursor-pointer">Modifier</summary>
+        <form method="post" class="ins-sub-create-form mt-2">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="update_plan">
+          <input type="hidden" name="plan_id" value="{{ p.pk }}">
+          <label><span>Nom</span><input name="name" value="{{ p.name }}" class="ins-filters__input" required {% if partner_profile.preview %}disabled{% endif %}></label>
+          <label><span>Cotisation (FCFA)</span><input type="number" name="premium_amount" min="0" value="{{ p.premium_amount }}" class="ins-filters__input" required {% if partner_profile.preview %}disabled{% endif %}></label>
+          <label><span>Taux (%)</span><input type="number" name="coverage_rate" min="0" max="100" value="{{ p.coverage_rate }}" class="ins-filters__input" {% if partner_profile.preview %}disabled{% endif %}></label>
+          <label><span>Période</span>
+            <select name="billing_period" class="ins-filters__input" {% if partner_profile.preview %}disabled{% endif %}>
+              {% for val, label in billing_periods %}
+              <option value="{{ val }}" {% if p.billing_period == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label><span>Description</span><textarea name="description" rows="2" class="ins-filters__input" {% if partner_profile.preview %}disabled{% endif %}>{{ p.description }}</textarea></label>
+          <button type="submit" class="ins-btn-outline ins-btn-outline--sm" {% if partner_profile.preview %}disabled{% endif %}>Enregistrer</button>
+        </form>
+      </details>
       <form method="post" class="mt-2">
         {% csrf_token %}
         <input type="hidden" name="action" value="toggle_plan">
@@ -79,32 +99,82 @@
         </button>
       </form>
     </article>
+    {% empty %}
+    <p class="text-sm text-ink-muted">Aucune formule — créez-en une ci-dessous.</p>
     {% endfor %}
   </div>
 </section>
 
 <article class="ins-panel ins-sub-create">
-  <h3 class="ins-claim-section-title">Nouvelle souscription</h3>
+  <h3 class="ins-claim-section-title">Créer une formule</h3>
+  <form method="post" class="ins-sub-create-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="create_plan">
+    <label>
+      <span>Nom de la formule *</span>
+      <input name="name" class="ins-filters__input" placeholder="Ex. Famille Plus" required {% if partner_profile.preview %}disabled{% endif %}>
+    </label>
+    <label>
+      <span>Code (optionnel)</span>
+      <input name="code" class="ins-filters__input" placeholder="auto si vide" {% if partner_profile.preview %}disabled{% endif %}>
+    </label>
+    <label>
+      <span>Cotisation (FCFA) *</span>
+      <input type="number" name="premium_amount" min="0" value="25000" class="ins-filters__input" required {% if partner_profile.preview %}disabled{% endif %}>
+    </label>
+    <label>
+      <span>Taux de couverture (%)</span>
+      <input type="number" name="coverage_rate" min="0" max="100" value="80" class="ins-filters__input" {% if partner_profile.preview %}disabled{% endif %}>
+    </label>
+    <label>
+      <span>Période de facturation</span>
+      <select name="billing_period" class="ins-filters__input" {% if partner_profile.preview %}disabled{% endif %}>
+        {% for val, label in billing_periods %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>Description</span>
+      <textarea name="description" rows="2" class="ins-filters__input" placeholder="Avantages, plafonds…" {% if partner_profile.preview %}disabled{% endif %}></textarea>
+    </label>
+    <button type="submit" class="ins-btn-primary" {% if partner_profile.preview %}disabled{% endif %}>Créer la formule</button>
+  </form>
+</article>
+
+<article class="ins-panel ins-sub-create">
+  <h3 class="ins-claim-section-title">Créer l'abonnement</h3>
   <form method="post" class="ins-sub-create-form">
     {% csrf_token %}
     <input type="hidden" name="action" value="create_subscription">
     <label>
-      <span>Bénéficiaire (e-mail, identifiant ou n° assuré)</span>
-      <input name="member_identifier" class="ins-filters__input" placeholder="patient@gabpharma.ga" required>
+      <span>Bénéficiaire (e-mail, identifiant ou n° assuré) *</span>
+      <input name="member_identifier" class="ins-filters__input" placeholder="patient@gabpharma.ga" required {% if partner_profile.preview %}disabled{% endif %}>
     </label>
     <label>
-      <span>Formule</span>
-      <select name="plan_id" class="ins-filters__input" required>
+      <span>N° assuré (optionnel — généré si vide)</span>
+      <input name="insurance_number" class="ins-filters__input" placeholder="Ex. CNAM-000123" {% if partner_profile.preview %}disabled{% endif %}>
+    </label>
+    <label>
+      <span>Formule *</span>
+      <select name="plan_id" class="ins-filters__input" required {% if partner_profile.preview %}disabled{% endif %}>
         {% for p in provider_plans %}
         {% if p.is_active %}
-        <option value="{{ p.pk }}">{{ p.name }} — {{ p.premium_amount|intcomma }} FCFA</option>
+        <option value="{{ p.pk }}">{{ p.name }} — {{ p.premium_amount|intcomma }} FCFA ({{ p.coverage_rate }} %)</option>
         {% endif %}
         {% endfor %}
       </select>
     </label>
     <label>
+      <span>Statut initial</span>
+      <select name="status" class="ins-filters__input" {% if partner_profile.preview %}disabled{% endif %}>
+        <option value="active">Actif</option>
+        <option value="pending">En attente</option>
+      </select>
+    </label>
+    <label>
       <span>Employeur / organisme (optionnel)</span>
-      <input name="employer_name" class="ins-filters__input" placeholder="Entreprise, mutuelle…">
+      <input name="employer_name" class="ins-filters__input" placeholder="Entreprise, mutuelle…" {% if partner_profile.preview %}disabled{% endif %}>
     </label>
     <button type="submit" class="ins-btn-primary" {% if partner_profile.preview %}disabled{% endif %}>Créer l'abonnement</button>
   </form>

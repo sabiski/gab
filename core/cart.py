@@ -18,6 +18,17 @@ def save_cart(request, cart):
 
 
 def cart_add(request, stock_id, qty=1):
+    from core.patient_access import STAFF_BYPASS_ROLES, user_needs_paywall
+
+    user = getattr(request, "user", None)
+    if not user or not user.is_authenticated:
+        return None, "Connectez-vous pour ajouter au panier."
+    if getattr(user, "role", None) not in STAFF_BYPASS_ROLES and user_needs_paywall(user):
+        return (
+            None,
+            "Abonnement requis pour commander. Souscrivez à un forfait avant d'ajouter au panier.",
+        )
+
     cart = get_cart(request)
     sid = str(stock_id)
     stock = PharmacyStock.objects.select_related("pharmacy", "medicine").filter(

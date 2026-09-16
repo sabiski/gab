@@ -1,9 +1,14 @@
 from django.contrib import admin
 
 from payments.models import (
+    CoverageAccessLog,
+    CoverageInvoice,
+    CoverageRequest,
+    CoverageRequestEvent,
     CourierEarning,
     InsuranceClaim,
     InsuranceProvider,
+    InsuranceSubscriptionPlan,
     OrderSettlement,
     PatientAccessPurchase,
     Payment,
@@ -53,6 +58,45 @@ class PatientAccessPurchaseAdmin(admin.ModelAdmin):
     list_filter = ("plan", "status", "payment_method")
 
 
+@admin.register(CoverageRequest)
+class CoverageRequestAdmin(admin.ModelAdmin):
+    list_display = (
+        "reference",
+        "client",
+        "provider",
+        "pharmacy",
+        "status",
+        "estimated_amount",
+        "insurance_amount",
+        "patient_amount",
+        "created_at",
+    )
+    list_filter = ("status", "provider")
+    search_fields = ("reference", "insured_number", "client__email")
+
+
+@admin.register(CoverageInvoice)
+class CoverageInvoiceAdmin(admin.ModelAdmin):
+    list_display = (
+        "reference",
+        "coverage_request",
+        "total",
+        "insurance_share",
+        "patient_share",
+        "payment_status",
+        "created_at",
+    )
+    list_filter = ("payment_status",)
+
+
+@admin.register(InsuranceSubscriptionPlan)
+class InsuranceSubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ("name", "provider", "code", "premium_amount", "coverage_rate", "is_active")
+    list_filter = ("is_active", "provider")
+
+
 admin.site.register(Subscription)
 admin.site.register(InsuranceProvider)
 admin.site.register(InsuranceClaim)
+admin.site.register(CoverageRequestEvent)
+admin.site.register(CoverageAccessLog)

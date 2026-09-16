@@ -23,4 +23,12 @@ def branding(request):
     data["access_status"] = access_status_label(user) if user and user.is_authenticated else None
     data["search_paywall"] = user_needs_paywall(user) if user else True
     data["has_premium"] = user_has_premium(user) if user and user.is_authenticated else False
+
+    try:
+        from core.pharmacy_boost import active_popup_ads
+
+        popup_ads = active_popup_ads(limit=1)
+        data["boost_popup_ad"] = popup_ads[0] if popup_ads else None
+    except Exception:
+        data["boost_popup_ad"] = None
     return data
