@@ -37,6 +37,11 @@
         <input name="phone" placeholder="+241..." class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary font-medium">
       </div>
       <div>
+        <label class="block text-xs font-bold text-ink-muted mb-1">Date de naissance</label>
+        <input type="date" name="date_of_birth" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary font-medium">
+        <p class="text-[11px] text-ink-muted mt-1">Recommandé — obligatoire pour un compte mineur (autorisation parentale).</p>
+      </div>
+      <div>
         <label class="block text-xs font-bold text-ink-muted mb-1">Mot de passe *</label>
         <input type="password" name="password" required minlength="8" autocomplete="new-password" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary font-medium">
       </div>
@@ -44,6 +49,32 @@
         <label class="block text-xs font-bold text-ink-muted mb-1">Confirmer *</label>
         <input type="password" name="password2" required minlength="8" autocomplete="new-password" class="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-primary font-medium">
       </div>
+
+      <label class="flex gap-2 items-start text-xs text-ink-muted font-medium leading-relaxed pt-1">
+        <input type="checkbox" name="accept_terms" value="1" required class="mt-0.5 accent-primary">
+        <span>J’accepte les conditions d’utilisation de Gab'Pharma (disponibles dans l’espace patient après connexion).</span>
+      </label>
+
+      <div class="rounded-xl border border-violet-100 bg-violet-50/60 px-3 py-3 space-y-2">
+        <p class="text-[11px] font-bold text-ink uppercase tracking-wide">Consentement données de santé *</p>
+        <p class="text-[11px] text-ink-muted leading-relaxed">Distinct des conditions d’utilisation (Loi n°025/2023 relative aux données personnelles).</p>
+        <label class="flex gap-2 items-start text-xs text-ink font-medium leading-relaxed">
+          <input type="checkbox" name="health_consent" value="1" required class="mt-0.5 accent-primary">
+          <span>{{ health_consent_label }}</span>
+        </label>
+        <div id="parental-block" class="hidden space-y-2 pt-1 border-t border-violet-100">
+          <label class="flex gap-2 items-start text-xs text-ink font-medium leading-relaxed">
+            <input type="checkbox" name="parental_consent" value="1" class="mt-0.5 accent-primary" id="parental_consent_cb">
+            <span>{{ parental_consent_label }}</span>
+          </label>
+          <div>
+            <label class="block text-xs font-bold text-ink-muted mb-1">Nom du titulaire de l’autorité parentale</label>
+            <input type="text" name="parental_consent_name" id="parental_consent_name" maxlength="200" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-primary font-medium" placeholder="Nom et prénom">
+          </div>
+        </div>
+        <p class="text-[10px] text-ink-muted">Version du texte : {{ health_consent_version }}</p>
+      </div>
+
       <button type="submit" class="w-full bg-primary hover:bg-primary-600 text-white font-bold text-sm py-3 rounded-full transition mt-2">Créer mon compte patient</button>
     </form>
     <p class="text-center text-sm text-ink-muted mt-5 font-medium">
@@ -51,4 +82,32 @@
     </p>
   </div>
 </div>
+<script>
+(function () {
+  var dob = document.querySelector('input[name="date_of_birth"]');
+  var block = document.getElementById('parental-block');
+  var cb = document.getElementById('parental_consent_cb');
+  var name = document.getElementById('parental_consent_name');
+  function ageYears(iso) {
+    if (!iso) return null;
+    var d = new Date(iso + 'T00:00:00');
+    if (isNaN(d.getTime())) return null;
+    var t = new Date();
+    var a = t.getFullYear() - d.getFullYear();
+    var m = t.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
+    return a;
+  }
+  function sync() {
+    var a = ageYears(dob && dob.value);
+    var minor = a !== null && a < 18;
+    if (!block) return;
+    block.classList.toggle('hidden', !minor);
+    if (cb) cb.required = !!minor;
+    if (name) name.required = !!minor;
+  }
+  if (dob) dob.addEventListener('change', sync);
+  sync();
+})();
+</script>
 {% endblock %}

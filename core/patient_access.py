@@ -43,10 +43,11 @@ PLAN_CATALOG = {
         "label": "Premium",
         "amount": 5000,
         "tagline": "Accès total + priorités",
-        "description": "Recherche illimitée 30 jours, livraison offerte, bouton d'urgence et priorités.",
+        "description": "Recherche illimitée 30 jours, livraison offerte, prises en charge incluses, bouton d'urgence et priorités.",
         "features": [
             "Tout le Standard, 30 jours",
-            "Livraison à domicile & express offertes",
+            "Livraison offerte dès {free_delivery_min} F d'achat",
+            "{coverage_quota} dossiers de prise en charge inclus / mois",
             "Bouton d'urgence SOS + pharmacies alertées",
             "Commandes prioritaires",
         ],
@@ -118,15 +119,13 @@ def _cancel_other_active(user):
     )
 
 
-def delivery_fee_for_user(user, delivery_mode):
-    """Frais livraison : 0 pour Premium (domicile / express), sinon 1500 F."""
-    from orders.models import Order
+def delivery_fee_for_user(user, delivery_mode, *, pharmacy=None, lat=None, lng=None, subtotal=0):
+    """Frais livraison facturés : tarif distance, offert Premium au-delà du panier minimum."""
+    from core.payment_settlement import delivery_quote
 
-    if delivery_mode == Order.DeliveryMode.PICKUP:
-        return 0
-    if user_has_premium(user):
-        return 0
-    return 1500
+    return delivery_quote(
+        user, delivery_mode, pharmacy=pharmacy, lat=lat, lng=lng, subtotal=subtotal
+    )["fee"]
 
 
 def user_needs_paywall(user):
@@ -231,9 +230,17 @@ def purchase_plan(user, plan, payment_method):
 
 
 def catalog_for_template():
+    from payments.models import PlatformPaymentSettings
+
+    settings = PlatformPaymentSettings.load()
+    values = {
+        "free_delivery_min": f"{settings.premium_free_delivery_min_order:,}".replace(",", " "),
+        "coverage_quota": settings.premium_coverage_monthly_quota,
+    }
     items = []
     for key, cfg in PLAN_CATALOG.items():
         row = {"key": key, **cfg}
+        row["features"] = [f.format(**values) for f in cfg["features"]]
         items.append(row)
     items.sort(key=lambda x: x["tier"])
     return items

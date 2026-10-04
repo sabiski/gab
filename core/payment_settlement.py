@@ -18,6 +18,11 @@ from payments.models import (
 )
 
 
+def fcfa(amount) -> str:
+    """Montant au format français : 500 000 FCFA."""
+    return f"{int(amount or 0):,}".replace(",", " ") + " FCFA"
+
+
 class PaymentLimitError(ValueError):
     """Plafond journalier de transaction dépassé."""
 
@@ -49,12 +54,18 @@ def check_daily_transaction_cap(user, amount: int):
     amount = int(amount or 0)
     if amount <= 0:
         return
+    cap = settings.daily_transaction_cap
     already = client_paid_today(user)
-    if already + amount > settings.daily_transaction_cap:
-        remaining = max(0, settings.daily_transaction_cap - already)
+    if already + amount > cap:
+        remaining = max(0, cap - already)
+        if amount > cap:
+            raise PaymentLimitError(
+                f"Ce paiement de {fcfa(amount)} dépasse le plafond journalier de {fcfa(cap)}. "
+                "Utilisez votre assurance, le paiement en pharmacie, ou réduisez le panier."
+            )
         raise PaymentLimitError(
-            f"Plafond journalier atteint ({settings.daily_transaction_cap:,} FCFA). "
-            f"Reste disponible aujourd'hui : {remaining:,} FCFA."
+            f"Plafond journalier presque atteint : il vous reste {fcfa(remaining)} "
+            f"aujourd'hui (plafond {fcfa(cap)})."
         )
 
 
@@ -65,6 +76,76 @@ def cod_deposit_amount(client_total: int) -> int:
     pct = max(1, min(100, settings.cod_deposit_rate))
     deposit = int(Decimal(client_total) * Decimal(pct) / Decimal(100))
     return max(settings.cod_deposit_min, deposit)
+
+
+def delivery_distance_km(pharmacy, lat, lng) -> float | None:
+    """Distance à vol d'oiseau pharmacie → point de livraison (km), None si GPS inconnu."""
+    from core.pharmacy_proximity import _parse_coord, haversine_km
+
+    lat, lng = _parse_coord(lat), _parse_coord(lng)
+    plat = _parse_coord(getattr(pharmacy, "latitude", None))
+    plng = _parse_coord(getattr(pharmacy, "longitude", None))
+    if None in (lat, lng, plat, plng):
+        return None
+    return round(haversine_km(plat, plng, lat, lng), 2)
+
+
+def delivery_tariff(delivery_mode: str, distance_km: float | None = None) -> int:
+    """Frais de livraison catalogue : base + km + supplément express, arrondis à 50 F."""
+    if delivery_mode == Order.DeliveryMode.PICKUP:
+        return 0
+    settings = load_payment_settings()
+    fee = settings.courier_base_fee
+    if distance_km:
+        fee += int(float(distance_km) * settings.courier_per_km_fee)
+    if delivery_mode == Order.DeliveryMode.EXPRESS:
+        fee += settings.courier_express_bonus
+    return int(-(-fee // 50) * 50)
+
+
+def courier_share(delivery_fee: int) -> int:
+    """Part livreur des frais de livraison (le reste = commission plateforme)."""
+    settings = load_payment_settings()
+    rate = max(0, min(100, settings.delivery_platform_rate))
+    if delivery_fee <= 0:
+        return 0
+    return delivery_fee - _commission_amount(delivery_fee, Decimal(rate))
+
+
+def delivery_quote(
+    user,
+    delivery_mode: str,
+    *,
+    pharmacy=None,
+    lat=None,
+    lng=None,
+    subtotal: int = 0,
+) -> dict:
+    """Frais facturés au client, avec livraison offerte Premium au-delà d'un panier minimum."""
+    from core.patient_access import user_has_premium
+
+    settings = load_payment_settings()
+    distance = delivery_distance_km(pharmacy, lat, lng) if pharmacy else None
+    out_of_zone = bool(
+        distance is not None
+        and delivery_mode != Order.DeliveryMode.PICKUP
+        and distance > settings.delivery_max_km
+    )
+    nominal = delivery_tariff(delivery_mode, None if out_of_zone else distance)
+    threshold = settings.premium_free_delivery_min_order
+    premium = bool(user and user_has_premium(user))
+    waived = nominal if premium and nominal and subtotal >= threshold else 0
+    return {
+        "fee": nominal - waived,
+        "nominal": nominal,
+        "waived": waived,
+        "distance_km": distance,
+        "out_of_zone": out_of_zone,
+        "max_km": settings.delivery_max_km,
+        "is_premium": premium,
+        "premium_threshold": threshold,
+        "premium_missing": max(0, threshold - subtotal) if premium and not waived else 0,
+    }
 
 
 def _commission_amount(product_base: int, rate: Decimal) -> int:
@@ -82,16 +163,28 @@ def build_settlement_preview(order: Order) -> dict:
     commission = _commission_amount(product_base, settings.platform_commission_rate)
     pharmacy_net = max(0, product_base - commission)
     delivery_fee = order.delivery_fee or 0
+    courier = courier_share(order_delivery_nominal(order))
     payout_due = timezone.now() + timedelta(days=settings.payout_delay_days)
     return {
         "product_base": product_base,
         "platform_commission": commission,
         "pharmacy_net": pharmacy_net,
         "delivery_fee": delivery_fee,
-        "courier_earning": 0,
-        "platform_delivery_margin": delivery_fee,
+        "courier_earning": courier,
+        "platform_delivery_margin": max(0, delivery_fee - courier),
         "payout_due_at": payout_due,
     }
+
+
+def order_delivery_nominal(order: Order, distance_km=None) -> int:
+    """Frais de livraison catalogue d'une commande (payés + offerts Premium)."""
+    if order.delivery_mode == Order.DeliveryMode.PICKUP:
+        return 0
+    nominal = (order.delivery_fee or 0) + (order.delivery_fee_waived or 0)
+    if nominal <= 0:
+        # Commandes antérieures au tarif distance : on recalcule.
+        nominal = delivery_tariff(order.delivery_mode, distance_km)
+    return nominal
 
 
 def ensure_order_settlement(order: Order) -> OrderSettlement:
@@ -104,7 +197,7 @@ def ensure_order_settlement(order: Order) -> OrderSettlement:
             "platform_commission": preview["platform_commission"],
             "pharmacy_net": preview["pharmacy_net"],
             "delivery_fee": preview["delivery_fee"],
-            "platform_delivery_margin": preview["delivery_fee"],
+            "platform_delivery_margin": preview["platform_delivery_margin"],
             "payout_due_at": preview["payout_due_at"],
             "pharmacy_payout_status": OrderSettlement.PharmacyPayoutStatus.SCHEDULED,
             "courier_payout_status": OrderSettlement.CourierPayoutStatus.NA
@@ -135,27 +228,24 @@ def ensure_order_settlement(order: Order) -> OrderSettlement:
 
 
 def calculate_courier_earning(delivery: Delivery) -> dict:
+    """Le livreur perçoit (100 − commission) % des frais de livraison catalogue."""
     settings = load_payment_settings()
     order = delivery.order
-    base = settings.courier_base_fee
-    distance_km = float(delivery.distance_km or 0)
-    distance_bonus = int(distance_km * settings.courier_per_km_fee)
-    express_bonus = (
-        settings.courier_express_bonus
+    nominal = order_delivery_nominal(order, delivery.distance_km)
+    total = courier_share(nominal)
+    express_part = (
+        courier_share(settings.courier_express_bonus)
         if order.delivery_mode == Order.DeliveryMode.EXPRESS
         else 0
     )
-    total = base + distance_bonus + express_bonus
-    delivery_fee = order.delivery_fee or 0
-    if delivery_fee > 0:
-        total = min(total, delivery_fee)
-    platform_margin = max(0, delivery_fee - total)
+    express_part = min(express_part, total)
+    base = min(courier_share(settings.courier_base_fee), total - express_part)
     return {
         "base_fee": base,
-        "distance_bonus": distance_bonus,
-        "express_bonus": express_bonus,
+        "distance_bonus": max(0, total - base - express_part),
+        "express_bonus": express_part,
         "total": total,
-        "platform_delivery_margin": platform_margin,
+        "platform_delivery_margin": max(0, (order.delivery_fee or 0) - total),
     }
 
 
@@ -188,7 +278,7 @@ def record_courier_earning(delivery: Delivery):
             "platform_commission": preview["platform_commission"],
             "pharmacy_net": preview["pharmacy_net"],
             "delivery_fee": preview["delivery_fee"],
-            "platform_delivery_margin": preview["delivery_fee"],
+            "platform_delivery_margin": preview["platform_delivery_margin"],
             "payout_due_at": preview["payout_due_at"],
             "pharmacy_payout_status": OrderSettlement.PharmacyPayoutStatus.SCHEDULED,
         },

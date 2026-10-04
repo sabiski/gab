@@ -129,6 +129,22 @@ class ClientProfile(models.Model):
     emergency_contact = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
 
+    # Consentements Loi n°025/2023 (distincts CGU / données de santé)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
+    terms_version = models.CharField(max_length=32, blank=True)
+    health_consent = models.BooleanField(
+        default=False,
+        help_text="Consentement exprès au traitement des données de santé",
+    )
+    health_consent_at = models.DateTimeField(null=True, blank=True)
+    health_consent_version = models.CharField(max_length=32, blank=True)
+    parental_consent = models.BooleanField(
+        default=False,
+        help_text="Autorisation du titulaire de l'autorité parentale (mineurs)",
+    )
+    parental_consent_at = models.DateTimeField(null=True, blank=True)
+    parental_consent_name = models.CharField(max_length=200, blank=True)
+
     def __str__(self):
         return f"Profil client — {self.user}"
 
@@ -814,3 +830,22 @@ class AuthorityProfile(models.Model):
                 return "National"
             return "—"
         return region
+
+
+class LoginAttempt(models.Model):
+    """Tentative de connexion (site ou API) — sert au blocage anti force brute."""
+
+    username = models.CharField(max_length=150, db_index=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True, db_index=True)
+    success = models.BooleanField(default=False)
+    channel = models.CharField(max_length=10, default="web")
+    user_agent = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Tentative de connexion"
+        verbose_name_plural = "Tentatives de connexion"
+
+    def __str__(self):
+        return f"{self.username} — {'OK' if self.success else 'échec'} ({self.ip_address})"

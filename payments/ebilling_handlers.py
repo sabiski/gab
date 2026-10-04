@@ -99,7 +99,7 @@ def _finalize_order(payment: Payment) -> None:
         notify_user(
             client,
             f"Paiement confirmé — {order.code}",
-            f"Votre paiement de {payment.amount:,} FCFA a été reçu. Commande transmise à la pharmacie.",
+            f"Votre paiement de {payment.amount:,} FCFA a été reçu. Commande transmise à la pharmacie.".replace(",", " "),
             notification_type=Notification.Type.ORDER,
             data={"order_id": order.id, "code": order.code, "payment_id": payment.id},
             transactional=True,

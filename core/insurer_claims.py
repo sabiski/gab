@@ -109,13 +109,15 @@ def claim_has_prescription(claim: InsuranceClaim) -> bool:
 
 
 def claim_prescription_url(claim: InsuranceClaim) -> str:
+    from django.urls import reverse
+
     order = claim.order
     if not order:
         return ""
-    if order.prescription:
-        return order.prescription.url
-    if order.linked_prescription_id and order.linked_prescription.file:
-        return order.linked_prescription.file.url
+    if order.prescription or (
+        order.linked_prescription_id and order.linked_prescription.file
+    ):
+        return reverse("bo_order_prescription_file", args=[order.pk])
     return ""
 
 
@@ -279,17 +281,14 @@ def build_claim_detail(claim: InsuranceClaim) -> dict:
         rx_reason = order.notes
 
     documents = []
-    if rx and rx.file:
-        documents.append(
-            {"label": "Ordonnance", "url": rx.file.url, "icon": "medication", "thumb": rx.file.url}
-        )
-    elif order and order.prescription:
+    secure_rx = claim_prescription_url(claim)
+    if secure_rx:
         documents.append(
             {
                 "label": "Ordonnance",
-                "url": order.prescription.url,
+                "url": secure_rx,
                 "icon": "medication",
-                "thumb": order.prescription.url,
+                "thumb": secure_rx,
             }
         )
     if client.avatar:

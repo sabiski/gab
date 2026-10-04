@@ -98,10 +98,37 @@
           <input type="text" name="doctor_name" id="doctor_name" class="c-input" placeholder="Dr. …">
         </div>
       </div>
+      <div class="mt-4">
+        {% include "backoffice/partials/health_consent_fields.html" %}
+      </div>
+    </div>
+
+    <div class="pt-4 border-t border-[#F3F4F6]">
+      <h2 class="c-card__title mb-1">Étape 3 — Frais de dossier</h2>
+      {% if coverage_fee.included %}
+      <p class="c-card__sub">
+        <span class="material-symbols-rounded sm align-middle text-emerald-600">workspace_premium</span>
+        Inclus dans votre abonnement Premium — {{ coverage_fee.remaining }} dossier{{ coverage_fee.remaining|pluralize }} restant{{ coverage_fee.remaining|pluralize }} sur {{ coverage_fee.quota }} ce mois-ci.
+      </p>
+      {% else %}
+      <p class="c-card__sub mb-4">
+        Traitement du dossier : <strong>{{ coverage_fee.fee }} FCFA</strong>.
+        {% if coverage_fee.is_premium %}Quota Premium du mois atteint ({{ coverage_fee.quota }} dossiers).{% else %}Inclus pour les abonnés Premium ({{ coverage_fee.quota }} dossiers / mois).{% endif %}
+      </p>
+      <div class="grid sm:grid-cols-3 gap-2">
+        {% for code, label in fee_payment_methods %}
+        <label class="flex items-center gap-2 border rounded-xl p-3 cursor-pointer has-[:checked]:border-[#7C3AED] has-[:checked]:bg-[#FAF8FF]">
+          <input type="radio" name="fee_payment_method" value="{{ code }}" required {% if forloop.first %}checked{% endif %}>
+          <span class="font-bold text-sm">{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
 
     <button type="submit" class="c-btn c-btn--primary w-full sm:w-auto">
-      <span class="material-symbols-rounded sm">send</span> Envoyer la demande
+      <span class="material-symbols-rounded sm">send</span>
+      {% if coverage_fee.fee %}Payer {{ coverage_fee.fee }} F et envoyer{% else %}Envoyer la demande{% endif %}
     </button>
   </form>
 </section>

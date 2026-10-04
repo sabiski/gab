@@ -13,6 +13,8 @@ from backoffice.decorators import role_required
 from backoffice.views import _audit, _ctx, _ensure_client_profile, client_roles
 from core.coverage_requests import (
     IN_PROGRESS_STATUSES,
+    FEE_PAYMENT_METHODS,
+    coverage_fee_for,
     create_coverage_request,
     log_access,
     patient_insurance_context,
@@ -67,6 +69,9 @@ def _annotate_request(req: CoverageRequest) -> CoverageRequest:
 
 @role_required(*client_roles)
 def client_insurance_home(request):
+    from core.coverage_requests import expire_stale_coverage_requests
+
+    expire_stale_coverage_requests()
     ctx_ins = patient_insurance_context(request.user)
     recent = (
         CoverageRequest.objects.filter(client=request.user)
@@ -141,25 +146,42 @@ def client_insurance_request_create(request):
         elif not _valid_prescription(rx_file):
             messages.error(request, "Ajoutez votre ordonnance (PDF, JPG, JPEG ou PNG).")
         else:
-            profile = _ensure_client_profile(request.user)
+            from core.privacy_consent import (
+                apply_health_consent_from_post,
+                ensure_client_profile,
+                has_valid_health_consent,
+            )
+
+            profile = ensure_client_profile(request.user)
+            if not has_valid_health_consent(profile):
+                err = apply_health_consent_from_post(profile, request.POST)
+                if err:
+                    messages.error(request, err)
+                    return redirect("bo_client_insurance_request_create")
+                profile.refresh_from_db()
             if not profile.insurance_provider_id:
                 profile.insurance_provider = provider
             if insured_number and not profile.insurance_number:
                 profile.insurance_number = insured_number
             profile.save()
-            req = create_coverage_request(
-                client=request.user,
-                provider=provider,
-                pharmacy=pharmacy,
-                insured_number=insured_number,
-                request_type=request_type,
-                desired_date=desired_date,
-                prescription_file=rx_file,
-                prescription_date=prescription_date,
-                doctor_name=doctor_name,
-                comment=comment,
-                estimated_amount=estimated_amount,
-            )
+            try:
+                req = create_coverage_request(
+                    client=request.user,
+                    provider=provider,
+                    pharmacy=pharmacy,
+                    insured_number=insured_number,
+                    request_type=request_type,
+                    desired_date=desired_date,
+                    prescription_file=rx_file,
+                    prescription_date=prescription_date,
+                    doctor_name=doctor_name,
+                    comment=comment,
+                    estimated_amount=estimated_amount,
+                    payment_method=request.POST.get("fee_payment_method", ""),
+                )
+            except ValueError as exc:
+                messages.error(request, str(exc))
+                return redirect("bo_client_insurance_request_create")
             _audit(
                 request,
                 "coverage_request_create",
@@ -169,9 +191,13 @@ def client_insurance_request_create(request):
             )
             messages.success(
                 request,
-                f"Demande {req.reference} envoyée. Vous pouvez suivre son avancement dans Mes demandes.",
+                f"Demande {req.reference} envoyée"
+                + (f" — frais de dossier {req.processing_fee} F payés" if req.processing_fee else "")
+                + ". Vous pouvez suivre son avancement dans Mes demandes.",
             )
             return redirect("bo_client_insurance_request_detail", pk=req.pk)
+
+    from core.privacy_consent import consent_context
 
     return render(
         request,
@@ -183,6 +209,9 @@ def client_insurance_request_create(request):
             pharmacies=pharmacies,
             providers=providers,
             request_types=CoverageRequest.RequestType.choices,
+            coverage_fee=coverage_fee_for(request.user),
+            fee_payment_methods=FEE_PAYMENT_METHODS,
+            **consent_context(request.user),
         ),
     )
 
@@ -262,6 +291,7 @@ def client_insurance_request_detail(request, pk):
 
     _annotate_request(req)
     events = req.events.select_related("actor").all()[:40]
+    rx_access_logs = req.prescription_access_logs.all()[:30]
     return render(
         request,
         "backoffice/client/insurance/request_detail.html",
@@ -270,6 +300,7 @@ def client_insurance_request_detail(request, pk):
             "insurance_requests",
             coverage_request=req,
             events=events,
+            rx_access_logs=rx_access_logs,
             invoice=invoice,
             payment_methods=[
                 (Payment.Method.MOOV, "Moov Money"),
@@ -303,13 +334,19 @@ def client_insurance_history(request):
 @role_required(*client_roles)
 @xframe_options_sameorigin
 def client_coverage_prescription_file(request, pk):
+    from backoffice.prescription_files import secure_prescription_response
     from payments.models import CoverageAccessLog
 
     req = get_object_or_404(CoverageRequest, pk=pk, client=request.user)
     if not req.prescription_file:
         raise Http404
     log_access(req, request.user, CoverageAccessLog.Action.PRESCRIPTION, request=request)
-    return FileResponse(req.prescription_file.open("rb"), as_attachment=False)
+    return secure_prescription_response(
+        request,
+        req.prescription_file,
+        context=f"Dossier {req.reference}",
+        owner_id=req.client_id,
+    )
 
 
 @role_required(*client_roles)
@@ -336,4 +373,72 @@ def client_coverage_invoice_pdf(request, pk):
         invoice.pdf_file.open("rb"),
         as_attachment=True,
         filename=f"{invoice.reference}.pdf",
+    )
+
+
+@role_required(*client_roles)
+def client_insurance_subscribe(request):
+    """Self-service : choisir une formule et souscrire (paiement simulé pour l'instant)."""
+    from accounts.models import InsuranceMemberSubscription
+    from core.insurer_subscription import subscribe_user
+    from payments.models import InsuranceSubscriptionPlan, Payment
+
+    ctx_ins = patient_insurance_context(request.user)
+    plans = (
+        InsuranceSubscriptionPlan.objects.filter(is_active=True, provider__is_active=True)
+        .select_related("provider")
+        .order_by("provider__name", "sort_order", "name")
+    )
+
+    if request.method == "POST":
+        plan = InsuranceSubscriptionPlan.objects.filter(
+            pk=request.POST.get("plan_id"),
+            is_active=True,
+            provider__is_active=True,
+        ).select_related("provider").first()
+        method = request.POST.get("payment_method") or Payment.Method.MOOV
+        if method not in dict(Payment.Method.choices):
+            method = Payment.Method.MOOV
+        if not plan:
+            messages.error(request, "Formule invalide.")
+        else:
+            # Paiement simulé — branchement E-Billing prévu bientôt
+            sub = subscribe_user(
+                request.user,
+                plan.provider,
+                plan,
+                status=InsuranceMemberSubscription.Status.ACTIVE,
+                insurance_number=(request.POST.get("insurance_number") or "").strip(),
+            )
+            _audit(
+                request,
+                "insurance_self_subscribe",
+                "insurance",
+                f"{sub.reference} — {plan.name} — {method} (simulé)",
+                True,
+            )
+            messages.success(
+                request,
+                (
+                    f"Abonnement {sub.reference} activé — {plan.name} "
+                    f"({plan.premium_amount} FCFA). Paiement {dict(Payment.Method.choices).get(method)} "
+                    "enregistré (mode simulation — E-Billing bientôt)."
+                ),
+            )
+            return redirect("bo_client_insurance_home")
+
+    return render(
+        request,
+        "backoffice/client/insurance/subscribe.html",
+        _ctx(
+            request,
+            "insurance_subscribe",
+            insurance=ctx_ins,
+            plans=plans,
+            payment_methods=[
+                (Payment.Method.MOOV, "Moov Money"),
+                (Payment.Method.AIRTEL, "Airtel Money"),
+                (Payment.Method.CARD, "Carte bancaire"),
+            ],
+        ),
     )

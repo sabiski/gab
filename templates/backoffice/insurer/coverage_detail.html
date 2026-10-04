@@ -22,7 +22,7 @@
       <li>Date ordonnance : {{ coverage_request.prescription_date|date:"d/m/Y"|default:"—" }}</li>
     </ul>
     {% if coverage_request.prescription_file %}
-    <p class="mt-3"><a class="text-violet-700 font-bold" href="{{ coverage_request.prescription_file.url }}" target="_blank">Consulter l'ordonnance</a></p>
+    <p class="mt-3"><a class="text-violet-700 font-bold" href="{% url 'bo_insurer_coverage_prescription' coverage_request.pk %}" target="_blank" rel="noopener">Consulter l'ordonnance</a></p>
     {% endif %}
   </article>
   <article class="ins-panel p-4">

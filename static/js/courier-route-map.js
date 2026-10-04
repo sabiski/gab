@@ -66,7 +66,7 @@
     loadLeaflet(function () {
       if (maps[mapId]) return;
       var map = L.map(el, { zoomControl: false }).setView(center, 13);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: "&copy; OpenStreetMap",
       }).addTo(map);

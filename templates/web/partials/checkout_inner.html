@@ -1,3 +1,4 @@
+{% load humanize %}
 {% load portal_urls %}
 {% if client_portal %}<div class="space-y-5">{% else %}<div class="max-w-site mx-auto px-4 py-8 max-w-3xl">{% endif %}
   <h1 class="portal-hide-in-espace text-2xl font-extrabold mb-2">Finaliser la commande</h1>
@@ -51,8 +52,8 @@
     <div>
       <label class="text-xs font-bold text-ink-muted">Mode</label>
       <select name="delivery_mode" id="delivery-mode" class="mt-1 w-full border rounded-xl px-3 py-2">
-        <option value="home">Livraison à domicile {% if premium_delivery %}(offerte Premium){% else %}(+1500 F){% endif %}</option>
-        <option value="express">Livraison express {% if premium_delivery %}(offerte Premium){% else %}(+1500 F){% endif %}</option>
+        <option value="home">Livraison à domicile {% if premium_delivery %}(offerte Premium){% else %}(selon la distance){% endif %}</option>
+        <option value="express">Livraison express {% if premium_delivery %}(offerte Premium){% else %}(+{{ express_surcharge }} F){% endif %}</option>
         <option value="pickup">Retrait en pharmacie</option>
       </select>
     </div>
@@ -88,6 +89,7 @@
       <p id="rx-choice-error" class="hidden text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2 py-1.5">
         Sélectionnez une ordonnance de votre dossier, ou déposez un nouveau fichier.
       </p>
+      {% include "backoffice/partials/health_consent_fields.html" %}
 
       {% if prescriptions %}
       <div class="space-y-2" id="rx-cards">
@@ -178,7 +180,7 @@
 
     <div class="border-t pt-4 space-y-3" id="payment-methods-block">
       <p class="text-xs font-bold text-ink-muted uppercase">Mode de paiement <span class="normal-case font-medium">(reste à charge)</span></p>
-      <p class="text-[11px] text-ink-muted rounded-lg bg-canvas px-3 py-2">Plafond journalier : {{ payment_cap|default:"500 000" }} F — reste disponible aujourd'hui : <strong>{{ payment_cap_remaining|default:payment_cap }} F</strong>.</p>
+      <p class="text-[11px] text-ink-muted rounded-lg bg-canvas px-3 py-2">Plafond journalier : {{ payment_cap|default:500000|intcomma }} F — reste disponible aujourd'hui : <strong>{{ payment_cap_remaining|default:payment_cap|intcomma }} F</strong>.</p>
       {% for code, label, kind in payment_methods %}
       <label class="flex items-center gap-3 border rounded-xl p-3 cursor-pointer hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary-50">
         <input type="radio" name="payment_method" value="{{ code }}" {% if payment_method == code %}checked{% endif %}>
@@ -190,6 +192,8 @@
     <div class="border-t pt-3 space-y-1 text-sm" id="checkout-totals">
       <div class="flex justify-between"><span class="text-ink-muted">Sous-total</span><span class="font-bold" id="sum-subtotal">{{ subtotal }} F</span></div>
       <div class="flex justify-between"><span class="text-ink-muted">Livraison</span><span class="font-bold" id="sum-delivery">{% if premium_delivery and delivery_fee == 0 %}<span class="text-emerald-600">Offerte</span>{% else %}{{ delivery_fee }} F{% endif %}</span></div>
+      <p class="text-[11px] text-rose-700 font-bold hidden" id="sum-zone-hint"></p>
+      <p class="text-[11px] text-amber-700 {% if not delivery.premium_missing %}hidden{% endif %}" id="sum-premium-hint">Premium : plus que <strong id="sum-premium-missing">{{ delivery.premium_missing }}</strong> F d'achat pour la livraison offerte.</p>
       <div class="flex justify-between text-emerald-700 hidden" id="sum-insurance-row"><span>Prise en charge assurance</span><span class="font-bold" id="sum-insurance">0 F</span></div>
       <div class="flex justify-between font-extrabold text-base pt-2 border-t">
         <span>Reste à payer</span>
@@ -229,7 +233,7 @@
     mapEl.classList.remove('hidden');
     if (!map) {
       map = L.map(mapEl).setView([lat, lng], 16);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19, attribution: '&copy; OSM'
       }).addTo(map);
       marker = L.marker([lat, lng]).addTo(map);
@@ -248,6 +252,7 @@
     addrDisplay.classList.remove('hidden');
     showMap(lat, lng);
     setStatus('Position enregistrée pour la livraison.', true);
+    document.dispatchEvent(new Event('gp:delivery-position'));
   }
 
   function reverseGeocode(lat, lng) {
@@ -347,17 +352,49 @@
     });
   });
 
+  function updateDeliveryLine(data) {
+    if (data.delivery_fee === undefined) return;
+    var sumDelivery = document.getElementById('sum-delivery');
+    if (sumDelivery) {
+      sumDelivery.innerHTML = (data.delivery_waived > 0 && data.delivery_fee === 0)
+        ? '<span class="text-emerald-600">Offerte</span>'
+        : data.delivery_fee + ' F';
+    }
+    if (data.gross_total !== undefined) grossDefault = data.gross_total;
+    var zone = document.getElementById('sum-zone-hint');
+    if (zone) {
+      if (data.delivery_out_of_zone) {
+        zone.textContent = 'Votre position est à ' + Math.round(data.delivery_distance_km) +
+          ' km de la pharmacie : hors zone de livraison (max. ' + data.delivery_max_km +
+          ' km). Choisissez le retrait en pharmacie.';
+        zone.classList.remove('hidden');
+      } else {
+        zone.classList.add('hidden');
+      }
+    }
+    var hint = document.getElementById('sum-premium-hint');
+    var missing = document.getElementById('sum-premium-missing');
+    if (hint) hint.classList.toggle('hidden', !(data.premium_missing > 0));
+    if (missing) missing.textContent = data.premium_missing;
+  }
+
   function refreshInsuranceQuote() {
-    if (!useIns && !loyaltyInput) return;
     var params = new URLSearchParams();
     params.set('use_insurance', useIns && useIns.checked ? '1' : '0');
     if (modeEl) params.set('delivery_mode', modeEl.value);
+    var latEl = document.getElementById('delivery-latitude');
+    var lngEl = document.getElementById('delivery-longitude');
+    if (latEl && latEl.value && lngEl && lngEl.value) {
+      params.set('delivery_latitude', latEl.value);
+      params.set('delivery_longitude', lngEl.value);
+    }
     if (insSelect && insSelect.value) params.set('insurance_provider', insSelect.value);
     if (loyaltyInput && loyaltyInput.value) params.set('loyalty_voucher', loyaltyInput.value.trim());
     fetch('{% portal_url "checkout_insurance_quote" %}?' + params.toString(), { headers: { 'Accept': 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (insError) insError.classList.add('hidden');
+        updateDeliveryLine(data);
         if (!data.ok && data.reason && data.loyalty_discount === undefined) {
           if (insError) {
             insError.textContent = data.reason || 'Erreur devis.';
@@ -427,6 +464,7 @@
     });
   }
   if (insSelect) insSelect.addEventListener('change', refreshInsuranceQuote);
+  document.addEventListener('gp:delivery-position', refreshInsuranceQuote);
   if (modeEl) modeEl.addEventListener('change', function () { syncMode(); refreshInsuranceQuote(); });
   refreshInsuranceQuote();
 

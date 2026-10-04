@@ -1,0 +1,175 @@
+/* Gab'Pharma — micro-interactions communes aux espaces (back-office).
+   Tout est neutralisé si l'utilisateur demande moins d'animations. */
+
+:root {
+  --gp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --gp-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Entrée de page : les blocs montent l'un après l'autre ── */
+.bo-shell__content > * {
+  animation: gp-rise 0.5s var(--gp-ease-out) both;
+}
+.bo-shell__content > *:nth-child(2) { animation-delay: 0.05s; }
+.bo-shell__content > *:nth-child(3) { animation-delay: 0.1s; }
+.bo-shell__content > *:nth-child(4) { animation-delay: 0.15s; }
+.bo-shell__content > *:nth-child(5) { animation-delay: 0.2s; }
+.bo-shell__content > *:nth-child(n + 6) { animation-delay: 0.25s; }
+
+@keyframes gp-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes gp-pop {
+  0% { transform: scale(0.9); opacity: 0; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes gp-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(34, 133, 69, 0.45); }
+  100% { box-shadow: 0 0 0 12px rgba(34, 133, 69, 0); }
+}
+
+@keyframes gp-shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+
+/* Apparition au défilement */
+.gp-reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.5s var(--gp-ease-out), transform 0.5s var(--gp-ease-out); }
+.gp-reveal.is-visible { opacity: 1; transform: none; }
+
+.gp-pop { animation: gp-pop 0.35s var(--gp-ease-spring) both; }
+.gp-pulse { animation: gp-pulse-ring 1.6s ease-out infinite; }
+
+.gp-skeleton {
+  background: linear-gradient(90deg, #eef2ef 25%, #f7faf8 50%, #eef2ef 75%);
+  background-size: 200% 100%;
+  animation: gp-shimmer 1.4s linear infinite;
+  border-radius: 0.75rem;
+}
+
+/* ── Boutons : retour tactile ── */
+button:not(:disabled),
+.gp-press {
+  transition: transform 0.12s ease, box-shadow 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+button:not(:disabled):active,
+.gp-press:active {
+  transform: scale(0.97);
+}
+
+/* ── Cartes & KPI ── */
+.gp-card {
+  background: #fff;
+  border: 1px solid rgba(20, 41, 28, 0.08);
+  border-radius: 1.25rem;
+  transition: transform 0.25s var(--gp-ease-out), box-shadow 0.25s var(--gp-ease-out), border-color 0.25s;
+}
+.gp-card--hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -12px rgba(1, 85, 51, 0.25);
+  border-color: rgba(34, 133, 69, 0.25);
+}
+
+.gp-kpi {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.gp-kpi__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.8rem;
+  background: var(--gp-kpi-tint, #eaf5ee);
+  color: var(--gp-kpi-color, #228545);
+  transition: transform 0.3s var(--gp-ease-spring);
+}
+.gp-card--hover:hover .gp-kpi__icon { transform: scale(1.08) rotate(-4deg); }
+.gp-kpi__label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #5b6b63; }
+.gp-kpi__value { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; color: var(--gp-kpi-value, #14291c); line-height: 1.1; word-break: break-word; }
+.gp-kpi__hint { font-size: 0.6875rem; color: #5b6b63; font-weight: 600; }
+.gp-kpi::after {
+  content: "";
+  position: absolute;
+  right: -1.5rem;
+  top: -1.5rem;
+  width: 5rem;
+  height: 5rem;
+  border-radius: 9999px;
+  background: var(--gp-kpi-tint, #eaf5ee);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.gp-kpi--amber { --gp-kpi-tint: #fff4dc; --gp-kpi-color: #b45309; --gp-kpi-value: #b45309; }
+.gp-kpi--rose { --gp-kpi-tint: #ffe4e8; --gp-kpi-color: #be123c; --gp-kpi-value: #be123c; }
+.gp-kpi--blue { --gp-kpi-tint: #e0edff; --gp-kpi-color: #1d4ed8; }
+.gp-kpi--violet { --gp-kpi-tint: #efe9ff; --gp-kpi-color: #6d28d9; }
+.gp-kpi--green { --gp-kpi-value: #15803d; }
+
+/* ── Navigation latérale : icône pleine + barre d'état actif ── */
+.bo-sidebar nav a,
+.bo-sidebar .bo-nav-link {
+  position: relative;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s var(--gp-ease-out);
+}
+.bo-sidebar nav a:hover { transform: translateX(2px); }
+.bo-sidebar nav a .material-symbols-rounded { transition: transform 0.25s var(--gp-ease-spring), font-variation-settings 0.25s; }
+.bo-sidebar nav a:hover .material-symbols-rounded { transform: scale(1.12); }
+.bo-sidebar nav a[aria-current="page"] .material-symbols-rounded { font-variation-settings: "FILL" 1, "wght" 500; }
+.bo-sidebar nav a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: -0.25rem;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: gp-pop 0.3s var(--gp-ease-spring) both;
+}
+.bo-nav-group {
+  margin: 0.9rem 0 0.25rem;
+  padding: 0 0.75rem;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.45;
+}
+.bo-nav-badge-new {
+  margin-left: auto;
+  font-size: 0.5625rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+  background: #8dc63f;
+  color: #014d2e;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .gp-reveal { opacity: 1; transform: none; }
+}
+
+/* Portail assureur : même logique d'icône pleine sur le lien actif */
+.ins-side-link { transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s var(--gp-ease-out); }
+.ins-side-link:hover { transform: translateX(2px); }
+.ins-side-link .material-symbols-rounded { transition: transform 0.25s var(--gp-ease-spring); }
+.ins-side-link:hover .material-symbols-rounded { transform: scale(1.12); }
+.ins-side-link.is-active .material-symbols-rounded { font-variation-settings: "FILL" 1, "wght" 500; }

@@ -1,0 +1,38 @@
+{% extends "backoffice/base_bo.html" %}
+{% block title %}Accès exceptionnel{% endblock %}
+{% block bo_label %}Confidentialité{% endblock %}
+{% block bo_title %}Accès exceptionnel à une ordonnance{% endblock %}
+{% block bo_content %}
+<section class="bg-white rounded-2xl border p-5 max-w-2xl">
+  <div class="flex gap-3 rounded-xl bg-amber-50 border border-amber-200 p-4 mb-5">
+    <span class="material-symbols-rounded text-amber-600">lock</span>
+    <div class="text-sm">
+      <p class="font-extrabold text-amber-900">Donnée de santé protégée</p>
+      <p class="text-amber-900/80 mt-1">
+        L'équipe Gab'Pharma n'a pas accès aux ordonnances. Un accès exceptionnel n'est justifié
+        que par un litige, une réclamation du patient ou une réquisition légale.
+      </p>
+      <ul class="text-amber-900/80 mt-2 list-disc pl-5 space-y-0.5">
+        <li>Votre motif est enregistré dans le journal d'audit.</li>
+        <li><strong>{{ patient.get_full_name|default:patient.username }}</strong> sera notifié(e) immédiatement.</li>
+        <li>L'accès expire après {{ duration }} minutes.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="text-sm mb-3">Document : <strong>{{ title }}</strong></p>
+  <form method="post" class="space-y-3 text-sm">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next_url }}">
+    <label class="block font-bold">Motif de l'accès *
+      <textarea name="reason" rows="3" minlength="{{ min_reason }}" required
+        class="w-full border rounded-xl px-3 py-2 mt-1 font-normal"
+        placeholder="Ex. Réclamation du patient du 04/10 — ticket support #123"></textarea>
+    </label>
+    <div class="flex flex-wrap gap-2">
+      <button class="bg-amber-600 text-white font-bold px-5 py-2.5 rounded-xl">Confirmer l'accès</button>
+      <a href="javascript:history.back()" class="border font-bold px-5 py-2.5 rounded-xl">Annuler</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

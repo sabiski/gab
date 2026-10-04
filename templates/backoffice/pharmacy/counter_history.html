@@ -1,0 +1,117 @@
+{% extends "backoffice/base_bo.html" %}
+{% load humanize %}
+{% block title %}Historique caisse{% endblock %}
+{% block bo_title %}Ventes hors app{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="/static/css/pharmacy-counter.css?v=2">{% endblock %}
+
+{% block bo_content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+  <p class="text-sm text-ink-muted font-medium">Du {{ date_from|date:"d/m/Y" }} au {{ date_to|date:"d/m/Y" }}</p>
+  <div class="flex flex-wrap gap-2">
+    <a href="?{{ request.GET.urlencode }}{% if request.GET %}&{% endif %}export=csv" class="pc-btn pc-btn--ghost">
+      <span class="material-symbols-rounded sm">download</span> Export CSV
+    </a>
+    <a href="{% url 'bo_pharmacy_counter' %}" class="pc-btn pc-btn--primary">
+      <span class="material-symbols-rounded sm">point_of_sale</span> Nouvelle vente
+    </a>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+  <div class="gp-card gp-card--hover gp-kpi">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">receipt</span></span>
+    <span class="gp-kpi__label">Ventes validées</span>
+    <span class="gp-kpi__value" data-countup>{{ totals.count }}</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--green">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">payments</span></span>
+    <span class="gp-kpi__label">Encaissé</span>
+    <span class="gp-kpi__value" data-countup>{{ totals.cashed }} F</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--blue">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">health_and_safety</span></span>
+    <span class="gp-kpi__label">À recevoir des assurances</span>
+    <span class="gp-kpi__value" data-countup>{{ totals.insurance }} F</span>
+  </div>
+</div>
+
+<form method="get" class="gp-card p-3 mb-4 grid grid-cols-2 lg:grid-cols-6 gap-2 text-sm">
+  <input name="q" value="{{ q }}" placeholder="Code, client, téléphone…" class="pc-input col-span-2">
+  <input type="date" name="from" value="{{ date_from|date:'Y-m-d' }}" class="pc-input" aria-label="Du">
+  <input type="date" name="to" value="{{ date_to|date:'Y-m-d' }}" class="pc-input" aria-label="Au">
+  <select name="channel" class="pc-input" aria-label="Canal">
+    <option value="">Tous canaux</option>
+    {% for v, l in channels %}<option value="{{ v }}" {% if filter_channel == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  <select name="method" class="pc-input" aria-label="Paiement">
+    <option value="">Tous paiements</option>
+    {% for v, l in payment_methods %}<option value="{{ v }}" {% if filter_method == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  <button class="pc-btn pc-btn--primary col-span-2 lg:col-span-6 lg:justify-self-end">
+    <span class="material-symbols-rounded sm">filter_list</span> Filtrer
+  </button>
+</form>
+
+<div class="gp-card overflow-x-auto">
+  <table class="pc-table">
+    <thead>
+      <tr><th>Vente</th><th>Produits</th><th>Client</th><th>Paiement</th><th class="text-right">Encaissé</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for s in page %}
+      <tr>
+        <td>
+          <p class="font-extrabold">{{ s.code }}</p>
+          <p class="text-xs text-ink-muted">{{ s.sold_at|date:"d/m H:i" }} · {{ s.get_channel_display }}</p>
+          {% if s.status == "cancelled" %}<span class="pc-status pc-status--cancelled mt-1">Annulée</span>{% endif %}
+          {% if s.recorded_offline %}<span class="pc-status mt-1" style="background:#fff7ed;color:#c2410c" title="Vendue le {{ s.sold_at|date:'d/m H:i' }}">Hors connexion</span>{% endif %}
+          {% if s.sync_warning %}<p class="text-[11px] text-rose-700 font-bold mt-1 max-w-[14rem]">{{ s.sync_warning }}</p>{% endif %}
+        </td>
+        <td class="max-w-[16rem]">
+          {% for i in s.items.all %}<p class="truncate">{{ i.quantity }}× {{ i.medicine_name }}</p>{% endfor %}
+          {% if s.prescription_checked %}<p class="text-[11px] text-orange-700 font-bold mt-0.5">Ordonnance vérifiée</p>{% endif %}
+        </td>
+        <td>{{ s.customer_name|default:"—" }}{% if s.customer_phone %}<p class="text-xs text-ink-muted">{{ s.customer_phone }}</p>{% endif %}</td>
+        <td>
+          {{ s.get_payment_method_display }}
+          {% if s.insurance_amount %}<p class="text-xs text-blue-700">{{ s.insurance_provider.name }} : {{ s.insurance_amount|intcomma }} F</p>{% endif %}
+        </td>
+        <td class="text-right font-extrabold {% if s.status == 'cancelled' %}line-through text-ink-muted{% endif %}">{{ s.total|intcomma }} F</td>
+        <td class="text-right whitespace-nowrap">
+          <a href="{% url 'bo_pharmacy_counter_receipt' s.pk %}" target="_blank" class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-canvas text-ink-muted hover:text-primary" title="Ticket">
+            <span class="material-symbols-rounded sm">print</span>
+          </a>
+          {% if s.status == "completed" %}
+          <details class="inline-block relative">
+            <summary class="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-rose-50 text-ink-muted hover:text-rose-600 cursor-pointer list-none" title="Annuler">
+              <span class="material-symbols-rounded sm">undo</span>
+            </summary>
+            <form method="post" class="absolute right-0 z-10 mt-1 w-64 gp-card p-3 shadow-lg text-left gp-pop">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="cancel">
+              <input type="hidden" name="sale_id" value="{{ s.pk }}">
+              <p class="text-xs font-bold mb-2">Annuler {{ s.code }} ? Les produits reviennent en stock.</p>
+              <input name="reason" required placeholder="Motif (erreur de saisie, retour…)" class="pc-input mb-2">
+              <button class="w-full bg-rose-600 text-white font-bold text-xs py-2 rounded-lg">Confirmer l'annulation</button>
+            </form>
+          </details>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6">
+        <div class="pc-empty"><span class="material-symbols-rounded">receipt_long</span>Aucune vente sur cette période.</div>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page.has_other_pages %}
+<nav class="flex justify-center gap-2 mt-4 text-sm">
+  {% if page.has_previous %}<a class="pc-btn pc-btn--ghost" href="?{{ request.GET.urlencode }}&page={{ page.previous_page_number }}">← Précédent</a>{% endif %}
+  <span class="px-3 py-2 font-bold">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a class="pc-btn pc-btn--ghost" href="?{{ request.GET.urlencode }}&page={{ page.next_page_number }}">Suivant →</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

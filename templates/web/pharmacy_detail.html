@@ -54,7 +54,7 @@
   var lng = {% localize off %}{{ pharmacy.longitude }}{% endlocalize %};
   if (typeof L === 'undefined' || !document.getElementById('public-pharmacy-map')) return;
   var map = L.map('public-pharmacy-map').setView([lat, lng], 15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap'
   }).addTo(map);

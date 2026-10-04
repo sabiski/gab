@@ -22,7 +22,7 @@ def favicon(_request):
 urlpatterns = [
     path("favicon.ico", favicon, name="favicon"),
     path("health/", health_check, name="health"),
-    path("django-admin/", admin.site.urls),  # technique uniquement
+    path(settings.ADMIN_URL, admin.site.urls),  # technique uniquement (URL via DJANGO_ADMIN_URL)
     path("api/v1/", include("api.urls")),
     path("auth/", include("accounts.urls")),
     path("espace/", include("backoffice.urls")),

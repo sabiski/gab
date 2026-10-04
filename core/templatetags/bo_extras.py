@@ -5,6 +5,10 @@ register = template.Library()
 PHARMACY_SECTION_ICONS = {
     "dashboard": "dashboard",
     "orders": "receipt_long",
+    "counter": "point_of_sale",
+    "statements": "request_quote",
+    "coverage": "health_and_safety",
+    "boost": "campaign",
     "prescription_detail": "description",
     "stocks": "inventory_2",
     "personnel": "groups",

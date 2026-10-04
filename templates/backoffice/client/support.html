@@ -1,13 +1,57 @@
 {% extends "backoffice/client/portal_wrap.html" %}
-{% block portal_title %}Réclamations{% endblock %}
-{% block portal_heading %}Réclamations & support{% endblock %}
+{% block portal_title %}Centre d'aide{% endblock %}
+{% block portal_heading %}Centre d'aide{% endblock %}
 {% block portal_lead %}
-<p class="c-lead">Signalez un problème de commande ou de service — notre équipe vous répond sous 48 h.</p>
+<p class="c-lead">FAQ, tickets support et droits sur vos données — réponse sous 48 h ouvrés.</p>
 {% endblock %}
 {% block portal_body %}
+
+<nav class="c-help-tabs" aria-label="Sections du centre d'aide">
+  <a href="#faq" class="c-help-tab is-active">FAQ</a>
+  <a href="#nouveau-ticket" class="c-help-tab">Nouveau ticket</a>
+  <a href="#mes-tickets" class="c-help-tab">Mes tickets <span class="c-pill c-pill--muted">{{ tickets|length }}</span></a>
+</nav>
+
+<section id="faq" class="c-card p-5 scroll-mt-24">
+  <div class="c-card__head">
+    <div>
+      <h2 class="c-card__title">Questions fréquentes</h2>
+      <p class="c-card__sub">Commandes, ordonnances, assurance et confidentialité</p>
+    </div>
+  </div>
+  <div class="c-faq" data-faq>
+    {% for item in faq_items %}
+    <details class="c-faq__item"{% if forloop.first %} open{% endif %}>
+      <summary class="c-faq__q">
+        <span class="material-symbols-rounded sm c-faq__icon" aria-hidden="true">{{ item.icon }}</span>
+        <span>{{ item.q }}</span>
+        <span class="material-symbols-rounded sm c-faq__chevron" aria-hidden="true">expand_more</span>
+      </summary>
+      <div class="c-faq__a">{{ item.a|safe }}</div>
+    </details>
+    {% endfor %}
+  </div>
+  <p class="text-xs text-[#6B7280] mt-4">
+    Politique détaillée :
+    <a href="{% url 'bo_client_profile_privacy' %}" class="font-bold text-[#6C3AED] hover:underline">Confidentialité</a>
+  </p>
+</section>
+
 <div class="grid lg:grid-cols-2 gap-5">
-  <section class="c-card p-5">
-    <h2 class="c-card__title mb-4">Nouvelle réclamation</h2>
+  <section id="nouveau-ticket" class="c-card p-5 scroll-mt-24">
+    <h2 class="c-card__title mb-1">Nouveau ticket</h2>
+    <p class="c-card__sub mb-4">Décrivez le problème — évitez d'y coller une ordonnance complète.</p>
+
+    <div class="c-help-banner mb-4" role="note">
+      <span class="material-symbols-rounded sm" aria-hidden="true">health_and_safety</span>
+      <p>
+        Les pièces jointes de santé sont chiffrées et non accessibles via un lien public.
+        Préférez déposer l'ordonnance dans
+        <a href="{% url 'bo_client_prescriptions' %}" class="font-bold underline">Mes ordonnances</a>
+        (dossier sécurisé), puis mentionnez-la dans le ticket.
+      </p>
+    </div>
+
     <form method="post" enctype="multipart/form-data" class="space-y-4 text-sm">
       {% csrf_token %}
       <div class="c-field">
@@ -25,7 +69,7 @@
       </div>
       <div class="c-field">
         <label class="c-label">Sujet</label>
-        <input name="subject" required maxlength="200" class="c-input" placeholder="Ex. Article manquant">
+        <input name="subject" required maxlength="200" class="c-input" placeholder="Ex. Article manquant · droit d'accès">
       </div>
       <div class="c-field">
         <label class="c-label">Description</label>
@@ -33,12 +77,14 @@
       </div>
       <div class="c-field">
         <label class="c-label">Pièce jointe (optionnel)</label>
-        <input type="file" name="attachment" class="c-file w-full border border-dashed border-[#E5E7EB] rounded-xl p-2">
+        <input type="file" name="attachment" accept=".pdf,.jpg,.jpeg,.png,image/*" class="c-file w-full border border-dashed border-[#E5E7EB] rounded-xl p-2">
+        <p class="text-[11px] text-[#6B7280] mt-1">PDF ou image — ne joignez une ordonnance que si nécessaire au traitement du ticket.</p>
       </div>
-      <button type="submit" class="c-btn c-btn--primary">Envoyer la réclamation</button>
+      <button type="submit" class="c-btn c-btn--primary">Envoyer le ticket</button>
     </form>
   </section>
-  <section class="c-card p-5">
+
+  <section id="mes-tickets" class="c-card p-5 scroll-mt-24">
     <div class="c-card__head">
       <h2 class="c-card__title">Mes tickets</h2>
       <span class="c-pill c-pill--muted">{{ tickets|length }}</span>
@@ -56,11 +102,32 @@
       </div>
       {% empty %}
       <div class="c-empty py-8">
-        <div class="c-empty__icon"><span class="material-symbols-rounded">support</span></div>
-        <p class="text-sm text-[#6B7280]">Aucune réclamation pour le moment.</p>
+        <div class="c-empty__icon"><span class="material-symbols-rounded">support_agent</span></div>
+        <p class="text-sm text-[#6B7280]">Aucun ticket pour le moment.</p>
       </div>
       {% endfor %}
     </div>
   </section>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var tabs = document.querySelectorAll('.c-help-tab');
+  function setActive() {
+    var hash = (location.hash || '#faq').toLowerCase();
+    tabs.forEach(function (t) {
+      t.classList.toggle('is-active', (t.getAttribute('href') || '').toLowerCase() === hash);
+    });
+  }
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      setTimeout(setActive, 0);
+    });
+  });
+  window.addEventListener('hashchange', setActive);
+  setActive();
+})();
+</script>
 {% endblock %}

@@ -31,14 +31,33 @@
     <label class="block">Acompte COD min (F)
       <input type="number" name="cod_deposit_min" value="{{ settings_obj.cod_deposit_min }}" class="w-full border rounded-xl px-3 py-2 mt-1">
     </label>
-    <label class="block">Base livreur / course (F)
+    <p class="sm:col-span-2 lg:col-span-3 text-xs font-bold text-ink-muted uppercase pt-2">Livraison — tarif client</p>
+    <label class="block">Frais de base / course (F)
       <input type="number" name="courier_base_fee" value="{{ settings_obj.courier_base_fee }}" class="w-full border rounded-xl px-3 py-2 mt-1">
     </label>
-    <label class="block">Bonus km livreur (F)
+    <label class="block">Supplément par km (F)
       <input type="number" name="courier_per_km_fee" value="{{ settings_obj.courier_per_km_fee }}" class="w-full border rounded-xl px-3 py-2 mt-1">
     </label>
-    <label class="block">Bonus express (F)
+    <label class="block">Supplément express (F)
       <input type="number" name="courier_express_bonus" value="{{ settings_obj.courier_express_bonus }}" class="w-full border rounded-xl px-3 py-2 mt-1">
+    </label>
+    <label class="block">Zone de livraison max (km)
+      <input type="number" min="1" name="delivery_max_km" value="{{ settings_obj.delivery_max_km }}" class="w-full border rounded-xl px-3 py-2 mt-1">
+    </label>
+    <label class="block">Commission sur la livraison (%)
+      <input type="number" min="0" max="100" name="delivery_platform_rate" value="{{ settings_obj.delivery_platform_rate }}" class="w-full border rounded-xl px-3 py-2 mt-1">
+      <span class="text-[11px] text-ink-muted">Le livreur perçoit le reste.</span>
+    </label>
+    <label class="block">Livraison offerte Premium dès (F)
+      <input type="number" min="0" name="premium_free_delivery_min_order" value="{{ settings_obj.premium_free_delivery_min_order }}" class="w-full border rounded-xl px-3 py-2 mt-1">
+      <span class="text-[11px] text-ink-muted">0 = toujours offerte.</span>
+    </label>
+    <p class="sm:col-span-2 lg:col-span-3 text-xs font-bold text-ink-muted uppercase pt-2">Prise en charge assurance</p>
+    <label class="block">Frais par dossier (F)
+      <input type="number" min="0" name="coverage_request_fee" value="{{ settings_obj.coverage_request_fee }}" class="w-full border rounded-xl px-3 py-2 mt-1">
+    </label>
+    <label class="block">Dossiers inclus Premium / mois
+      <input type="number" min="0" name="premium_coverage_monthly_quota" value="{{ settings_obj.premium_coverage_monthly_quota }}" class="w-full border rounded-xl px-3 py-2 mt-1">
     </label>
     <div class="sm:col-span-2 lg:col-span-3">
       <button class="bg-primary text-white font-bold px-5 py-2.5 rounded-xl">Enregistrer (journalisé)</button>

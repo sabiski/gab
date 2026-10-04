@@ -109,3 +109,20 @@ Sans ce volume, MySQL suffit déjà à faire réapparaître les images après un
 ## Onboarding pharmacie
 
 Voir [PHARMACIE_ONBOARDING.md](PHARMACIE_ONBOARDING.md) — rattachement titulaire, abonnement, connexion portail.
+
+## Conservation des ordonnances (données de santé)
+
+Le conteneur lance `python manage.py purge_prescriptions` au démarrage puis toutes les 24 h
+(voir `docker/entrypoint.sh`). Les fichiers sont supprimés du disque **et** de la copie MySQL ;
+seule l'empreinte SHA-256 est conservée comme preuve de vérification.
+
+Variables (jours) :
+
+| Variable | Défaut | Portée |
+|----------|--------|--------|
+| `PRESCRIPTION_RETENTION_DAYS` | 7 | après livraison / annulation de la commande |
+| `PRESCRIPTION_UNUSED_RETENTION_DAYS` | 90 | ordonnance du dossier patient jamais utilisée |
+| `COVERAGE_PRESCRIPTION_RETENTION_DAYS` | 30 | prise en charge terminée / refusée / expirée |
+| `PRESCRIPTION_BREAK_GLASS_MINUTES` | 30 | durée d'un accès exceptionnel admin / support |
+
+Simulation sans suppression : `python manage.py purge_prescriptions --dry-run`.

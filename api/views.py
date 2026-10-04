@@ -44,6 +44,30 @@ class IsOwnerOrAdmin(permissions.BasePermission):
 
 class LoginView(TokenObtainPairView):
     serializer_class = GabPharmaTokenSerializer
+    throttle_scope = "auth"
+
+    def post(self, request, *args, **kwargs):
+        from accounts.security import client_ip, is_demo_password_blocked, lock_status, record_attempt
+
+        username = str(request.data.get("username") or request.data.get("email") or "")
+        if "@" in username:
+            match = User.objects.filter(email__iexact=username).first()
+            if match:
+                username = match.username
+        lock = lock_status(username, client_ip(request))
+        if lock.locked:
+            return Response({"detail": lock.message}, status=429)
+        if is_demo_password_blocked(str(request.data.get("password") or "")):
+            record_attempt(username, request, success=False, channel="api")
+            return Response({"detail": "Mot de passe de démonstration désactivé en production."}, status=401)
+        try:
+            response = super().post(request, *args, **kwargs)
+        except Exception:
+            # simplejwt lève AuthenticationFailed / InvalidToken sur mauvais identifiants
+            record_attempt(username, request, success=False, channel="api")
+            raise
+        record_attempt(username, request, success=response.status_code == 200, channel="api")
+        return response
 
 
 class RegisterView(generics.CreateAPIView):
@@ -202,6 +226,20 @@ class OrderViewSet(viewsets.ModelViewSet):
                 unit_price=stock.display_price,
                 medicine_name=str(medicine),
             )
+        order.recalculate_totals()
+        from core.payment_settlement import delivery_quote
+
+        delivery = delivery_quote(
+            request.user,
+            order.delivery_mode,
+            pharmacy=pharmacy,
+            lat=request.data.get("delivery_latitude") or request.user.latitude,
+            lng=request.data.get("delivery_longitude") or request.user.longitude,
+            subtotal=order.subtotal,
+        )
+        order.delivery_fee = delivery["fee"]
+        order.delivery_fee_waived = delivery["waived"]
+        order.save(update_fields=["delivery_fee", "delivery_fee_waived", "updated_at"])
         order.recalculate_totals()
         # Acompte COD (CDC v1.1)
         if request.data.get("payment_method") == "cod":

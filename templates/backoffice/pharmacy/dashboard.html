@@ -4,6 +4,8 @@
 
 {% block bo_title %}Tableau de bord{% endblock %}
 
+{% block extra_head %}<link rel="stylesheet" href="/static/css/pharmacy-counter.css?v=2">{% endblock %}
+
 {% block bo_content %}
 
 {% if not pharmacy %}
@@ -100,46 +102,100 @@
 
 
 
+{% if pharmacy_permissions.orders %}
+<a href="{% url 'bo_pharmacy_counter' %}" class="pd-cta gp-press mb-6">
+  <span class="pd-cta__icon"><span class="material-symbols-rounded">point_of_sale</span></span>
+  <span class="flex-1 min-w-0">
+    <span class="block font-extrabold text-base">Encaisser une vente hors app</span>
+    <span class="block text-xs text-white/80">Client au comptoir, appel ou WhatsApp — stock à jour, 0 % de commission.{% if counter.count %} Aujourd'hui : {{ counter.count }} vente{{ counter.count|pluralize }}.{% endif %}</span>
+  </span>
+  <span class="material-symbols-rounded pd-cta__arrow">arrow_forward</span>
+</a>
+{% endif %}
+
 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-
   {% if pharmacy_permissions.orders %}
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Reçues aujourd'hui</p><p class="text-2xl font-extrabold mt-1">{{ stats.received_today }}</p></div>
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">À préparer</p><p class="text-2xl font-extrabold text-amber-600 mt-1">{{ stats.to_prepare }}</p></div>
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">En préparation</p><p class="text-2xl font-extrabold text-amber-700 mt-1">{{ stats.preparing }}</p></div>
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">En livraison</p><p class="text-2xl font-extrabold text-primary mt-1">{{ stats.delivering }}</p></div>
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Urgences SOS</p><p class="text-2xl font-extrabold text-rose-600 mt-1">{{ stats.emergencies }}</p></div>
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Alertes non lues</p><p class="text-2xl font-extrabold text-amber-600 mt-1">{{ stats.unread_alerts }}</p></div>
-
+  <div class="gp-card gp-card--hover gp-kpi">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">inbox</span></span>
+    <span class="gp-kpi__label">Reçues aujourd'hui</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.received_today }}</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--amber">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">pending_actions</span></span>
+    <span class="gp-kpi__label">À préparer</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.to_prepare }}</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--amber">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">science</span></span>
+    <span class="gp-kpi__label">En préparation</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.preparing }}</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--green">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">local_shipping</span></span>
+    <span class="gp-kpi__label">En livraison</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.delivering }}</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--rose">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">e911_emergency</span></span>
+    <span class="gp-kpi__label">Urgences SOS</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.emergencies }}</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--amber">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">notifications_active</span></span>
+    <span class="gp-kpi__label">Alertes non lues</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.unread_alerts }}</span>
+  </div>
   {% endif %}
-
   {% if pharmacy_permissions.stats %}
-
-  <div class="bg-white rounded-2xl border p-4 min-w-0"><p class="text-xs font-bold text-ink-muted uppercase">CA du jour</p><p class="text-xl font-extrabold text-primary mt-1 break-anywhere">{{ stats.ca_today }} F</p></div>
-
-  <div class="bg-white rounded-2xl border p-4 min-w-0"><p class="text-xs font-bold text-ink-muted uppercase">CA du mois</p><p class="text-xl font-extrabold mt-1">{{ stats.ca_month }} F</p></div>
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Clients servis</p><p class="text-2xl font-extrabold mt-1">{{ stats.clients_served }}</p></div>
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Livraisons OK</p><p class="text-2xl font-extrabold mt-1">{{ stats.deliveries_done }}</p></div>
-
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--green">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">shopping_bag</span></span>
+    <span class="gp-kpi__label">CA app du jour</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.ca_today }} F</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--violet">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">point_of_sale</span></span>
+    <span class="gp-kpi__label">CA hors app du jour</span>
+    <span class="gp-kpi__value" data-countup>{{ counter.cashed }} F</span>
+    <span class="gp-kpi__hint">{{ counter.count }} vente{{ counter.count|pluralize }} comptoir</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">calendar_month</span></span>
+    <span class="gp-kpi__label">CA app du mois</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.ca_month }} F</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--violet">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">storefront</span></span>
+    <span class="gp-kpi__label">CA hors app du mois</span>
+    <span class="gp-kpi__value" data-countup>{{ counter.month_total }} F</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--blue">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">group</span></span>
+    <span class="gp-kpi__label">Clients servis</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.clients_served }}</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--green">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">task_alt</span></span>
+    <span class="gp-kpi__label">Livraisons OK</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.deliveries_done }}</span>
+  </div>
   {% endif %}
-
   {% if pharmacy_permissions.stocks %}
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Stock faible</p><p class="text-2xl font-extrabold text-amber-600 mt-1">{{ stats.low_stock }}</p></div>
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Ruptures</p><p class="text-2xl font-extrabold text-rose-600 mt-1">{{ stats.out_stock }}</p></div>
-
-  <div class="bg-white rounded-2xl border p-4"><p class="text-xs font-bold text-ink-muted uppercase">Péremption &lt; 60 j</p><p class="text-2xl font-extrabold text-orange-600 mt-1">{{ stats.expiring }}</p></div>
-
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--amber">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">inventory</span></span>
+    <span class="gp-kpi__label">Stock faible</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.low_stock }}</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--rose">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">remove_shopping_cart</span></span>
+    <span class="gp-kpi__label">Ruptures</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.out_stock }}</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--amber">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">event_busy</span></span>
+    <span class="gp-kpi__label">Péremption &lt; 60 j</span>
+    <span class="gp-kpi__value" data-countup>{{ stats.expiring }}</span>
+  </div>
   {% endif %}
-
 </div>
 
 

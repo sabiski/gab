@@ -178,7 +178,7 @@
             ? [pharmacy.lat, pharmacy.lng]
             : [dest.lat, dest.lng];
         map = L.map("track-map", { zoomControl: true }).setView(center, 14);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
           maxZoom: 19,
           attribution: "&copy; OSM",
         }).addTo(map);

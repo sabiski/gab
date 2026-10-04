@@ -186,8 +186,10 @@ class PharmacyBoostAd(models.Model):
 
     class Status(models.TextChoices):
         DRAFT = "draft", "Brouillon"
+        PENDING_REVIEW = "pending_review", "En attente de validation"
         ACTIVE = "active", "Active"
         PAUSED = "paused", "En pause"
+        REJECTED = "rejected", "Refusée"
         ENDED = "ended", "Terminée"
 
     pharmacy = models.ForeignKey(
@@ -221,6 +223,15 @@ class PharmacyBoostAd(models.Model):
     )
     priority = models.PositiveIntegerField(default=10)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    moderation_notes = models.TextField(blank=True)
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    moderated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="moderated_boost_ads",
+    )
     starts_at = models.DateTimeField(null=True, blank=True)
     ends_at = models.DateTimeField(null=True, blank=True)
     impressions = models.PositiveIntegerField(default=0)

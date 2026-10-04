@@ -1005,3 +1005,132 @@ a.c-settings-row:hover {
   background: rgba(239, 68, 68, 0.15);
   color: #fecaca;
 }
+
+/* Centre d'aide — FAQ + tickets */
+.c-help-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.c-help-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #6b7280;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.c-help-tab:hover {
+  border-color: #c4b5fd;
+  color: #6c3aed;
+}
+
+.c-help-tab.is-active {
+  background: #6c3aed;
+  border-color: #6c3aed;
+  color: #fff;
+}
+
+.c-help-banner {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.85rem;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #4c1d95;
+}
+
+.c-help-banner .material-symbols-rounded {
+  color: #6c3aed;
+  flex-shrink: 0;
+}
+
+.c-faq {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.c-faq__item {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.85rem;
+  background: #fafafa;
+  overflow: hidden;
+}
+
+.c-faq__item[open] {
+  background: #fff;
+  border-color: #ddd6fe;
+}
+
+.c-faq__q {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #374151;
+  cursor: pointer;
+  list-style: none;
+}
+
+.c-faq__q::-webkit-details-marker {
+  display: none;
+}
+
+.c-faq__icon {
+  color: #6c3aed;
+  flex-shrink: 0;
+}
+
+.c-faq__chevron {
+  margin-left: auto;
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+}
+
+.c-faq__item[open] .c-faq__chevron {
+  transform: rotate(180deg);
+}
+
+.c-faq__a {
+  padding: 0 1rem 1rem 2.5rem;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #6b7280;
+}
+
+.c-consent-box {
+  padding: 0.9rem 1rem;
+  border-radius: 0.85rem;
+  background: #faf8ff;
+  border: 1px solid #ddd6fe;
+}
+
+.c-consent-check {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #374151;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.c-consent-check input {
+  accent-color: #6c3aed;
+}

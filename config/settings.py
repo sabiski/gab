@@ -43,25 +43,41 @@ SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
     "django-insecure-gabpharma-dev-change-me-in-production-2026",
 )
+# Clé Fernet pour ordonnances PC (dérivée de SECRET_KEY si vide)
+FIELD_ENCRYPTION_KEY = os.environ.get("FIELD_ENCRYPTION_KEY", "")
+
+# Conservation des ordonnances (jours) — purge via `manage.py purge_prescriptions`.
+# Après livraison / annulation de la commande :
+PRESCRIPTION_RETENTION_DAYS = int(os.environ.get("PRESCRIPTION_RETENTION_DAYS", "7"))
+# Ordonnance du dossier patient jamais utilisée :
+PRESCRIPTION_UNUSED_RETENTION_DAYS = int(os.environ.get("PRESCRIPTION_UNUSED_RETENTION_DAYS", "90"))
+# Dossier de prise en charge clos (terminé / refusé / expiré) — délai de paiement assureur :
+COVERAGE_PRESCRIPTION_RETENTION_DAYS = int(os.environ.get("COVERAGE_PRESCRIPTION_RETENTION_DAYS", "30"))
+# Durée d'un accès exceptionnel (admin / support) après motif saisi :
+PRESCRIPTION_BREAK_GLASS_MINUTES = int(os.environ.get("PRESCRIPTION_BREAK_GLASS_MINUTES", "30"))
 
 DEBUG = _env_bool("DJANGO_DEBUG", default=True)
 
 ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", default="*")
 
 # Tunnel de démo (Cloudflare / ngrok / localtunnel) : login et formulaires en HTTPS
-CSRF_TRUSTED_ORIGINS = [
-    "http://127.0.0.1:8000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8080",
-    "http://localhost:8080",
-    "https://*.trycloudflare.com",
-    "https://*.loca.lt",
-    "https://*.localtunnel.me",
-    "https://*.ngrok-free.app",
-    "https://*.ngrok.io",
-    "https://*.localhost.run",
-    "https://*.serveo.net",
-]
+CSRF_TRUSTED_ORIGINS = []
+if DEBUG:
+    # Tunnels de démo : uniquement en développement. En production, n'importe qui
+    # pourrait héberger une page sur ces domaines et soumettre des formulaires (CSRF).
+    CSRF_TRUSTED_ORIGINS += [
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8080",
+        "http://localhost:8080",
+        "https://*.trycloudflare.com",
+        "https://*.loca.lt",
+        "https://*.localtunnel.me",
+        "https://*.ngrok-free.app",
+        "https://*.ngrok.io",
+        "https://*.localhost.run",
+        "https://*.serveo.net",
+    ]
 CSRF_TRUSTED_ORIGINS.extend(_env_list("DJANGO_CSRF_TRUSTED_ORIGINS"))
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
@@ -112,12 +128,15 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "core.security_middleware.MaxUploadSizeMiddleware",
+    "core.security_middleware.SecurityHeadersMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.security_middleware.IdleSessionTimeoutMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.ClientEspaceMiddleware",
@@ -186,10 +205,26 @@ elif _db_engine == "django.db.backends.postgresql":
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 10},
+    },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "accounts.security.ComplexityValidator"},
+    {"NAME": "accounts.security.DemoPasswordValidator"},
 ]
+
+# --- Sécurité applicative ---
+# Nombre de reverse proxies devant Django (Traefik/Nginx) pour lire la vraie IP client.
+SECURITY_TRUSTED_PROXIES = int(os.environ.get("DJANGO_TRUSTED_PROXIES", "1"))
+# URL de l'admin technique Django : à changer en production (évite les scans automatiques).
+ADMIN_URL = os.environ.get("DJANGO_ADMIN_URL", "django-admin/").strip("/") + "/"
+# Taille maximale d'une requête (envoi de fichiers compris).
+MAX_UPLOAD_BYTES = int(os.environ.get("DJANGO_MAX_UPLOAD_MB", "15")) * 1024 * 1024
+# CSP en mode « rapport seulement » si une page tierce casse après déploiement.
+CSP_REPORT_ONLY = _env_bool("DJANGO_CSP_REPORT_ONLY", default=False)
+SESSION_COOKIE_HTTPONLY = True
 
 LANGUAGE_CODE = "fr-fr"
 TIME_ZONE = "Africa/Libreville"
@@ -229,6 +264,16 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.environ.get("API_THROTTLE_ANON", "60/min"),
+        "user": os.environ.get("API_THROTTLE_USER", "600/min"),
+        "auth": os.environ.get("API_THROTTLE_AUTH", "10/min"),
+    },
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.openapi.AutoSchema",
 }
 
@@ -237,6 +282,10 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
 }
+
+# Origine seule (sans chemin) vers les sites tiers : requis par les tuiles OpenStreetMap,
+# qui renvoient « Access blocked » sans en-tête Referer (Django envoie "same-origin" par défaut).
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOWED_ORIGINS = _env_list("CORS_ALLOWED_ORIGINS")
@@ -253,7 +302,6 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", "31536000"))
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = _env_bool("DJANGO_HSTS_PRELOAD", default=True)
-    SECURE_REFERRER_POLICY = "same-origin"
 
 _log_file = Path(os.environ.get("DJANGO_LOG_FILE", str(BASE_DIR / "logs" / "django.log")))
 try:
@@ -299,6 +347,11 @@ LOGGING = {
             "propagate": False,
         },
         "gabpharma.mail": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "gabpharma.security": {
             "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": False,

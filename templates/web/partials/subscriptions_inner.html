@@ -1,4 +1,13 @@
 {% load portal_urls %}
+<style>
+  /* Styles des cartes forfait — inclus ici pour le site public ET l'espace client. */
+  .card-violet { border-color: #6C3AED; background: linear-gradient(180deg, #F5F3FF 0%, #fff 40%); }
+  .card-green { border-color: #16A34A; background: linear-gradient(180deg, #F0FDF4 0%, #fff 40%); }
+  .card-amber { border-color: #F59E0B; background: linear-gradient(180deg, #FFFBEB 0%, #fff 40%); }
+  .btn-violet { background: #6C3AED; color: #fff; }
+  .btn-green { background: #16A34A; color: #fff; }
+  .btn-amber { background: #D97706; color: #fff; }
+</style>
 {% if client_portal %}<div class="space-y-5">{% else %}<div class="forfait-page max-w-site mx-auto px-4 py-8">{% endif %}
   <nav class="portal-hide-in-espace text-xs text-ink-muted mb-4 flex items-center gap-1.5">
     <a href="{% portal_url 'home' %}" class="hover:text-primary">Accueil</a><span>/</span>

@@ -1130,6 +1130,40 @@ def insurer_coverage_list(request):
 
 @role_required(*insurer_access_roles)
 @portal_permission_required("claims")
+def insurer_coverage_prescription(request, pk):
+    """Ordonnance PC — déchiffrement + auth assureur (jamais /media/)."""
+    from django.http import Http404
+
+    from backoffice.prescription_files import secure_prescription_response
+    from core.coverage_requests import log_access
+    from core.prescription_privacy import (
+        break_glass_active,
+        is_platform_staff,
+        log_prescription_view,
+    )
+    from payments.models import CoverageAccessLog
+
+    profile = _insurer_profile(request.user, request)
+    req = get_object_or_404(_coverage_qs(profile), pk=pk)
+    if not req.prescription_file:
+        raise Http404
+    if is_platform_staff(request.user) and not break_glass_active(
+        request.user, coverage_request=req
+    ):
+        url = reverse("bo_prescription_break_glass", args=["coverage", req.pk])
+        return redirect(f"{url}?next={request.get_full_path()}")
+    log_access(req, request.user, CoverageAccessLog.Action.PRESCRIPTION, request=request)
+    log_prescription_view(request.user, coverage_request=req, request=request)
+    return secure_prescription_response(
+        request,
+        req.prescription_file,
+        context=f"Dossier {req.reference}",
+        owner_id=req.client_id,
+    )
+
+
+@role_required(*insurer_access_roles)
+@portal_permission_required("claims")
 def insurer_coverage_detail(request, pk):
     from core.coverage_requests import (
         accept_coverage,

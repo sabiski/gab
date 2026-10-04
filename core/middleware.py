@@ -1,4 +1,5 @@
 """Redirige les patients connectés vers l'espace /espace/client/."""
+from django.conf import settings
 from django.shortcuts import redirect
 from django.urls import reverse
 
@@ -34,7 +35,7 @@ class ClientEspaceMiddleware:
             and not request.path.startswith("/espace/")
             and not request.path.startswith("/auth/")
             and not request.path.startswith("/api/")
-            and not request.path.startswith("/django-admin/")
+            and not request.path.startswith("/" + settings.ADMIN_URL)
             and request.path not in {"/offline/", "/manifest.webmanifest"}
         ):
             path = request.path

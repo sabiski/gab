@@ -28,7 +28,6 @@ from core.catalog_visibility import (
 )
 from core.patient_access import (
     catalog_for_template,
-    delivery_fee_for_user,
     ensure_search_access,
     get_best_access,
     purchase_plan,
@@ -56,7 +55,7 @@ from core.payments_web import (
     valid_payment_method,
 )
 from payments.ebilling import EbillingError
-from core.payment_settlement import client_paid_today, load_payment_settings
+from core.payment_settlement import client_paid_today, delivery_quote, load_payment_settings
 from core.pharmacy_notifications import check_stock_alert, notify_pharmacy_new_order
 from orders.models import Order, OrderItem, Prescription
 from payments.models import Payment, PatientAccessPurchase, InsuranceProvider
@@ -1131,8 +1130,16 @@ def cart_view(request):
         if request.user.is_authenticated
         else 0
     )
-    delivery_fee = delivery_fee_for_user(request.user, Order.DeliveryMode.HOME) if lines else 0
-    premium_delivery = user_has_premium(request.user)
+    delivery = delivery_quote(
+        request.user,
+        Order.DeliveryMode.HOME,
+        pharmacy=pharmacy,
+        lat=getattr(request.user, "latitude", None),
+        lng=getattr(request.user, "longitude", None),
+        subtotal=total,
+    ) if lines else None
+    delivery_fee = delivery["fee"] if delivery else 0
+    premium_delivery = bool(delivery and delivery["waived"])
     return _render(
         request,
         "web/cart.html",
@@ -1142,6 +1149,7 @@ def cart_view(request):
             "delivery_fee": delivery_fee,
             "grand_total": total + delivery_fee,
             "premium_delivery": premium_delivery,
+            "delivery": delivery,
             "pharmacy": pharmacy,
             "needs_rx": needs_rx,
             "rx_meds": rx_meds,
@@ -1161,7 +1169,17 @@ def checkout_insurance_quote(request):
         return JsonResponse({"ok": False, "reason": "Panier vide."}, status=400)
     subtotal = sum(l["line_total"] for l in lines)
     mode = request.GET.get("delivery_mode") or Order.DeliveryMode.HOME
-    fee = 0 if mode == Order.DeliveryMode.PICKUP else delivery_fee_for_user(request.user, mode)
+    if mode not in dict(Order.DeliveryMode.choices):
+        mode = Order.DeliveryMode.HOME
+    delivery = delivery_quote(
+        request.user,
+        mode,
+        pharmacy=lines[0]["stock"].pharmacy,
+        lat=request.GET.get("delivery_latitude") or request.user.latitude,
+        lng=request.GET.get("delivery_longitude") or request.user.longitude,
+        subtotal=subtotal,
+    )
+    fee = delivery["fee"]
     gross = subtotal + fee
     voucher_code = request.GET.get("loyalty_voucher", "")
     loyalty = compute_loyalty_benefit(
@@ -1207,6 +1225,12 @@ def checkout_insurance_quote(request):
             "loyalty_label": loyalty["label"],
             "coverage_rate": coverage_rate,
             "provider_name": provider_name,
+            "delivery_fee": fee,
+            "delivery_waived": delivery["waived"],
+            "delivery_distance_km": delivery["distance_km"],
+            "delivery_out_of_zone": delivery["out_of_zone"],
+            "delivery_max_km": delivery["max_km"],
+            "premium_missing": delivery["premium_missing"],
         }
     )
 
@@ -1258,8 +1282,24 @@ def checkout_view(request):
             request.user.longitude = dlng
             request.user.save(update_fields=["latitude", "longitude", "updated_at"])
 
-        fee = delivery_fee_for_user(request.user, mode)
         subtotal_preview = sum(l["line_total"] for l in lines)
+        delivery = delivery_quote(
+            request.user,
+            mode,
+            pharmacy=pharmacy,
+            lat=dlat,
+            lng=dlng,
+            subtotal=subtotal_preview,
+        )
+        if delivery["out_of_zone"]:
+            messages.error(
+                request,
+                f"Votre position est à {delivery['distance_km']:.0f} km de {pharmacy.name} : "
+                f"hors zone de livraison (maximum {delivery['max_km']} km). "
+                "Choisissez le retrait en pharmacie ou une pharmacie plus proche.",
+            )
+            return _p_redirect(request, "checkout")
+        fee = delivery["fee"]
         gross_preview = subtotal_preview + fee
 
         voucher_code = request.POST.get("loyalty_voucher", "").strip()
@@ -1300,13 +1340,28 @@ def checkout_view(request):
 
         linked = None
         if needs_rx:
+            from core.privacy_consent import (
+                apply_health_consent_from_post,
+                ensure_client_profile,
+                has_valid_health_consent,
+            )
+
+            profile = ensure_client_profile(request.user)
+            if not has_valid_health_consent(profile):
+                err = apply_health_consent_from_post(profile, request.POST)
+                if err:
+                    messages.error(request, err)
+                    return _p_redirect(request, "checkout")
+
             rx_id = request.POST.get("prescription_id")
             upload = request.FILES.get("prescription_file")
             if upload:
+                from core.field_crypto import encrypt_uploaded_file
+
                 linked = Prescription.objects.create(
                     client=request.user,
                     pharmacy=pharmacy,
-                    file=upload,
+                    file=encrypt_uploaded_file(upload),
                     doctor_name=request.POST.get("doctor_name", "").strip(),
                     status=Prescription.Status.PENDING,
                     notes="Jointe à la commande",
@@ -1332,6 +1387,7 @@ def checkout_view(request):
             delivery_latitude=dlat,
             delivery_longitude=dlng,
             delivery_fee=fee,
+            delivery_fee_waived=delivery["waived"],
             notes=request.POST.get("notes", "").strip(),
             linked_prescription=linked,
             is_urgent=user_has_premium(request.user),
@@ -1490,7 +1546,15 @@ def checkout_view(request):
         return _p_redirect(request, "payment_confirmed", code=order.code)
 
     total = sum(l["line_total"] for l in lines)
-    fee = delivery_fee_for_user(request.user, Order.DeliveryMode.HOME)
+    delivery = delivery_quote(
+        request.user,
+        Order.DeliveryMode.HOME,
+        pharmacy=pharmacy,
+        lat=request.user.latitude,
+        lng=request.user.longitude,
+        subtotal=total,
+    )
+    fee = delivery["fee"]
     gross = total + fee
     rx_meds = [
         l["stock"].medicine.name
@@ -1515,6 +1579,8 @@ def checkout_view(request):
     tier_preview = compute_loyalty_benefit(
         request.user, subtotal=total, delivery_fee=fee, voucher_code=""
     )
+    from core.privacy_consent import consent_context
+
     return _render(
         request,
         "web/checkout.html",
@@ -1532,7 +1598,9 @@ def checkout_view(request):
             "loyalty_vouchers": loyalty_vouchers,
             "loyalty_tier_percent": tier_pct,
             "loyalty_level_name": level_name,
-            "premium_delivery": user_has_premium(request.user),
+            "premium_delivery": bool(delivery["waived"]),
+            "delivery": delivery,
+            "express_surcharge": pay_settings.courier_express_bonus,
             "payment_methods": PAYMENT_METHODS,
             "payment_method": payment_method,
             "insurance_providers": insurance_providers,
@@ -1542,6 +1610,7 @@ def checkout_view(request):
             "payment_cap": pay_settings.daily_transaction_cap,
             "payment_cap_remaining": max(0, pay_settings.daily_transaction_cap - paid_today),
             "active_nav": "orders",
+            **consent_context(request.user),
         },
     )
 

@@ -1,0 +1,35 @@
+{# Case consentement santé — distincte des CGU.
+   Variables : needs_health_consent, health_consent_label, is_minor_account, parental_consent_label, health_consent_version, minor_status_unknown #}
+{% if needs_health_consent %}
+<div class="c-consent-box space-y-3 rounded-xl border border-violet-200 bg-violet-50/70 px-3 py-3 mb-3">
+  <p class="text-xs font-bold text-[#374151] uppercase tracking-wide">Consentement données de santé</p>
+  <p class="text-[11px] text-[#6B7280] leading-relaxed">
+    Obligatoire avant tout dépôt ou usage d'ordonnance / prise en charge.
+    Distinct des conditions d'utilisation (Loi n°025/2023).
+  </p>
+  <label class="c-consent-check flex gap-2 items-start text-xs text-[#374151] font-medium leading-relaxed cursor-pointer">
+    <input type="checkbox" name="health_consent" value="1" required class="mt-0.5 accent-[#6C3AED]">
+    <span>{{ health_consent_label }}</span>
+  </label>
+  {% if is_minor_account %}
+  <label class="c-consent-check flex gap-2 items-start text-xs text-[#374151] font-medium leading-relaxed cursor-pointer">
+    <input type="checkbox" name="parental_consent" value="1" required class="mt-0.5 accent-[#6C3AED]">
+    <span>{{ parental_consent_label }}</span>
+  </label>
+  <div class="c-field">
+    <label class="c-label block text-xs font-bold text-[#6B7280] mb-1" for="parental_consent_name">Nom du titulaire de l'autorité parentale *</label>
+    <input type="text" name="parental_consent_name" id="parental_consent_name" required maxlength="200" class="c-input w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="Nom et prénom">
+  </div>
+  {% elif minor_status_unknown %}
+  <p class="text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+    Renseignez votre date de naissance dans
+    <a href="{% url 'bo_client_profile_personal' %}" class="font-bold underline">Informations personnelles</a>
+    : un compte mineur nécessite l'autorisation parentale.
+  </p>
+  {% endif %}
+  <p class="text-[11px] text-[#6B7280]">
+    <a href="{% url 'bo_client_profile_privacy' %}" class="font-bold text-[#6C3AED] hover:underline">Politique de confidentialité</a>
+    · version {{ health_consent_version }}
+  </p>
+</div>
+{% endif %}

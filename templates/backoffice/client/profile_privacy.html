@@ -2,17 +2,107 @@
 {% block profile_back_href %}{% url 'bo_client_parametres' %}{% endblock %}
 {% block profile_back_label %}Retour aux paramètres{% endblock %}
 {% block profile_lead %}
-<p class="c-lead">Comment nous protégeons vos données de santé et de commande.</p>
+<p class="c-lead">Protection de vos données personnelles et de santé — Loi n°025/2023.</p>
 {% endblock %}
 {% block profile_form %}
-<div class="space-y-4 text-sm text-[#374151]">
-  <p class="font-bold">Protection de vos données</p>
-  <p class="text-[#6B7280] leading-relaxed">Gab'Pharma traite vos informations de santé et de commande conformément à la réglementation en vigueur au Gabon.</p>
-  <ul class="space-y-3 text-[#6B7280] list-disc list-inside leading-relaxed">
-    <li>Vos ordonnances et messages avec les pharmacies restent accessibles uniquement à vous et aux professionnels concernés.</li>
-    <li>Vous pouvez demander la correction de vos coordonnées depuis <a href="{% url 'bo_client_profile_personal' %}" class="text-[#6C3AED] font-bold hover:underline">Informations personnelles</a>.</li>
-    <li>Les données de géolocalisation ne sont utilisées que pour la livraison et les alertes urgence Premium.</li>
-    <li>Pour toute question : <a href="tel:+24111223344" class="text-[#2563EB] font-bold hover:underline">+241 11 22 33 44</a>.</li>
-  </ul>
+<div class="space-y-5 text-sm text-[#374151]">
+
+  <section class="space-y-2">
+    <p class="font-bold">Responsable du traitement</p>
+    <p class="text-[#6B7280] leading-relaxed">
+      Gab'Pharma traite vos données pour la mise en relation entre patients, pharmacies,
+      assureurs et livreurs. Un délégué à la protection des données (DPO) sera désigné
+      avant la mise en production à grande échelle ; en attendant, contactez le
+      <a href="{% url 'bo_client_support' %}#nouveau-ticket" class="text-[#6C3AED] font-bold hover:underline">Centre d'aide</a>
+      (catégorie « Données personnelles / droits »).
+    </p>
+  </section>
+
+  <section class="space-y-2">
+    <p class="font-bold">Finalités</p>
+    <ul class="space-y-2 text-[#6B7280] list-disc list-inside leading-relaxed">
+      <li>Recherche, réservation et commande de produits pharmaceutiques</li>
+      <li>Validation d'ordonnances par la pharmacie concernée</li>
+      <li>Prises en charge et échanges avec votre assureur</li>
+      <li>Organisation de la livraison</li>
+      <li>Support client et exercice de vos droits</li>
+    </ul>
+    <p class="text-[#6B7280] leading-relaxed text-xs">
+      Pas de détournement vers du profilage publicitaire à partir de vos données de santé.
+    </p>
+  </section>
+
+  <section class="space-y-2">
+    <p class="font-bold">Données de santé (régime renforcé)</p>
+    <p class="text-[#6B7280] leading-relaxed">
+      Ordonnances et informations liées aux soins sont des <strong>données sensibles</strong>.
+      Leur traitement repose sur votre <strong>consentement exprès</strong>, distinct des CGU
+      (version texte : {{ consent_version }}).
+    </p>
+    {% if health_consent_ok %}
+    <p class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2">
+      Consentement santé enregistré
+      {% if client_profile.health_consent_at %}le {{ client_profile.health_consent_at|date:"d/m/Y H:i" }}{% endif %}.
+    </p>
+    {% else %}
+    <p class="text-xs font-bold text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+      Consentement santé non encore enregistré — il vous sera demandé avant le dépôt d'une ordonnance ou d'une demande de prise en charge.
+    </p>
+    {% endif %}
+  </section>
+
+  <section class="space-y-2">
+    <p class="font-bold">Destinataires</p>
+    <ul class="space-y-2 text-[#6B7280] list-disc list-inside leading-relaxed">
+      <li>Vous-même (espace patient)</li>
+      <li>La pharmacie choisie pour la commande ou la PC</li>
+      <li>Votre assureur, uniquement pour une prise en charge</li>
+      <li>Le livreur, pour l'acheminement (sans accès à l'ordonnance)</li>
+      <li>Le support Gab'Pharma, sur ticket ouvert par vous</li>
+    </ul>
+  </section>
+
+  <section class="space-y-2">
+    <p class="font-bold">Sécurité</p>
+    <ul class="space-y-2 text-[#6B7280] list-disc list-inside leading-relaxed">
+      <li>Ordonnances et pièces jointes support chiffrées au repos</li>
+      <li>Accès authentifié uniquement — pas de lien /media/ public</li>
+      <li>Noms de fichiers randomisés</li>
+    </ul>
+  </section>
+
+  <section class="space-y-2">
+    <p class="font-bold">Mineurs</p>
+    <p class="text-[#6B7280] leading-relaxed">
+      Moins de 18 ans : autorisation du titulaire de l'autorité parentale requise.
+      {% if is_minor_account %}
+      <span class="font-bold text-amber-800">Compte identifié comme mineur
+      {% if parental_consent %}— autorisation parentale enregistrée{% else %}— autorisation parentale manquante{% endif %}.</span>
+      {% elif minor_status_unknown %}
+      Renseignez votre date de naissance dans
+      <a href="{% url 'bo_client_profile_personal' %}" class="text-[#6C3AED] font-bold hover:underline">Informations personnelles</a>.
+      {% endif %}
+    </p>
+  </section>
+
+  <section class="space-y-2">
+    <p class="font-bold">Vos droits</p>
+    <ul class="space-y-2 text-[#6B7280] list-disc list-inside leading-relaxed">
+      <li>Accès et rectification de vos coordonnées</li>
+      <li>Opposition / retrait du consentement santé (impacte l'usage des ordonnances)</li>
+      <li>Contestation d'une décision automatisée (révision humaine via ticket)</li>
+    </ul>
+    <p class="text-[#6B7280] leading-relaxed">
+      Exercer un droit :
+      <a href="{% url 'bo_client_support' %}#nouveau-ticket" class="text-[#6C3AED] font-bold hover:underline">ouvrir un ticket</a>
+      ou appeler <a href="tel:+24111223344" class="text-[#2563EB] font-bold hover:underline">+241 11 22 33 44</a>.
+    </p>
+  </section>
+
+  <p class="text-[11px] text-[#9CA3AF] leading-relaxed border-t border-[#E5E7EB] pt-4">
+    La mise en exploitation à grande échelle suppose notamment l'autorisation préalable de l'APDPVP
+    pour le traitement des données de santé. Cette page informe les utilisateurs ; elle ne remplace
+    pas les formalités administratives auprès de l'Autorité.
+  </p>
 </div>
 {% endblock %}

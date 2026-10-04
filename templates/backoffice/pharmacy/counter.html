@@ -1,0 +1,211 @@
+{% extends "backoffice/base_bo.html" %}
+{% load humanize %}
+{% block title %}Caisse hors app{% endblock %}
+{% block bo_title %}Caisse hors app{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="/static/css/pharmacy-counter.css?v=2">{% endblock %}
+{% block bo_subtitle %}<p class="bo-pharmacy-header__subtitle">Clients au comptoir, par téléphone ou WhatsApp — stock mis à jour, 0 % de commission.</p>{% endblock %}
+
+{% block bo_content %}
+{% if done_sale %}
+<section class="pc-success gp-pop mb-5" role="status">
+  <div class="pc-success__check" aria-hidden="true">
+    <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" fill="none"/><path fill="none" d="M15 27l7 7 15-16"/></svg>
+  </div>
+  <div class="flex-1 min-w-0">
+    <p class="font-extrabold text-primary-800">Vente {{ done_sale.code }} enregistrée</p>
+    <p class="text-sm text-ink-muted">{{ done_sale.total|intcomma }} F encaissés · {{ done_sale.get_payment_method_display }}{% if done_sale.insurance_amount %} · {{ done_sale.insurance_amount|intcomma }} F tiers payant{% endif %}</p>
+  </div>
+  <a href="{% url 'bo_pharmacy_counter_receipt' done_sale.pk %}" target="_blank" class="pc-btn pc-btn--ghost">
+    <span class="material-symbols-rounded sm">print</span> Ticket
+  </a>
+  <a href="{% url 'bo_pharmacy_counter' %}" class="pc-btn pc-btn--primary">
+    <span class="material-symbols-rounded sm">add</span> Nouvelle vente
+  </a>
+</section>
+{% endif %}
+
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+  <div class="gp-card gp-card--hover gp-kpi">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">receipt</span></span>
+    <span class="gp-kpi__label">Ventes du jour</span>
+    <span class="gp-kpi__value" data-countup>{{ summary.count }}</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--green">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">payments</span></span>
+    <span class="gp-kpi__label">Encaissé aujourd'hui</span>
+    <span class="gp-kpi__value" data-countup>{{ summary.cashed }} F</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--blue">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">health_and_safety</span></span>
+    <span class="gp-kpi__label">Tiers payant du jour</span>
+    <span class="gp-kpi__value" data-countup>{{ summary.insurance }} F</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--violet">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">calendar_month</span></span>
+    <span class="gp-kpi__label">Ce mois</span>
+    <span class="gp-kpi__value" data-countup>{{ summary.month_total }} F</span>
+    <a href="{% url 'bo_pharmacy_counter_history' %}" class="gp-kpi__hint text-primary hover:underline">Historique &amp; export →</a>
+  </div>
+</div>
+
+<div class="pc-netbar mb-4">
+  <span id="pc-netstatus" class="pc-net pc-net--on"><span class="pc-net__dot"></span><span data-label>En ligne</span></span>
+  <span id="pc-pending" class="pc-pending hidden"></span>
+  <button type="button" id="pc-sync" class="pc-btn pc-btn--ghost hidden"><span class="material-symbols-rounded sm">sync</span> Synchroniser</button>
+  <span class="pc-netbar__hint">La caisse fonctionne aussi sans internet : les ventes sont envoyées dès le retour du réseau.</span>
+</div>
+<p id="pc-flash" class="pc-flash hidden" role="status" aria-live="polite"></p>
+<section id="pc-offline-done" class="pc-offline-done hidden mb-5" role="status">
+  <span class="material-symbols-rounded">cloud_off</span>
+  <div class="flex-1 min-w-0">
+    <p class="font-extrabold">Vente enregistrée sur cet appareil — <span data-total></span></p>
+    <p class="text-xs">Elle sera transmise automatiquement au retour de la connexion. Ne videz pas les données du navigateur.</p>
+  </div>
+  <button type="button" data-print class="pc-btn pc-btn--ghost"><span class="material-symbols-rounded sm">print</span> Ticket</button>
+</section>
+
+<form method="post" id="pc-form" class="grid lg:grid-cols-12 gap-5 items-start"
+      data-api="{% url 'bo_pharmacy_counter_api' %}"
+      data-sw="{% url 'bo_pharmacy_counter_sw' %}"
+      data-scope="{% url 'bo_pharmacy_counter' %}"
+      data-pharmacy="{{ pharmacy.pk }}"
+      data-pharmacy-name="{{ pharmacy.name }}">
+  {% csrf_token %}
+  {# ── Catalogue ── #}
+  <section class="lg:col-span-7 gp-card p-4 sm:p-5">
+    <div class="pc-search">
+      <span class="material-symbols-rounded">search</span>
+      <input type="search" id="pc-search" placeholder="Rechercher un produit…  (raccourci : /)" autocomplete="off" aria-label="Rechercher un produit">
+      <kbd class="hidden sm:inline">Entrée = ajouter</kbd>
+    </div>
+    <div class="pc-chips" id="pc-cats" role="tablist" aria-label="Catégories"></div>
+    <div class="pc-grid" id="pc-grid" aria-live="polite"></div>
+    <p class="pc-empty hidden" id="pc-noresult">
+      <span class="material-symbols-rounded">search_off</span>
+      Aucun produit en stock ne correspond.
+    </p>
+  </section>
+
+  {# ── Ticket ── #}
+  <aside class="lg:col-span-5 lg:sticky lg:top-4 space-y-4">
+    <section class="gp-card p-4 sm:p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-extrabold flex items-center gap-2"><span class="material-symbols-rounded text-primary">shopping_cart</span> Ticket</h2>
+        <button type="button" id="pc-clear" class="text-xs font-bold text-ink-muted hover:text-rose-600 hidden">Vider</button>
+      </div>
+      <ul class="pc-lines" id="pc-lines"></ul>
+      <div class="pc-cart-empty" id="pc-cart-empty">
+        <span class="material-symbols-rounded">add_shopping_cart</span>
+        <p>Touchez un produit pour l'ajouter</p>
+      </div>
+      <div id="pc-hidden"></div>
+
+      <div class="pc-rx hidden" id="pc-rx">
+        <span class="material-symbols-rounded">prescriptions</span>
+        <label class="flex-1 text-sm">
+          <input type="checkbox" name="prescription_checked" value="1" id="pc-rx-check">
+          <strong>Ordonnance originale vérifiée</strong>
+          <span class="block text-xs text-amber-800/80">Rien n'est photographié ni stocké : vous attestez seulement l'avoir vue.</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="gp-card p-4 sm:p-5 space-y-4">
+      <div>
+        <p class="pc-label">Canal</p>
+        <div class="pc-seg" role="radiogroup">
+          {% for val, label in channels %}
+          <label class="pc-seg__opt">
+            <input type="radio" name="channel" value="{{ val }}" {% if forloop.first %}checked{% endif %}>
+            <span class="material-symbols-rounded sm">{% if val == 'counter' %}storefront{% elif val == 'phone' %}call{% elif val == 'whatsapp' %}chat{% else %}more_horiz{% endif %}</span>
+            {{ label }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div>
+        <p class="pc-label">Paiement</p>
+        <div class="pc-pay">
+          {% for val, label in payment_methods %}
+          <label class="pc-pay__opt">
+            <input type="radio" name="payment_method" value="{{ val }}" {% if forloop.first %}checked{% endif %}>
+            <span class="material-symbols-rounded">{% if val == 'cash' %}payments{% elif val == 'moov' or val == 'airtel' %}phone_iphone{% elif val == 'card' %}credit_card{% elif val == 'insurance' %}health_and_safety{% else %}account_balance_wallet{% endif %}</span>
+            <span>{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 hidden" id="pc-insurance">
+        <label class="text-xs font-bold text-ink-muted col-span-2 sm:col-span-1">Assurance
+          <select name="insurance_provider" class="pc-input mt-1">
+            <option value="">— Choisir —</option>
+            {% for p in insurance_providers %}<option value="{{ p.pk }}" data-rate="{{ p.coverage_rate }}">{{ p.name }} ({{ p.coverage_rate }} %)</option>{% endfor %}
+          </select>
+        </label>
+        <label class="text-xs font-bold text-ink-muted col-span-2 sm:col-span-1">Part assurance (F)
+          <input type="number" name="insurance_amount" min="0" value="0" class="pc-input mt-1" id="pc-ins-amount">
+        </label>
+        <label class="text-xs font-bold text-ink-muted col-span-2">N° d'assuré *
+          <input name="insured_number" placeholder="Figure sur la carte d'assuré" class="pc-input mt-1" autocomplete="off">
+          <span class="font-medium">Le nom du bénéficiaire (rubrique Client) est aussi obligatoire : ils apparaissent sur le relevé de tiers payant.</span>
+        </label>
+      </div>
+
+      <details class="pc-more" id="pc-customer">
+        <summary><span class="material-symbols-rounded sm">person_add</span> Client &amp; remise <span class="text-ink-muted font-medium">(optionnel)</span></summary>
+        <div class="grid grid-cols-2 gap-3 mt-3">
+          <input name="customer_name" placeholder="Nom du client" class="pc-input col-span-2 sm:col-span-1">
+          <input name="customer_phone" placeholder="Téléphone" inputmode="tel" class="pc-input col-span-2 sm:col-span-1">
+          <label class="text-xs font-bold text-ink-muted col-span-2 sm:col-span-1">Remise (F)
+            <input type="number" name="discount" min="0" value="0" class="pc-input mt-1" id="pc-discount">
+          </label>
+          <input name="notes" placeholder="Note interne" class="pc-input col-span-2 sm:col-span-1 self-end">
+        </div>
+      </details>
+
+      <dl class="pc-totals">
+        <div><dt>Sous-total</dt><dd id="pc-subtotal">0 F</dd></div>
+        <div class="hidden" id="pc-row-discount"><dt>Remise</dt><dd id="pc-sum-discount">0 F</dd></div>
+        <div class="hidden" id="pc-row-ins"><dt>Tiers payant</dt><dd id="pc-sum-ins">0 F</dd></div>
+        <div class="pc-totals__grand"><dt>À encaisser</dt><dd id="pc-total">0 F</dd></div>
+      </dl>
+      <button type="submit" id="pc-submit" class="pc-btn pc-btn--primary pc-btn--xl w-full" disabled>
+        <span class="material-symbols-rounded">point_of_sale</span>
+        <span id="pc-submit-label">Encaisser</span>
+      </button>
+    </section>
+
+    {% if recent_sales %}
+    <section class="gp-card p-4 sm:p-5">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="font-extrabold text-sm">Dernières ventes</h3>
+        <a href="{% url 'bo_pharmacy_counter_history' %}" class="text-xs font-bold text-primary">Tout voir</a>
+      </div>
+      <ul class="divide-y divide-slate-100">
+        {% for s in recent_sales %}
+        <li class="py-2 flex items-center gap-3 text-sm">
+          <span class="pc-dot {% if s.status == 'cancelled' %}pc-dot--off{% endif %}"></span>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold truncate">{{ s.code }} · {{ s.get_channel_display }}</p>
+            <p class="text-xs text-ink-muted truncate">{% for i in s.items.all %}{{ i.quantity }}× {{ i.medicine_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+          </div>
+          <div class="text-right">
+            <p class="font-extrabold {% if s.status == 'cancelled' %}line-through text-ink-muted{% endif %}">{{ s.total|intcomma }} F</p>
+            <p class="text-[11px] text-ink-muted">{{ s.created_at|time:"H:i" }}</p>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  </aside>
+</form>
+
+{{ products|json_script:"pc-products" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/pharmacy-counter.js?v=2"></script>
+{% endblock %}

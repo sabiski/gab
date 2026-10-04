@@ -27,6 +27,7 @@ from payments.models import (
     CoverageRequest,
     CoverageRequestEvent,
     InsuranceProvider,
+    Payment,
     PlatformPaymentSettings,
 )
 
@@ -210,6 +211,8 @@ def log_access(req: CoverageRequest, user, action: str, request=None, details: s
 
 
 def _notify_patient(req: CoverageRequest, title: str, message: str, *, ntype=None, extra=None):
+    from notifications.models import Notification
+
     data = {
         "event": "coverage_request",
         "coverage_request_id": req.id,
@@ -225,7 +228,40 @@ def _notify_patient(req: CoverageRequest, title: str, message: str, *, ntype=Non
         notification_type=ntype or Notification.Type.INFO,
         data=data,
         transactional=True,
+        channels=[
+            Notification.Channel.PUSH,
+            Notification.Channel.SMS,
+            Notification.Channel.EMAIL,
+            Notification.Channel.WHATSAPP,
+        ],
     )
+
+
+def expire_stale_coverage_requests() -> int:
+    """Passe en Expirée les PC acceptées dont expires_at est dépassé."""
+    now = timezone.now()
+    qs = CoverageRequest.objects.filter(
+        status__in=[
+            CoverageRequest.Status.ACCEPTED,
+            CoverageRequest.Status.READY,
+        ],
+        expires_at__isnull=False,
+        expires_at__lt=now,
+    )
+    count = 0
+    for req in qs.iterator():
+        req.status = CoverageRequest.Status.EXPIRED
+        req.save(update_fields=["status", "updated_at"])
+        log_event(req, "expired", "Délai d'utilisation dépassé — dossier expiré automatiquement.")
+        _notify_patient(
+            req,
+            f"Prise en charge expirée — {req.reference}",
+            "Le délai d'utilisation de votre prise en charge est dépassé.",
+            ntype=Notification.Type.WARNING,
+        )
+        count += 1
+    return count
+
 
 
 def _insurer_users(provider: InsuranceProvider):
@@ -305,6 +341,41 @@ def notify_pharmacy_coverage(req: CoverageRequest, *, event: str = "new") -> Non
         )
 
 
+FEE_PAYMENT_METHODS = (
+    (Payment.Method.MOOV, "Moov Money"),
+    (Payment.Method.AIRTEL, "Airtel Money"),
+    (Payment.Method.CARD, "Carte bancaire"),
+)
+
+
+def coverage_fee_for(user) -> dict:
+    """Frais de dossier PC : payant, ou inclus dans le quota mensuel Premium."""
+    from core.patient_access import user_has_premium
+
+    settings_obj = PlatformPaymentSettings.load()
+    base_fee = settings_obj.coverage_request_fee
+    quota = settings_obj.premium_coverage_monthly_quota
+    premium = user_has_premium(user)
+    used = 0
+    if premium:
+        month_start = timezone.localdate().replace(day=1)
+        used = CoverageRequest.objects.filter(
+            client=user,
+            fee_included_premium=True,
+            created_at__date__gte=month_start,
+        ).count()
+    included = premium and used < quota
+    return {
+        "fee": 0 if included else base_fee,
+        "base_fee": base_fee,
+        "included": included,
+        "is_premium": premium,
+        "quota": quota,
+        "used": used,
+        "remaining": max(0, quota - used) if premium else 0,
+    }
+
+
 @transaction.atomic
 def create_coverage_request(
     *,
@@ -319,7 +390,14 @@ def create_coverage_request(
     doctor_name: str,
     comment: str,
     estimated_amount: int = 0,
+    payment_method: str = "",
 ) -> CoverageRequest:
+    from core.field_crypto import encrypt_uploaded_file
+
+    fee = coverage_fee_for(client)
+    if fee["fee"] and payment_method not in dict(FEE_PAYMENT_METHODS):
+        raise ValueError("Choisissez un moyen de paiement pour les frais de dossier.")
+
     sub = active_subscription_for(client, provider)
     rate = resolve_coverage_rate(client, provider)
     remaining = remaining_annual_cap(client, provider)
@@ -328,6 +406,9 @@ def create_coverage_request(
         coverage_rate=rate,
         remaining_cap=remaining,
     )
+    secure_file = None
+    if prescription_file:
+        secure_file = encrypt_uploaded_file(prescription_file)
     req = CoverageRequest(
         reference=generate_pc_reference(),
         client=client,
@@ -337,16 +418,39 @@ def create_coverage_request(
         insured_number=(insured_number or "").strip().upper(),
         request_type=request_type or CoverageRequest.RequestType.PHARMACY,
         desired_date=desired_date or None,
-        prescription_file=prescription_file,
+        prescription_file=secure_file,
+        prescription_encrypted=bool(secure_file),
         prescription_date=prescription_date or None,
         doctor_name=(doctor_name or "").strip(),
         comment=(comment or "").strip(),
         estimated_amount=max(0, int(estimated_amount or 0)),
         status=CoverageRequest.Status.SENT,
+        processing_fee=fee["fee"],
+        fee_included_premium=fee["included"],
+        fee_payment_method=payment_method if fee["fee"] else "",
+        fee_payment_reference=(
+            f"GP-PCFEE-{secrets.token_hex(3).upper()}" if fee["fee"] else ""
+        ),
+        fee_paid_at=timezone.now() if fee["fee"] else None,
     )
     apply_amounts(req, breakdown, save=False)
     req.save()
     log_event(req, "created", "Demande envoyée par le patient.", actor=client)
+    if fee["included"]:
+        log_event(
+            req,
+            "fee_included",
+            f"Frais de dossier inclus Premium ({fee['used'] + 1}/{fee['quota']} ce mois).",
+            actor=client,
+        )
+    elif fee["fee"]:
+        log_event(
+            req,
+            "fee_paid",
+            f"Frais de dossier payés : {fee['fee']} FCFA ({req.get_fee_payment_method_display()}, "
+            f"réf. {req.fee_payment_reference}).",
+            actor=client,
+        )
     _notify_patient(
         req,
         f"Demande envoyée — {req.reference}",
@@ -496,7 +600,7 @@ def reject_coverage(req: CoverageRequest, reason: str, actor=None) -> CoverageRe
 def confirm_pharmacy_delivery(
     req: CoverageRequest,
     *,
-    delivered_amount: int,
+    delivered_amount: int | None = None,
     lines: list[dict] | None = None,
     actor=None,
 ) -> CoverageRequest:
@@ -506,13 +610,31 @@ def confirm_pharmacy_delivery(
         CoverageRequest.Status.READY,
     }:
         raise ValueError("La demande doit être acceptée avant confirmation de délivrance.")
+
+    uncovered = 0
+    if lines:
+        delivered = 0
+        for line in lines:
+            qty = max(1, int(line.get("quantity") or 1))
+            unit = max(0, int(line.get("unit_price") or 0))
+            total = qty * unit
+            delivered += total
+            if not bool(line.get("is_covered", True)):
+                uncovered += total
+        delivered_amount = delivered
+    else:
+        delivered_amount = max(0, int(delivered_amount or 0))
+
     delivered = max(0, int(delivered_amount))
+    if delivered <= 0:
+        raise ValueError("Indiquez au moins un produit délivré ou un montant.")
+
     remaining = remaining_annual_cap(req.client, req.provider) + req.insurance_amount
     breakdown = calculate_coverage(
         total=delivered,
         coverage_rate=req.coverage_rate,
         remaining_cap=remaining,
-        uncovered=req.uncovered_amount,
+        uncovered=uncovered if lines else req.uncovered_amount,
     )
     req.delivered_amount = delivered
     apply_amounts(req, breakdown, save=False)
@@ -834,4 +956,5 @@ def admin_coverage_stats() -> dict:
         ).aggregate(s=Sum("insurance_amount"))["s"]
         or 0,
         "invoices": CoverageInvoice.objects.count(),
+        "processing_fees": qs.aggregate(s=Sum("processing_fee"))["s"] or 0,
     }

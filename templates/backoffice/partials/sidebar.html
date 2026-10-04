@@ -82,6 +82,9 @@
     <a href="{% url 'bo_admin_ads' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'ads' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
       <span class="material-symbols-rounded sm">campaign</span> Publicités
     </a>
+    <a href="{% url 'bo_admin_boost_moderation' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'boost_moderation' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+      <span class="material-symbols-rounded sm">verified</span> Modération boost
+    </a>
     <a href="{% url 'bo_admin_tips' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'tips' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
       <span class="material-symbols-rounded sm">clinical_notes</span> Conseils
     </a>
@@ -95,56 +98,73 @@
     {% endwith %}
 
     {% elif bo_role == "pharmacy" %}
-    <a href="{% url 'bo_pharmacy_dashboard' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'dashboard' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
-      <span class="material-symbols-rounded sm">dashboard</span> Tableau de bord
+    <a href="{% url 'bo_pharmacy_dashboard' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'dashboard' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'dashboard' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">space_dashboard</span> Tableau de bord
     </a>
     {% if pharmacy_permissions.stats %}
-    <a href="{% url 'bo_pharmacy_stats' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'stats' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
-      <span class="material-symbols-rounded sm">analytics</span> Statistiques
+    <a href="{% url 'bo_pharmacy_stats' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'stats' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'stats' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">monitoring</span> Statistiques
     </a>
     {% endif %}
+
     {% if pharmacy_permissions.orders %}
-    <a href="{% url 'bo_pharmacy_orders' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'orders' or bo_section == 'prescription_detail' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
-      <span class="material-symbols-rounded sm">orders</span> Commandes
+    <p class="bo-nav-group">Activité</p>
+    <a href="{% url 'bo_pharmacy_orders' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'orders' or bo_section == 'prescription_detail' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'orders' or bo_section == 'prescription_detail' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">receipt_long</span> Commandes app
     </a>
-    <a href="{% url 'bo_pharmacy_coverage_list' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'coverage' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+    <a href="{% url 'bo_pharmacy_counter' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'counter' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'counter' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">point_of_sale</span> Caisse hors app
+      <span class="bo-nav-badge-new">NEW</span>
+    </a>
+    <a href="{% url 'bo_pharmacy_coverage_list' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'coverage' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'coverage' %} aria-current="page"{% endif %}>
       <span class="material-symbols-rounded sm">health_and_safety</span> Prises en charge
     </a>
+    {% if pharmacy_permissions.stats %}
+    <a href="{% url 'bo_pharmacy_statements' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'statements' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'statements' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">request_quote</span> Relevés tiers payant
+    </a>
+    {% endif %}
+    <a href="{% url 'bo_pharmacy_messages' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'messages' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %} relative"{% if bo_section == 'messages' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">forum</span> Messages patients
+      {% if messages_unread %}<span class="ml-auto min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center bg-secondary text-primary-800 gp-pop">{{ messages_unread }}</span>{% endif %}
+    </a>
+    <a href="{% url 'bo_pharmacy_notifications' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'notifications' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %} relative"{% if bo_section == 'notifications' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">notifications</span> Notifications
+      {% if notif_unread %}<span class="ml-auto min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center bg-rose-500 text-white gp-pop">{{ notif_unread }}</span>{% endif %}
+    </a>
+    {% endif %}
+
+    {% if pharmacy_permissions.stocks or pharmacy_permissions.settings %}
+    <p class="bo-nav-group">Catalogue &amp; visibilité</p>
     {% endif %}
     {% if pharmacy_permissions.stocks %}
-    <a href="{% url 'bo_pharmacy_stocks' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'stocks' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+    <a href="{% url 'bo_pharmacy_stocks' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'stocks' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'stocks' %} aria-current="page"{% endif %}>
       <span class="material-symbols-rounded sm">inventory_2</span> Stocks
     </a>
     {% endif %}
+    {% if pharmacy_permissions.settings %}
+    <a href="{% url 'bo_pharmacy_tips' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'tips' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'tips' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">tips_and_updates</span> Conseils santé
+    </a>
+    <a href="{% url 'bo_pharmacy_boost' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'boost' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'boost' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">campaign</span> Publicités boost
+    </a>
+    {% endif %}
+
+    {% if pharmacy_permissions.staff or pharmacy_permissions.settings %}
+    <p class="bo-nav-group">Officine</p>
+    {% endif %}
     {% if pharmacy_permissions.staff %}
-    <a href="{% url 'bo_pharmacy_personnel' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'personnel' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
+    <a href="{% url 'bo_pharmacy_personnel' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'personnel' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'personnel' %} aria-current="page"{% endif %}>
       <span class="material-symbols-rounded sm">groups</span> Personnel &amp; RH
     </a>
     {% endif %}
     {% if pharmacy_permissions.settings %}
-    <a href="{% url 'bo_pharmacy_tips' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'tips' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
-      <span class="material-symbols-rounded sm">clinical_notes</span> Conseils
+    <a href="{% url 'bo_pharmacy_subscription' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'subscription' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'subscription' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">workspace_premium</span> Abonnement
     </a>
-    <a href="{% url 'bo_pharmacy_boost' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'boost' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
-      <span class="material-symbols-rounded sm">campaign</span> Publicités boost
-    </a>
-    {% endif %}
-    {% if pharmacy_permissions.orders %}
-    <a href="{% url 'bo_pharmacy_messages' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'messages' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %} relative">
-      <span class="material-symbols-rounded sm">chat</span> Messages patients
-      {% if messages_unread %}<span class="ml-auto min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center bg-secondary text-primary-800">{{ messages_unread }}</span>{% endif %}
-    </a>
-    <a href="{% url 'bo_pharmacy_notifications' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'notifications' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %} relative">
-      <span class="material-symbols-rounded sm">notifications</span> Notifications
-      {% if notif_unread %}<span class="ml-auto min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-extrabold flex items-center justify-center bg-rose-500 text-white">{{ notif_unread }}</span>{% endif %}
-    </a>
-    {% endif %}
-    {% if pharmacy_permissions.settings %}
-    <a href="{% url 'bo_pharmacy_subscription' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'subscription' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
-      <span class="material-symbols-rounded sm">card_membership</span> Abonnement
-    </a>
-    <a href="{% url 'bo_pharmacy_settings' %}" class="flex items-center gap-2 px-3 py-2.5 rounded-xl {% if bo_section == 'settings' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10{% endif %}">
-      <span class="material-symbols-rounded sm">store</span> Profil pharmacie
+    <a href="{% url 'bo_pharmacy_settings' %}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl {% if bo_section == 'settings' %}bg-white/15 text-secondary{% else %}text-white/70 hover:bg-white/10 hover:text-white{% endif %}"{% if bo_section == 'settings' %} aria-current="page"{% endif %}>
+      <span class="material-symbols-rounded sm">storefront</span> Profil pharmacie
     </a>
     {% endif %}
 

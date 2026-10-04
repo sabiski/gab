@@ -1,0 +1,113 @@
+{% extends "backoffice/base_bo.html" %}
+{% load humanize %}
+{% block title %}Relevés tiers payant{% endblock %}
+{% block bo_title %}Relevés tiers payant{% endblock %}
+{% block bo_subtitle %}<p class="bo-pharmacy-header__subtitle">Récupérez auprès des assureurs les parts que vous avez avancées.</p>{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="/static/css/pharmacy-counter.css?v=2">{% endblock %}
+
+{% block bo_content %}
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--blue">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">health_and_safety</span></span>
+    <span class="gp-kpi__label">Tiers payant — {{ period_label }}</span>
+    <span class="gp-kpi__value" data-countup>{{ month_total }} F</span>
+  </div>
+  <div class="gp-card gp-card--hover gp-kpi gp-kpi--amber">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">hourglass_top</span></span>
+    <span class="gp-kpi__label">En attente de remboursement</span>
+    <span class="gp-kpi__value" data-countup>{{ outstanding.due }} F</span>
+    <span class="gp-kpi__hint">{{ outstanding.count }} relevé{{ outstanding.count|pluralize }} envoyé{{ outstanding.count|pluralize }} non soldé{{ outstanding.count|pluralize }}</span>
+  </div>
+  <div class="gp-card gp-kpi">
+    <span class="gp-kpi__icon"><span class="material-symbols-rounded sm">lightbulb</span></span>
+    <span class="gp-kpi__label">Comment ça marche</span>
+    <span class="text-xs text-ink-muted font-medium leading-relaxed">1. Générez le relevé du mois · 2. Envoyez le PDF signé à l'assureur · 3. Notez ses règlements.</span>
+  </div>
+</div>
+
+<div class="flex items-center justify-between gap-3 mb-4">
+  <a href="?month={{ prev_month|date:'Y-m' }}" class="pc-btn pc-btn--ghost" aria-label="Mois précédent">
+    <span class="material-symbols-rounded sm">chevron_left</span><span class="hidden sm:inline">{{ prev_month|date:"F Y" }}</span>
+  </a>
+  <h2 class="text-lg font-extrabold capitalize">{{ period_label }}</h2>
+  {% if next_month %}
+  <a href="?month={{ next_month|date:'Y-m' }}" class="pc-btn pc-btn--ghost" aria-label="Mois suivant">
+    <span class="hidden sm:inline">{{ next_month|date:"F Y" }}</span><span class="material-symbols-rounded sm">chevron_right</span>
+  </a>
+  {% else %}<span class="w-24"></span>{% endif %}
+</div>
+
+<div class="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
+  {% for r in rows %}
+  <article class="gp-card gp-card--hover p-5 flex flex-col gap-3">
+    <div class="flex items-start justify-between gap-2">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="st-logo">{{ r.provider.code|slice:":3" }}</span>
+        <div class="min-w-0">
+          <p class="font-extrabold truncate">{{ r.provider.name }}</p>
+          <p class="text-xs text-ink-muted">{{ r.live.count }} opération{{ r.live.count|pluralize }}</p>
+        </div>
+      </div>
+      {% if r.statement %}
+      <span class="st-badge st-badge--{{ r.statement.status }}">{{ r.statement.get_status_display }}</span>
+      {% else %}
+      <span class="st-badge">À générer</span>
+      {% endif %}
+    </div>
+    <p class="text-2xl font-extrabold text-blue-700">{{ r.live.total|intcomma }} F</p>
+    <dl class="st-split">
+      <div><dt><span class="material-symbols-rounded sm">point_of_sale</span> Comptoir</dt><dd>{{ r.live.counter|intcomma }} F</dd></div>
+      <div><dt><span class="material-symbols-rounded sm">shopping_bag</span> Commandes app</dt><dd>{{ r.live.order|intcomma }} F</dd></div>
+      <div><dt><span class="material-symbols-rounded sm">medical_information</span> Prises en charge</dt><dd>{{ r.live.coverage|intcomma }} F</dd></div>
+    </dl>
+    {% if r.out_of_date %}
+    <p class="text-xs font-bold text-amber-700 flex items-center gap-1"><span class="material-symbols-rounded sm">sync_problem</span> Nouvelles opérations depuis la génération</p>
+    {% endif %}
+    <div class="flex gap-2 mt-auto">
+      {% if r.statement %}
+      <a href="{% url 'bo_pharmacy_statement_detail' r.statement.pk %}" class="pc-btn pc-btn--primary flex-1">
+        <span class="material-symbols-rounded sm">visibility</span> Ouvrir le relevé
+      </a>
+      {% else %}
+      <form method="post" class="flex-1">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="generate">
+        <input type="hidden" name="provider_id" value="{{ r.provider.pk }}">
+        <input type="hidden" name="month" value="{{ period|date:'Y-m' }}">
+        <button class="pc-btn pc-btn--primary w-full"><span class="material-symbols-rounded sm">request_quote</span> Générer le relevé</button>
+      </form>
+      {% endif %}
+    </div>
+  </article>
+  {% empty %}
+  <div class="gp-card md:col-span-2 xl:col-span-3">
+    <div class="pc-empty">
+      <span class="material-symbols-rounded">receipt_long</span>
+      Aucune opération en tiers payant sur {{ period_label }}.
+      <a href="{% url 'bo_pharmacy_counter' %}" class="text-primary font-bold">Encaisser une vente en tiers payant →</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if history %}
+<section class="gp-card overflow-x-auto">
+  <h3 class="font-extrabold px-4 pt-4">Historique des relevés</h3>
+  <table class="pc-table mt-2">
+    <thead><tr><th>Référence</th><th>Mois</th><th>Assureur</th><th class="text-right">Montant</th><th class="text-right">Réglé</th><th>Statut</th></tr></thead>
+    <tbody>
+      {% for s in history %}
+      <tr>
+        <td><a href="{% url 'bo_pharmacy_statement_detail' s.pk %}" class="font-bold text-primary hover:underline">{{ s.reference }}</a></td>
+        <td class="capitalize">{{ s.period|date:"F Y" }}</td>
+        <td>{{ s.provider.name }}</td>
+        <td class="text-right font-bold">{{ s.total|intcomma }} F</td>
+        <td class="text-right">{{ s.paid_amount|intcomma }} F</td>
+        <td><span class="st-badge st-badge--{{ s.status }}">{{ s.get_status_display }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

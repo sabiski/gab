@@ -74,6 +74,9 @@ class SupportTicket(models.Model):
         DELAY = "delay", "Retard de livraison"
         PAYMENT = "payment", "Problème de paiement"
         ACCOUNT = "account", "Compte / profil"
+        PRIVACY = "privacy", "Données personnelles / droits"
+        INSURANCE = "insurance", "Assurance / prise en charge"
+        PRESCRIPTION = "prescription", "Ordonnance / dossier santé"
         OTHER = "other", "Autre"
 
     class Status(models.TextChoices):

@@ -1,0 +1,43 @@
+{% extends "backoffice/client/portal_wrap.html" %}
+{% load humanize %}
+{% block portal_title %}Souscrire une formule{% endblock %}
+{% block portal_heading %}Souscrire à une assurance{% endblock %}
+{% block portal_lead %}
+<p class="c-lead">Choisissez une formule proposée par un organisme partenaire. Le paiement sera branché sur E-Billing prochainement (simulation active).</p>
+{% endblock %}
+{% block portal_body %}
+<p class="mb-4"><a href="{% url 'bo_client_insurance_home' %}" class="text-sm font-bold text-[#6C3AED]">← Mon assurance</a></p>
+
+{% if insurance.has_insurance %}
+<div class="c-alert c-alert--info mb-4">
+  Vous avez déjà une couverture ({{ insurance.provider.name }} — {{ insurance.coverage_type }}). Souscrire remplacera l'abonnement actif chez le même organisme.
+</div>
+{% endif %}
+
+<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for plan in plans %}
+  <article class="c-card p-5 flex flex-col">
+    <p class="text-xs font-bold uppercase text-[#6C3AED]">{{ plan.provider.name }}</p>
+    <h3 class="font-extrabold text-lg mt-1">{{ plan.name }}</h3>
+    <p class="text-2xl font-extrabold text-[#374151] mt-2">{{ plan.premium_amount|intcomma }} <span class="text-sm font-bold">FCFA</span></p>
+    <p class="text-xs text-[#6B7280]">{{ plan.get_billing_period_display }} · Couverture {{ plan.coverage_rate }} %</p>
+    {% if plan.description %}<p class="text-sm text-[#6B7280] mt-2 flex-1">{{ plan.description }}</p>{% endif %}
+    <form method="post" class="mt-4 space-y-2">
+      {% csrf_token %}
+      <input type="hidden" name="plan_id" value="{{ plan.pk }}">
+      <input type="text" name="insurance_number" class="c-input text-sm" placeholder="N° assuré (optionnel)" value="{{ insurance.insured_number|default:'' }}">
+      <select name="payment_method" class="c-select text-sm">
+        {% for val, label in payment_methods %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="c-btn c-btn--primary w-full">Souscrire</button>
+    </form>
+  </article>
+  {% empty %}
+  <div class="c-card c-empty sm:col-span-2 lg:col-span-3">
+    <p class="text-sm font-bold">Aucune formule disponible pour le moment.</p>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

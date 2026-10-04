@@ -26,6 +26,7 @@ from accounts.two_factor import (
     two_factor_enabled,
     verify_code,
 )
+from core.field_crypto import encrypt_uploaded_file
 from core.mail_messages import mail_error_for_user
 from accounts.mail import (
     build_credentials_email,
@@ -613,8 +614,29 @@ def login_view(request):
             match = User.objects.filter(email__iexact=login_id).first()
             if match:
                 username = match.username
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
+        from accounts.security import (
+            client_ip,
+            is_demo_password_blocked,
+            lock_status,
+            record_attempt,
+        )
+
+        lock = lock_status(username, client_ip(request))
+        user = None
+        if lock.locked:
+            error = lock.message
+        else:
+            user = authenticate(request, username=username, password=password)
+            record_attempt(username, request, success=user is not None)
+        if user is not None and is_demo_password_blocked(password):
+            error = (
+                "Ce mot de passe de démonstration est désactivé en production. "
+                "Utilisez « Mot de passe oublié » pour en choisir un nouveau."
+            )
+            user = None
+        elif lock.locked:
+            pass
+        elif user is not None:
             if user.status == User.Status.SUSPENDED:
                 error = "Compte suspendu. Contactez le support Gab'Pharma."
             elif user.role == User.Role.AUTHORITY and user.status == User.Status.PENDING:
@@ -642,7 +664,7 @@ def login_view(request):
                     ):
                         return redirect(next_url)
                     return redirect(user.backoffice_home())
-        else:
+        elif not error:
             error = "E-mail / identifiant ou mot de passe incorrect."
     return render(request, "auth/login.html", {"error": error})
 
@@ -789,6 +811,14 @@ def register_view(request):
         return redirect(request.user.backoffice_home())
     error = None
     if request.method == "POST":
+        from core.privacy_consent import (
+            HEALTH_CONSENT_LABEL,
+            PARENTAL_CONSENT_LABEL,
+            HEALTH_CONSENT_VERSION,
+            record_health_consent,
+            record_terms_acceptance,
+        )
+
         email = request.POST.get("email", "").strip()
         phone = request.POST.get("phone", "").strip()
         first_name = request.POST.get("first_name", "").strip()
@@ -803,6 +833,13 @@ def register_view(request):
             error = "Les mots de passe ne correspondent pas."
         elif len(password) < 8:
             error = "Mot de passe : 8 caractères minimum."
+        elif not request.POST.get("accept_terms"):
+            error = "Vous devez accepter les conditions d'utilisation."
+        elif not request.POST.get("health_consent"):
+            error = (
+                "Le consentement exprès au traitement de vos données de santé "
+                "est obligatoire (distinct des CGU)."
+            )
         elif User.objects.filter(email__iexact=email).exists():
             error = "Cet e-mail est déjà utilisé."
         else:
@@ -818,13 +855,56 @@ def register_view(request):
                 status=User.Status.ACTIVE,
                 city="Libreville",
             )
-            ClientProfile.objects.get_or_create(user=user)
-            messages.success(
-                request,
-                "Compte créé avec succès ! Connectez-vous avec votre e-mail et votre mot de passe.",
-            )
-            return redirect("login")
-    return render(request, "auth/register.html", {"error": error})
+            profile, _ = ClientProfile.objects.get_or_create(user=user)
+            dob_raw = (request.POST.get("date_of_birth") or "").strip()
+            if dob_raw:
+                from datetime import date as date_cls
+
+                try:
+                    profile.date_of_birth = date_cls.fromisoformat(dob_raw)
+                    profile.save(update_fields=["date_of_birth"])
+                except ValueError:
+                    pass
+            record_terms_acceptance(profile)
+            err_parent = None
+            from core.privacy_consent import is_minor
+
+            if is_minor(profile) is True:
+                if not request.POST.get("parental_consent") or not (
+                    request.POST.get("parental_consent_name") or ""
+                ).strip():
+                    err_parent = (
+                        "Pour un mineur, l'autorisation parentale et le nom du titulaire sont requis."
+                    )
+            if err_parent:
+                user.delete()
+                error = err_parent
+            else:
+                record_health_consent(
+                    profile,
+                    parental_name=request.POST.get("parental_consent_name", ""),
+                )
+                messages.success(
+                    request,
+                    "Compte créé avec succès ! Connectez-vous avec votre e-mail et votre mot de passe.",
+                )
+                return redirect("login")
+    from core.privacy_consent import (
+        HEALTH_CONSENT_LABEL,
+        PARENTAL_CONSENT_LABEL,
+        HEALTH_CONSENT_VERSION,
+    )
+
+    return render(
+        request,
+        "auth/register.html",
+        {
+            "error": error,
+            "health_consent_label": HEALTH_CONSENT_LABEL,
+            "parental_consent_label": PARENTAL_CONSENT_LABEL,
+            "health_consent_version": HEALTH_CONSENT_VERSION,
+        },
+    )
 
 
 def authority_register_view(request):
@@ -2136,6 +2216,21 @@ def admin_payments(request):
         settings_obj.courier_base_fee = max(0, int(request.POST.get("courier_base_fee") or 1500))
         settings_obj.courier_per_km_fee = max(0, int(request.POST.get("courier_per_km_fee") or 200))
         settings_obj.courier_express_bonus = max(0, int(request.POST.get("courier_express_bonus") or 500))
+        settings_obj.delivery_max_km = max(
+            1, int(request.POST.get("delivery_max_km") or 30)
+        )
+        settings_obj.delivery_platform_rate = max(
+            0, min(100, int(request.POST.get("delivery_platform_rate") or 25))
+        )
+        settings_obj.premium_free_delivery_min_order = max(
+            0, int(request.POST.get("premium_free_delivery_min_order") or 0)
+        )
+        settings_obj.coverage_request_fee = max(
+            0, int(request.POST.get("coverage_request_fee") or 0)
+        )
+        settings_obj.premium_coverage_monthly_quota = max(
+            0, int(request.POST.get("premium_coverage_monthly_quota") or 0)
+        )
         settings_obj.save()
         AuditLog.objects.create(
             user=request.user,
@@ -2143,6 +2238,8 @@ def admin_payments(request):
             module="payments",
             details=(
                 f"Commission {settings_obj.platform_commission_rate}% · "
+                f"Livraison {settings_obj.delivery_platform_rate}% · "
+                f"Dossier PC {settings_obj.coverage_request_fee} F · "
                 f"Plafond {settings_obj.daily_transaction_cap} F · "
                 f"Versement J+{settings_obj.payout_delay_days}"
             ),
@@ -2924,7 +3021,7 @@ def _rx_detail_context(request, order, rx):
         "client_age": _client_age_years(client),
         "client_location": client.display_location,
         "doctor_initials": doctor_initials,
-        "file_url": reverse("bo_prescription_file", args=[rx.id]),
+        "file_url": "" if rx.is_purged else reverse("bo_prescription_file", args=[rx.id]),
         "file_name": file_name,
         "file_size_label": _format_file_size(file_size),
         "rx_timeline": timeline,
@@ -2937,12 +3034,18 @@ def _rx_detail_context(request, order, rx):
 def pharmacy_prescription_detail(request, pk):
     """Détail ordonnance — maquette responsive (mobile / tablette / desktop)."""
     pharmacy = _pharmacy_for(request.user, request)
-    order = get_object_or_404(
+    order = (
         Order.objects.select_related("client", "linked_prescription", "pharmacy")
-        .prefetch_related("items__medicine"),
-        pk=pk,
-        pharmacy=pharmacy,
+        .prefetch_related("items__medicine")
+        .filter(pk=pk, pharmacy=pharmacy)
+        .first()
     )
+    if not order:
+        messages.error(
+            request,
+            "Commande introuvable pour votre officine (lien expiré ou commande d'une autre pharmacie).",
+        )
+        return redirect("bo_pharmacy_orders")
     rx = order.linked_prescription
     if not rx:
         messages.error(request, "Cette commande n'a pas d'ordonnance associée.")
@@ -3013,6 +3116,12 @@ def pharmacy_prescription_detail(request, pk):
         **_rx_detail_context(request, order, rx),
     )
     return render(request, "backoffice/pharmacy/prescription_detail.html", ctx)
+
+
+def _counter_summary_for(pharmacy):
+    from core.counter_sales import counter_sales_summary
+
+    return counter_sales_summary(pharmacy) if pharmacy else None
 
 
 @role_required(*pharmacy_roles)
@@ -3125,6 +3234,7 @@ def pharmacy_dashboard(request):
             "dashboard",
             pharmacy=pharmacy,
             stats=stats,
+            counter=_counter_summary_for(pharmacy),
             sub_summary=sub_summary,
             recent=orders_qs.select_related("client")
             .prefetch_related("payments", "delivery")
@@ -3332,7 +3442,20 @@ def pharmacy_orders(request):
         action = request.POST.get("action") or "status"
 
         if action == "create_order" and pharmacy:
-            client = get_object_or_404(User, pk=request.POST.get("client_id"), role=User.Role.CLIENT)
+            lookup = (request.POST.get("client_lookup") or "").strip()
+            client = None
+            if lookup:
+                digits = "".join(ch for ch in lookup if ch.isdigit())
+                client = User.objects.filter(role=User.Role.CLIENT).filter(
+                    Q(email__iexact=lookup) | (Q(phone__endswith=digits[-8:]) if len(digits) >= 8 else Q(pk__in=[]))
+                ).first()
+            if not client:
+                messages.error(
+                    request,
+                    "Aucun compte Gab'Pharma pour ce téléphone ou cet e-mail. "
+                    "Pour un client sans compte, utilisez la Caisse hors app.",
+                )
+                return _pharmacy_orders_redirect(request)
             stock = get_object_or_404(
                 PharmacyStock, pk=request.POST.get("stock_id"), pharmacy=pharmacy
             )
@@ -3347,13 +3470,23 @@ def pharmacy_orders(request):
             if stock.quantity < qty:
                 messages.error(request, f"Stock insuffisant ({stock.quantity} disponible).")
             else:
-                fee = 0 if mode == Order.DeliveryMode.PICKUP else 1500
+                from core.payment_settlement import delivery_quote
+
+                delivery = delivery_quote(
+                    client,
+                    mode,
+                    pharmacy=pharmacy,
+                    lat=client.latitude,
+                    lng=client.longitude,
+                    subtotal=stock.display_price * qty,
+                )
                 order = Order.objects.create(
                     client=client,
                     pharmacy=pharmacy,
                     status=Order.Status.PREPARING,
                     delivery_mode=mode,
-                    delivery_fee=fee,
+                    delivery_fee=delivery["fee"],
+                    delivery_fee_waived=delivery["waived"],
                     is_urgent=is_urgent,
                     notes=request.POST.get("notes", "").strip(),
                     preparing_at=timezone.now(),
@@ -3674,7 +3807,7 @@ def pharmacy_orders(request):
             orders_count=orders_count,
             order_filter_extra=order_filter_extra,
             all_statuses=Order.Status.choices,
-            clients=User.objects.filter(role=User.Role.CLIENT).order_by("-date_joined")[:40],
+            clients=User.objects.none(),
             pharmacy_stocks=PharmacyStock.objects.filter(pharmacy=pharmacy, quantity__gt=0)
             .select_related("medicine")[:80]
             if pharmacy
@@ -3691,7 +3824,9 @@ def pharmacy_orders(request):
 @pharmacy_permission_required(PERM_ORDERS)
 def pharmacy_order_qr(request, pk):
     pharmacy = _pharmacy_for(request.user, request)
-    order = get_object_or_404(Order, pk=pk, pharmacy=pharmacy)
+    order = Order.objects.filter(pk=pk, pharmacy=pharmacy).first()
+    if not order:
+        return HttpResponse(status=404)
     if not order_needs_pharmacy_handoff(order):
         return HttpResponse(status=404)
     ensure_pharmacy_handoff_code(order)
@@ -5455,16 +5590,30 @@ def client_order_detail(request, pk):
 
 @role_required(*client_roles)
 def client_prescriptions(request):
+    from core.privacy_consent import (
+        apply_health_consent_from_post,
+        consent_context,
+        ensure_client_profile,
+        has_valid_health_consent,
+    )
+
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "upload":
             f = request.FILES.get("file")
+            profile = ensure_client_profile(request.user)
             if not f:
                 messages.error(request, "Choisissez un fichier (PDF, JPG, PNG).")
-            else:
+            elif not has_valid_health_consent(profile):
+                err = apply_health_consent_from_post(profile, request.POST)
+                if err:
+                    messages.error(request, err)
+                    return redirect("bo_client_prescriptions")
+                profile.refresh_from_db()
+            if f and has_valid_health_consent(ensure_client_profile(request.user)):
                 Prescription.objects.create(
                     client=request.user,
-                    file=f,
+                    file=encrypt_uploaded_file(f) if f else f,
                     doctor_name=request.POST.get("doctor_name", "").strip(),
                     notes=request.POST.get("notes", "").strip(),
                     status=Prescription.Status.DRAFT,
@@ -5487,8 +5636,12 @@ def client_prescriptions(request):
         elif action == "delete":
             rx = get_object_or_404(Prescription, pk=request.POST.get("rx_id"), client=request.user)
             if rx.status in {Prescription.Status.DRAFT, Prescription.Status.PENDING}:
+                from core.prescription_privacy import _delete_if_unreferenced
+
+                name, storage = rx.file.name, rx.file.storage
                 rx.delete()
-                messages.success(request, "Ordonnance supprimée.")
+                _delete_if_unreferenced(storage, name)
+                messages.success(request, "Ordonnance et fichier supprimés définitivement.")
             else:
                 messages.error(request, "Cette ordonnance ne peut plus être retirée.")
         return redirect("bo_client_prescriptions")
@@ -5498,7 +5651,8 @@ def client_prescriptions(request):
         _ctx(
             request,
             "prescriptions",
-            prescriptions=request.user.prescriptions.all()[:40],
+            prescriptions=request.user.prescriptions.prefetch_related("access_logs").all()[:40],
+            **consent_context(request.user),
         ),
     )
 
@@ -5665,10 +5819,19 @@ def client_profile_security(request):
 
 @role_required(*client_roles)
 def client_profile_privacy(request):
+    from core.privacy_consent import consent_context, HEALTH_CONSENT_VERSION
+
+    ctx = consent_context(request.user)
     return render(
         request,
         "backoffice/client/profile_privacy.html",
-        _ctx(request, "profile_privacy", page_title="Confidentialité"),
+        _ctx(
+            request,
+            "profile_privacy",
+            page_title="Confidentialité",
+            consent_version=HEALTH_CONSENT_VERSION,
+            **ctx,
+        ),
     )
 
 
@@ -5866,6 +6029,69 @@ def admin_ads(request):
             image_rules=ad_rules,
         ),
     )
+
+
+@role_required(*admin_roles)
+def admin_boost_moderation(request):
+    from core.models import PharmacyBoostAd
+    from core.pharmacy_boost import approve_boost_ad, reject_boost_ad
+
+    if request.method == "POST":
+        ad = get_object_or_404(PharmacyBoostAd, pk=request.POST.get("ad_id"))
+        action = request.POST.get("action")
+        notes = (request.POST.get("moderation_notes") or "").strip()
+        if action == "approve":
+            approve_boost_ad(ad, moderator=request.user, notes=notes)
+            messages.success(request, f"Publicité « {ad.title} » approuvée.")
+        elif action == "reject":
+            reject_boost_ad(ad, moderator=request.user, notes=notes)
+            messages.success(request, f"Publicité « {ad.title} » refusée.")
+        return redirect("bo_admin_boost_moderation")
+
+    pending = PharmacyBoostAd.objects.filter(
+        status=PharmacyBoostAd.Status.PENDING_REVIEW
+    ).select_related("pharmacy").order_by("-created_at")
+    recent = (
+        PharmacyBoostAd.objects.exclude(status=PharmacyBoostAd.Status.PENDING_REVIEW)
+        .select_related("pharmacy")
+        .order_by("-updated_at")[:30]
+    )
+    return render(
+        request,
+        "backoffice/admin/boost_moderation.html",
+        _ctx(request, "boost_moderation", pending_ads=pending, recent_ads=recent),
+    )
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+
+@csrf_exempt
+@require_POST
+def boost_track_impression(request, pk):
+    from core.models import PharmacyBoostAd
+    from core.pharmacy_boost import record_impression
+
+    ad = PharmacyBoostAd.objects.filter(pk=pk, status=PharmacyBoostAd.Status.ACTIVE).first()
+    if ad and ad.is_currently_active:
+        record_impression(ad)
+        return JsonResponse({"ok": True})
+    return JsonResponse({"ok": False}, status=404)
+
+
+@csrf_exempt
+@require_POST
+def boost_track_click(request, pk):
+    from core.models import PharmacyBoostAd
+    from core.pharmacy_boost import record_click
+
+    ad = PharmacyBoostAd.objects.filter(pk=pk, status=PharmacyBoostAd.Status.ACTIVE).first()
+    if ad and ad.is_currently_active:
+        record_click(ad)
+        return JsonResponse({"ok": True})
+    return JsonResponse({"ok": False}, status=404)
 
 
 @role_required(*admin_roles)
@@ -6575,6 +6801,8 @@ def client_loyalty(request):
 @role_required(*client_roles)
 def client_support(request):
     if request.method == "POST":
+        from core.field_crypto import encrypt_uploaded_file
+
         subject = request.POST.get("subject", "").strip()
         description = request.POST.get("description", "").strip()
         category = request.POST.get("category") or SupportTicket.Category.OTHER
@@ -6587,18 +6815,58 @@ def client_support(request):
         if not subject or not description:
             messages.error(request, "Sujet et description obligatoires.")
         else:
+            attachment = request.FILES.get("attachment")
+            if attachment:
+                attachment = encrypt_uploaded_file(attachment)
             ticket = SupportTicket.objects.create(
                 client=request.user,
                 order=order,
                 category=category,
                 subject=subject,
                 description=description,
-                attachment=request.FILES.get("attachment"),
+                attachment=attachment,
             )
-            messages.success(request, f"Réclamation {ticket.code} enregistrée.")
+            messages.success(request, f"Ticket {ticket.code} enregistré.")
             return redirect("bo_client_support")
     tickets = request.user.support_tickets.select_related("order")[:30]
     orders = request.user.orders.exclude(status=Order.Status.CART).order_by("-created_at")[:20]
+    faq_items = [
+        {
+            "icon": "local_shipping",
+            "q": "Comment suivre ma commande ?",
+            "a": "Ouvrez <strong>Mes commandes</strong> : chaque étape (validation ordonnance, préparation, livraison) y est affichée.",
+        },
+        {
+            "icon": "prescriptions",
+            "q": "Où sont stockées mes ordonnances ?",
+            "a": "Dans <strong>Mes ordonnances</strong>. Les fichiers sont chiffrés au repos et ne sont jamais exposés via un lien /media/ public. Seuls vous et la pharmacie concernée peuvent les consulter.",
+        },
+        {
+            "icon": "health_and_safety",
+            "q": "Qui peut voir mes données de santé ?",
+            "a": "Uniquement les professionnels nécessaires à votre demande : pharmacie choisie, assureur pour une prise en charge, livreur pour l'acheminement (sans accès à l'ordonnance). Pas de revente ni de profilage publicitaire à partir de vos données de santé.",
+        },
+        {
+            "icon": "verified_user",
+            "q": "Quels sont mes droits sur mes données ?",
+            "a": "Accès, rectification, opposition et information. Utilisez la catégorie <em>Données personnelles / droits</em> ci-dessous, ou la page Confidentialité dans vos paramètres.",
+        },
+        {
+            "icon": "child_care",
+            "q": "Un mineur peut-il utiliser Gab'Pharma ?",
+            "a": "Oui, avec l'<strong>autorisation écrite du titulaire de l'autorité parentale</strong> (moins de 18 ans). Renseignez la date de naissance dans votre profil.",
+        },
+        {
+            "icon": "account_balance",
+            "q": "Comment demander une prise en charge ?",
+            "a": "Dans <strong>Mon assurance</strong> → Demander une prise en charge. L'ordonnance jointe est chiffrée et transmise à votre assureur via un accès authentifié.",
+        },
+        {
+            "icon": "support_agent",
+            "q": "Comment contester une décision automatisée ?",
+            "a": "Ouvrez un ticket (catégorie Compte / profil ou Autre) pour demander une <strong>révision humaine</strong> d'une suggestion de pharmacie ou d'un classement automatisé.",
+        },
+    ]
     return render(
         request,
         "backoffice/client/support.html",
@@ -6608,6 +6876,8 @@ def client_support(request):
             tickets=tickets,
             orders=orders,
             categories=SupportTicket.Category.choices,
+            faq_items=faq_items,
+            page_title="Centre d'aide",
         ),
     )
 

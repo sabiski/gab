@@ -109,17 +109,20 @@
   <details class="po-create-panel" id="po-create-panel">
     <summary>
       <span class="material-symbols-rounded text-primary">add_circle</span>
-      Créer une commande manuelle
+      Créer une commande pour un client Gab'Pharma
     </summary>
     <div class="po-create-panel__body">
+      <p class="text-xs text-ink-muted mb-3 flex items-center gap-1.5">
+        <span class="material-symbols-rounded sm text-primary">info</span>
+        Client sans compte (comptoir, téléphone, WhatsApp) ?
+        <a href="{% url 'bo_pharmacy_counter' %}" class="font-bold text-primary underline">Ouvrir la caisse hors app</a>
+      </p>
       <form method="post" class="grid sm:grid-cols-2 gap-3 text-sm">
         {% csrf_token %}
         <input type="hidden" name="action" value="create_order">
         <div>
-          <label class="text-xs font-bold text-ink-muted">Client</label>
-          <select name="client_id" required class="mt-1 w-full border rounded-xl px-3 py-2">
-            {% for c in clients %}<option value="{{ c.id }}">{{ c.get_full_name|default:c.username }}</option>{% endfor %}
-          </select>
+          <label class="text-xs font-bold text-ink-muted">Client Gab'Pharma (téléphone ou e-mail)</label>
+          <input name="client_lookup" required placeholder="Ex. 077 12 34 56" class="mt-1 w-full border rounded-xl px-3 py-2">
         </div>
         <div>
           <label class="text-xs font-bold text-ink-muted">Produit en stock</label>
@@ -211,7 +214,7 @@
               {% if o.linked_prescription.is_image %}
               <img src="{% url 'bo_prescription_file' o.linked_prescription.id %}" alt="Ordonnance" class="max-h-80 w-full mx-auto object-contain bg-slate-50">
               {% elif o.linked_prescription.is_pdf %}
-              <embed src="{% url 'bo_prescription_file' o.linked_prescription.id %}#toolbar=1" type="application/pdf" class="w-full h-72 min-h-[18rem]">
+              <embed src="{% url 'bo_prescription_file' o.linked_prescription.id %}#toolbar=0" type="application/pdf" class="w-full h-72 min-h-[18rem]">
               {% else %}
               <iframe src="{% url 'bo_prescription_file' o.linked_prescription.id %}" class="w-full h-72 bg-slate-50" title="Ordonnance"></iframe>
               {% endif %}
@@ -219,9 +222,6 @@
             <div class="flex flex-wrap gap-2 mb-3">
               <a href="{% url 'bo_prescription_file' o.linked_prescription.id %}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-bold text-primary bg-white border border-primary/20 px-3 py-1.5 rounded-lg hover:bg-primary-50">
                 <span class="material-symbols-rounded sm">open_in_new</span> Plein écran
-              </a>
-              <a href="{% url 'bo_prescription_file' o.linked_prescription.id %}" download class="inline-flex items-center gap-1 text-xs font-bold text-ink-muted bg-white border px-3 py-1.5 rounded-lg hover:bg-canvas">
-                <span class="material-symbols-rounded sm">download</span> Télécharger
               </a>
             </div>
             {% if can_validate_rx %}
@@ -258,7 +258,7 @@
             {% endif %}
             {% elif o.prescription %}
             <div class="rounded-xl overflow-hidden bg-white border border-slate-200 mb-3">
-              <embed src="{% url 'bo_order_prescription_file' o.id %}#toolbar=1" type="application/pdf" class="w-full h-72 min-h-[18rem]">
+              <embed src="{% url 'bo_order_prescription_file' o.id %}#toolbar=0" type="application/pdf" class="w-full h-72 min-h-[18rem]">
             </div>
             <a href="{% url 'bo_order_prescription_file' o.id %}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-bold text-primary">
               <span class="material-symbols-rounded sm">open_in_new</span> Ouvrir le fichier
@@ -296,6 +296,9 @@
             <span class="material-symbols-rounded text-ink-muted rx-chevron">expand_more</span>
           </summary>
           <div class="px-4 pb-4 pt-1 border-t border-slate-100">
+            {% if o.linked_prescription.is_purged %}
+            <p class="text-xs text-ink-muted bg-canvas rounded-lg px-3 py-2 mb-2"><span class="material-symbols-rounded sm align-middle">lock_clock</span> Fichier supprimé le {{ o.linked_prescription.purged_at|date:"d/m/Y" }} (durée de conservation dépassée). La vérification reste tracée.</p>
+            {% else %}
             <div class="rounded-xl overflow-hidden bg-slate-50 border border-slate-200 mb-2">
               {% if o.linked_prescription.is_image %}
               <img src="{% url 'bo_prescription_file' o.linked_prescription.id %}" alt="Ordonnance" class="max-h-48 w-full mx-auto object-contain">
@@ -305,11 +308,12 @@
               <iframe src="{% url 'bo_prescription_file' o.linked_prescription.id %}" class="w-full h-48" title="Ordonnance"></iframe>
               {% endif %}
             </div>
+            {% endif %}
             <a href="{% url 'bo_pharmacy_prescription_detail' o.pk %}" class="inline-flex items-center gap-1 text-xs font-bold text-primary">
               <span class="material-symbols-rounded sm">open_in_full</span> Détail ordonnance
             </a>
             <a href="{% url 'bo_prescription_file' o.linked_prescription.id %}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-xs font-bold text-ink-muted ml-2">
-              <span class="material-symbols-rounded sm">open_in_new</span> Voir / télécharger
+              <span class="material-symbols-rounded sm">open_in_new</span> Voir
             </a>
             {% if o.linked_prescription.review_notes %}
             <p class="text-xs text-ink-muted mt-2 bg-canvas rounded-lg px-2 py-1.5">Note : {{ o.linked_prescription.review_notes }}</p>

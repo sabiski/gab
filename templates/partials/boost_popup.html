@@ -101,13 +101,19 @@
   }
 
   root.hidden = false;
+  try {
+    fetch('{% url "bo_boost_impression" boost_popup_ad.pk %}', { method: 'POST', credentials: 'same-origin' });
+  } catch (e) {}
   root.querySelectorAll('[data-boost-close]').forEach(function (el) {
     el.addEventListener('click', closePopup);
   });
   var cta = root.querySelector('[data-boost-cta]');
   if (cta) {
     cta.addEventListener('click', function () {
-      try { sessionStorage.setItem(key, '1'); } catch (e) {}
+      try {
+        fetch('{% url "bo_boost_click" boost_popup_ad.pk %}', { method: 'POST', credentials: 'same-origin' });
+        sessionStorage.setItem(key, '1');
+      } catch (e) {}
     });
   }
 

@@ -260,17 +260,38 @@ class PlatformPaymentSettings(models.Model):
         default=500,
         help_text="Acompte COD minimum (FCFA)",
     )
+    # Tarif livraison facturé au client : base + km + supplément express.
     courier_base_fee = models.PositiveIntegerField(
         default=1_500,
-        help_text="Rémunération de base par course (FCFA)",
+        help_text="Frais de livraison de base par course (FCFA)",
     )
     courier_per_km_fee = models.PositiveIntegerField(
         default=200,
-        help_text="Bonus distance par km (FCFA)",
+        help_text="Supplément distance par km pharmacie → client (FCFA)",
     )
     courier_express_bonus = models.PositiveIntegerField(
         default=500,
-        help_text="Bonus livraison express (FCFA)",
+        help_text="Supplément livraison express (FCFA)",
+    )
+    delivery_max_km = models.PositiveSmallIntegerField(
+        default=30,
+        help_text="Distance maximale pharmacie → client pour une livraison (km)",
+    )
+    delivery_platform_rate = models.PositiveSmallIntegerField(
+        default=25,
+        help_text="Commission plateforme sur les frais de livraison (%) — le livreur perçoit le reste",
+    )
+    premium_free_delivery_min_order = models.PositiveIntegerField(
+        default=5_000,
+        help_text="Panier minimum pour la livraison offerte Premium (FCFA, 0 = toujours offerte)",
+    )
+    coverage_request_fee = models.PositiveIntegerField(
+        default=500,
+        help_text="Frais de traitement d'un dossier de prise en charge (FCFA)",
+    )
+    premium_coverage_monthly_quota = models.PositiveSmallIntegerField(
+        default=3,
+        help_text="Dossiers de prise en charge inclus par mois pour les Premium",
     )
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -413,6 +434,12 @@ class CoverageRequest(models.Model):
         blank=True,
         null=True,
     )
+    prescription_encrypted = models.BooleanField(
+        default=False,
+        help_text="Ordonnance chiffrée au repos (Fernet)",
+    )
+    prescription_sha256 = models.CharField(max_length=64, blank=True)
+    prescription_purged_at = models.DateTimeField(null=True, blank=True)
     prescription_date = models.DateField(null=True, blank=True)
     doctor_name = models.CharField(max_length=200, blank=True)
     comment = models.TextField(blank=True)
@@ -444,6 +471,21 @@ class CoverageRequest(models.Model):
     accepted_at = models.DateTimeField(null=True, blank=True)
     pharmacy_notified_at = models.DateTimeField(null=True, blank=True)
     prepared_at = models.DateTimeField(null=True, blank=True)
+    processing_fee = models.PositiveIntegerField(
+        default=0,
+        help_text="Frais de traitement payés par le patient (FCFA)",
+    )
+    fee_included_premium = models.BooleanField(
+        default=False,
+        help_text="Dossier inclus dans le quota mensuel Premium",
+    )
+    fee_payment_method = models.CharField(
+        max_length=20,
+        choices=Payment.Method.choices,
+        blank=True,
+    )
+    fee_payment_reference = models.CharField(max_length=100, blank=True)
+    fee_paid_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -568,6 +610,7 @@ class CoverageAccessLog(models.Model):
         DOWNLOAD = "download", "Téléchargement"
         MODIFY = "modify", "Modification"
         PRESCRIPTION = "prescription", "Ordonnance consultée"
+        PURGE = "purge", "Ordonnance supprimée (conservation)"
 
     coverage_request = models.ForeignKey(
         CoverageRequest,
@@ -591,3 +634,52 @@ class CoverageAccessLog(models.Model):
 
     def __str__(self):
         return f"{self.action} — {self.coverage_request_id}"
+
+
+class InsuranceStatement(models.Model):
+    """Relevé mensuel de tiers payant d'une pharmacie pour un assureur.
+
+    Regroupe les parts assurance des ventes hors app, des commandes app et des
+    prises en charge (PC) de la période. Les montants sont figés à la génération.
+    """
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Brouillon"
+        SENT = "sent", "Envoyé à l'assureur"
+        PARTIAL = "partial", "Payé partiellement"
+        PAID = "paid", "Payé"
+
+    pharmacy = models.ForeignKey(Pharmacy, on_delete=models.CASCADE, related_name="insurance_statements")
+    provider = models.ForeignKey(InsuranceProvider, on_delete=models.PROTECT, related_name="statements")
+    period = models.DateField(help_text="Premier jour du mois couvert")
+    reference = models.CharField(max_length=30, unique=True)
+    counter_total = models.PositiveIntegerField(default=0)
+    order_total = models.PositiveIntegerField(default=0)
+    coverage_total = models.PositiveIntegerField(default=0)
+    total = models.PositiveIntegerField(default=0)
+    line_count = models.PositiveIntegerField(default=0)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    paid_amount = models.PositiveIntegerField(default=0)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    notes = models.CharField(max_length=255, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-period", "provider__name"]
+        verbose_name = "Relevé de tiers payant"
+        verbose_name_plural = "Relevés de tiers payant"
+        constraints = [
+            models.UniqueConstraint(fields=["pharmacy", "provider", "period"], name="uniq_statement_period")
+        ]
+
+    def __str__(self):
+        return self.reference
+
+    @property
+    def balance(self) -> int:
+        return max(0, self.total - self.paid_amount)

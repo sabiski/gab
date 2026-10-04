@@ -214,6 +214,14 @@
         </div>
       </section>
 
+      {% if rx.is_purged %}
+      <section class="rx-detail-card">
+        <div class="rx-detail-card__body">
+          <h3 class="rx-detail-section__title">Pièce jointe</h3>
+          <p class="text-sm text-ink-muted">Fichier supprimé le {{ rx.purged_at|date:"d/m/Y" }} (durée de conservation dépassée). La vérification reste tracée.</p>
+        </div>
+      </section>
+      {% endif %}
       {% if file_url %}
       <section class="rx-detail-card">
         <div class="rx-detail-card__body">
@@ -230,9 +238,6 @@
               <button type="button" class="rx-detail-file__btn" data-rx-fullscreen title="Agrandir">
                 <span class="material-symbols-rounded sm">visibility</span>
               </button>
-              <a href="{{ file_url }}" download class="rx-detail-file__btn" title="Télécharger">
-                <span class="material-symbols-rounded sm">download</span>
-              </a>
             </div>
           </div>
           <div class="rx-detail-preview">

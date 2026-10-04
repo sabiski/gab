@@ -84,7 +84,7 @@
         <h2 class="font-extrabold mb-4">Récapitulatif</h2>
         <dl class="text-sm space-y-2">
           <div class="flex justify-between"><dt class="text-ink-muted">Sous-total</dt><dd class="font-bold">{{ total }} F</dd></div>
-          <div class="flex justify-between"><dt class="text-ink-muted">Livraison (estimée)</dt><dd class="font-bold">{% if premium_delivery and delivery_fee == 0 %}<span class="text-emerald-600">Offerte Premium</span>{% else %}{{ delivery_fee }} F{% endif %}</dd></div>
+          <div class="flex justify-between"><dt class="text-ink-muted">Livraison (estimée)</dt><dd class="font-bold">{% if premium_delivery and delivery_fee == 0 %}<span class="text-emerald-600">Offerte Premium</span>{% elif delivery.out_of_zone or delivery.distance_km is None %}dès {{ delivery_fee }} F{% else %}{{ delivery_fee }} F{% endif %}</dd></div>
           <div class="flex justify-between border-t pt-3 text-base"><dt class="font-extrabold">Total</dt><dd class="font-extrabold text-primary">{{ grand_total }} F</dd></div>
         </dl>
         {% if pharmacy %}

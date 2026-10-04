@@ -81,7 +81,7 @@ def _daily_marketing_count(user, since):
     ).count()
 
 
-def _channels_for_user(user, notification_type, prefs, platform, *, channels=None):
+def _channels_for_user(user, notification_type, prefs, platform, *, channels=None, transactional=False):
     if channels:
         requested = set(channels)
     else:
@@ -95,12 +95,13 @@ def _channels_for_user(user, notification_type, prefs, platform, *, channels=Non
 
     allowed = []
     mapping = [
-        (Notification.Channel.PUSH, prefs.push_enabled and platform.channel_push_enabled),
-        (Notification.Channel.SMS, prefs.sms_enabled and platform.channel_sms_enabled),
-        (Notification.Channel.EMAIL, prefs.email_enabled and platform.channel_email_enabled),
+        (Notification.Channel.PUSH, prefs.push_enabled and (platform.channel_push_enabled or transactional)),
+        (Notification.Channel.SMS, prefs.sms_enabled and (platform.channel_sms_enabled or transactional)),
+        (Notification.Channel.EMAIL, prefs.email_enabled and (platform.channel_email_enabled or transactional)),
         (
             Notification.Channel.WHATSAPP,
-            prefs.whatsapp_enabled and platform.channel_whatsapp_enabled,
+            (prefs.whatsapp_enabled or transactional)
+            and (platform.channel_whatsapp_enabled or transactional),
         ),
     ]
     for ch, enabled in mapping:
@@ -165,7 +166,12 @@ def notify_user(
     )
 
     external_channels = _channels_for_user(
-        user, notification_type, prefs, platform, channels=channels
+        user,
+        notification_type,
+        prefs,
+        platform,
+        channels=channels,
+        transactional=transactional,
     )
 
     throttled = False

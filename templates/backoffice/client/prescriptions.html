@@ -2,7 +2,7 @@
 {% block portal_title %}Ordonnances{% endblock %}
 {% block portal_heading %}Mes ordonnances{% endblock %}
 {% block portal_lead %}
-<p class="c-lead">Stockez vos ordonnances ici. Lors d'une commande sur ordonnance, vous choisirez laquelle utiliser — rien n'est envoyé à la pharmacie sans votre validation.</p>
+<p class="c-lead">Stockez vos ordonnances ici. Lors d'une commande sur ordonnance, vous choisirez laquelle utiliser — rien n'est envoyé à la pharmacie sans votre validation. Seule la pharmacie choisie peut la voir, chaque consultation vous est affichée, et le fichier est supprimé automatiquement après usage.</p>
 {% endblock %}
 {% block portal_body %}
 
@@ -29,6 +29,9 @@
       <label class="c-label">Note</label>
       <input name="notes" placeholder="Précisions…" class="c-input">
     </div>
+    <div class="sm:col-span-2">
+      {% include "backoffice/partials/health_consent_fields.html" %}
+    </div>
     <button type="submit" class="c-btn c-btn--primary sm:col-span-2">Enregistrer dans mon dossier</button>
   </form>
 </section>
@@ -43,9 +46,11 @@
         <span class="c-pill mt-2 {% if rx.status == 'validated' or rx.status == 'used' %}c-pill--success{% elif rx.status == 'rejected' %}c-pill--danger{% elif rx.status == 'pending' %}c-pill--warn{% else %}c-pill--muted{% endif %}">{{ rx.get_status_display }}</span>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        {% if not rx.is_purged %}
         <button type="button" class="c-btn c-btn--ghost rx-open-modal" data-title="Ordonnance #{{ rx.id }}" data-url="{% url 'bo_prescription_file' rx.id %}" data-pdf="{% if rx.is_pdf %}1{% else %}0{% endif %}" data-image="{% if rx.is_image %}1{% else %}0{% endif %}">
           <span class="material-symbols-rounded sm">fullscreen</span> Agrandir
         </button>
+        {% endif %}
         {% if rx.status == "draft" or rx.status == "pending" %}
         <form method="post" onsubmit="return confirm('Supprimer cette ordonnance ?')">
           {% csrf_token %}
@@ -56,6 +61,9 @@
         {% endif %}
       </div>
     </div>
+    {% if rx.is_purged %}
+    <p class="px-4 pb-4 text-xs text-[#6B7280]"><span class="material-symbols-rounded sm align-middle">lock_clock</span> Fichier supprimé automatiquement le {{ rx.purged_at|date:"d/m/Y" }} pour protéger vos données. La vérification par la pharmacie reste tracée.</p>
+    {% else %}
     <div class="c-rx-preview">
       {% if rx.is_image %}
       <img src="{% url 'bo_prescription_file' rx.id %}" alt="Ordonnance {{ rx.id }}">
@@ -65,6 +73,27 @@
       <p class="p-4 text-xs text-[#6B7280]">Aperçu indisponible — utilisez « Agrandir ».</p>
       {% endif %}
     </div>
+    {% endif %}
+    {% with logs=rx.access_logs.all %}
+    <details class="px-4 pb-4 text-xs">
+      <summary class="cursor-pointer font-bold text-[#6B7280]">
+        <span class="material-symbols-rounded sm align-middle">visibility</span>
+        Qui a consulté cette ordonnance ? ({{ logs|length }})
+      </summary>
+      <ul class="mt-2 space-y-1">
+        {% for log in logs %}
+        <li class="flex flex-wrap gap-x-2 {% if log.action == 'break_glass' %}text-amber-700 font-bold{% else %}text-[#374151]{% endif %}">
+          <span>{{ log.created_at|date:"d/m/Y H:i" }}</span>
+          <span>·</span>
+          <span>{{ log.get_action_display }} — {{ log.actor_label }}</span>
+          {% if log.reason and log.action == 'break_glass' %}<span class="w-full font-normal">Motif : {{ log.reason }}</span>{% endif %}
+        </li>
+        {% empty %}
+        <li class="text-[#6B7280]">Personne d'autre que vous ne l'a consultée.</li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endwith %}
   </article>
   {% empty %}
   <div class="c-card c-empty">

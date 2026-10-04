@@ -463,7 +463,7 @@
 
   var map = L.map('track-map').setView([lat, lng], 14);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OSM' }).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OSM' }).addTo(map);
 
   L.marker([lat, lng]).addTo(map).bindPopup('Livreur');
 

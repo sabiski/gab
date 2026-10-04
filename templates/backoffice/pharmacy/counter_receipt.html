@@ -1,0 +1,50 @@
+{% load humanize %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ticket {{ sale.code }}</title>
+  <style>
+    body { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; background: #f1f5f2; margin: 0; padding: 1.5rem; color: #111; }
+    .ticket { width: 80mm; max-width: 100%; margin: 0 auto; background: #fff; padding: 1rem 0.9rem; box-shadow: 0 10px 30px -15px rgba(0,0,0,.35); }
+    h1 { font-size: 1rem; text-align: center; margin: 0; }
+    .c { text-align: center; } .muted { color: #555; font-size: 0.72rem; }
+    hr { border: 0; border-top: 1px dashed #999; margin: 0.6rem 0; }
+    table { width: 100%; font-size: 0.78rem; border-collapse: collapse; }
+    td { padding: 0.15rem 0; vertical-align: top; } td.r { text-align: right; white-space: nowrap; }
+    .total td { font-weight: 800; font-size: 0.95rem; padding-top: 0.3rem; }
+    .actions { text-align: center; margin-top: 1rem; }
+    .actions button { font: inherit; font-weight: 700; padding: 0.55rem 1.2rem; border-radius: 0.6rem; border: 0; background: #228545; color: #fff; cursor: pointer; }
+    .void { text-align: center; font-weight: 800; color: #b91c1c; border: 2px solid #b91c1c; padding: 0.25rem; margin: 0.4rem 0; }
+    @media print { body { background: #fff; padding: 0; } .ticket { box-shadow: none; } .actions { display: none; } }
+  </style>
+</head>
+<body>
+  <div class="ticket">
+    <h1>{{ sale.pharmacy.name }}</h1>
+    <p class="c muted">{{ sale.pharmacy.address }}{% if sale.pharmacy.phone %} · {{ sale.pharmacy.phone }}{% endif %}</p>
+    <hr>
+    <p class="muted">Ticket {{ sale.code }} · {{ sale.created_at|date:"d/m/Y H:i" }}<br>
+      {{ sale.get_channel_display }}{% if sale.created_by %} · Vendeur : {{ sale.created_by.get_full_name|default:sale.created_by.username }}{% endif %}
+      {% if sale.customer_name %}<br>Client : {{ sale.customer_name }}{% endif %}</p>
+    {% if sale.status == "cancelled" %}<p class="void">VENTE ANNULÉE</p>{% endif %}
+    <hr>
+    <table>
+      {% for i in sale.items.all %}
+      <tr><td colspan="2">{{ i.medicine_name }}</td></tr>
+      <tr><td class="muted">{{ i.quantity }} × {{ i.unit_price|intcomma }}</td><td class="r">{{ i.line_total|intcomma }} F</td></tr>
+      {% endfor %}
+    </table>
+    <hr>
+    <table>
+      <tr><td>Sous-total</td><td class="r">{{ sale.subtotal|intcomma }} F</td></tr>
+      {% if sale.discount %}<tr><td>Remise</td><td class="r">− {{ sale.discount|intcomma }} F</td></tr>{% endif %}
+      {% if sale.insurance_amount %}<tr><td>{{ sale.insurance_provider.name }}</td><td class="r">− {{ sale.insurance_amount|intcomma }} F</td></tr>{% endif %}
+      <tr class="total"><td>Payé ({{ sale.get_payment_method_display }})</td><td class="r">{{ sale.total|intcomma }} F</td></tr>
+    </table>
+    <hr>
+    <p class="c muted">Merci de votre visite.<br>Retrouvez votre pharmacie sur Gab'Pharma.</p>
+  </div>
+  <div class="actions"><button onclick="window.print()">Imprimer le ticket</button></div>
+</body>
+</html>

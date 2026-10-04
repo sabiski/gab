@@ -39,6 +39,10 @@
   <span class="material-symbols-rounded sm" aria-hidden="true">verified_user</span>
   <span class="bo-client-nav__label">Mes garanties</span>
 </a>
+<a href="{% url 'bo_client_insurance_subscribe' %}" class="bo-client-nav {% if bo_section == 'insurance_subscribe' %}is-active{% endif %}">
+  <span class="material-symbols-rounded sm" aria-hidden="true">add_card</span>
+  <span class="bo-client-nav__label">Souscrire une formule</span>
+</a>
 <a href="{% url 'bo_client_insurance_request_create' %}" class="bo-client-nav {% if bo_section == 'insurance_request' %}is-active{% endif %}">
   <span class="material-symbols-rounded sm" aria-hidden="true">add_circle</span>
   <span class="bo-client-nav__label">Demander une prise en charge</span>
@@ -91,7 +95,7 @@
 </a>
 <a href="{% url 'bo_client_support' %}" class="bo-client-nav {% if bo_section == 'support' %}is-active{% endif %}">
   <span class="material-symbols-rounded sm" aria-hidden="true">support</span>
-  <span class="bo-client-nav__label">Réclamations</span>
+  <span class="bo-client-nav__label">Centre d'aide</span>
 </a>
 
 <p class="px-3 pt-4 pb-1 text-[10px] font-bold uppercase tracking-wider text-white/40">Général</p>
@@ -155,7 +159,7 @@
 </a>
 <a href="{% url 'bo_client_support' %}" class="bo-client-nav {% if bo_section == 'support' %}is-active{% endif %}">
   <span class="material-symbols-rounded sm" aria-hidden="true">help</span>
-  <span class="bo-client-nav__label">Aide et support</span>
+  <span class="bo-client-nav__label">Centre d'aide</span>
 </a>
 <a href="{% url 'bo_client_terms' %}" class="bo-client-nav {% if bo_section == 'terms' %}is-active{% endif %}">
   <span class="material-symbols-rounded sm" aria-hidden="true">description</span>

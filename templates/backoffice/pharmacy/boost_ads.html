@@ -122,8 +122,10 @@
         <label class="text-xs font-bold text-[#6B7280] uppercase">Statut</label>
         <select name="status" class="mt-1 w-full border rounded-xl px-3 py-2">
           <option value="draft" {% if edit_obj.status == 'draft' %}selected{% endif %}>Brouillon</option>
+          <option value="pending_review" {% if edit_obj.status == 'pending_review' %}selected{% endif %}>En attente de validation</option>
           <option value="active" {% if edit_obj.status == 'active' %}selected{% endif %}>Active</option>
           <option value="paused" {% if edit_obj.status == 'paused' %}selected{% endif %}>En pause</option>
+          <option value="rejected" {% if edit_obj.status == 'rejected' %}selected{% endif %}>Refusée</option>
           <option value="ended" {% if edit_obj.status == 'ended' %}selected{% endif %}>Terminée</option>
         </select>
       </div>

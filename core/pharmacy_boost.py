@@ -158,8 +158,30 @@ def apply_boost_ordering(queryset, *extra_order):
 
 
 def record_impression(ad: PharmacyBoostAd):
-    PharmacyBoostAd.objects.filter(pk=ad.pk).update(impressions=ad.impressions + 1)
+    from django.db.models import F
+
+    PharmacyBoostAd.objects.filter(pk=ad.pk).update(impressions=F("impressions") + 1)
 
 
 def record_click(ad: PharmacyBoostAd):
-    PharmacyBoostAd.objects.filter(pk=ad.pk).update(clicks=ad.clicks + 1)
+    from django.db.models import F
+
+    PharmacyBoostAd.objects.filter(pk=ad.pk).update(clicks=F("clicks") + 1)
+
+
+def approve_boost_ad(ad: PharmacyBoostAd, *, moderator=None, notes: str = "") -> PharmacyBoostAd:
+    ad.status = PharmacyBoostAd.Status.ACTIVE
+    ad.moderation_notes = (notes or "").strip()
+    ad.moderated_at = timezone.now()
+    ad.moderated_by = moderator
+    ad.save(update_fields=["status", "moderation_notes", "moderated_at", "moderated_by", "updated_at"])
+    return ad
+
+
+def reject_boost_ad(ad: PharmacyBoostAd, *, moderator=None, notes: str = "") -> PharmacyBoostAd:
+    ad.status = PharmacyBoostAd.Status.REJECTED
+    ad.moderation_notes = (notes or "").strip() or "Refusée par la modération."
+    ad.moderated_at = timezone.now()
+    ad.moderated_by = moderator
+    ad.save(update_fields=["status", "moderation_notes", "moderated_at", "moderated_by", "updated_at"])
+    return ad

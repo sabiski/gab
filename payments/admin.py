@@ -30,6 +30,9 @@ class PlatformPaymentSettingsAdmin(admin.ModelAdmin):
         "daily_transaction_cap",
         "payout_delay_days",
         "courier_base_fee",
+        "delivery_platform_rate",
+        "coverage_request_fee",
+        "premium_coverage_monthly_quota",
     )
 
 

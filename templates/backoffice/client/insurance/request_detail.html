@@ -221,7 +221,26 @@
         <span class="material-symbols-rounded sm">visibility</span> Voir l'ordonnance
       </a>
     </section>
+    {% elif coverage_request.prescription_purged_at %}
+    <section class="c-card p-5">
+      <h2 class="c-card__title mb-2">Ordonnance</h2>
+      <p class="c-card__sub"><span class="material-symbols-rounded sm align-middle">lock_clock</span> Fichier supprimé automatiquement le {{ coverage_request.prescription_purged_at|date:"d/m/Y" }} pour protéger vos données.</p>
+    </section>
     {% endif %}
+
+    <section class="c-card p-5">
+      <h2 class="c-card__title mb-2">Qui a consulté mon ordonnance ?</h2>
+      <ul class="space-y-1.5 text-xs">
+        {% for log in rx_access_logs %}
+        <li class="{% if log.action == 'break_glass' %}text-amber-700 font-bold{% else %}text-[#374151]{% endif %}">
+          {{ log.created_at|date:"d/m/Y H:i" }} · {{ log.get_action_display }} — {{ log.actor_label }}
+          {% if log.reason and log.action == 'break_glass' %}<br><span class="font-normal">Motif : {{ log.reason }}</span>{% endif %}
+        </li>
+        {% empty %}
+        <li class="text-[#6B7280]">Personne d'autre que vous ne l'a encore consultée.</li>
+        {% endfor %}
+      </ul>
+    </section>
   </aside>
 </div>
 {% endblock %}

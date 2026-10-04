@@ -10,6 +10,8 @@
     </div>
     {% if error %}
     <div class="mb-4 text-sm bg-rose-50 text-rose-700 border border-rose-100 rounded-xl px-3 py-2.5 font-medium">{{ error }}</div>
+    {% elif request.GET.expire %}
+    <div class="mb-4 text-sm bg-amber-50 text-amber-800 border border-amber-100 rounded-xl px-3 py-2.5 font-medium">Votre session a expiré après une période d'inactivité. Reconnectez-vous pour continuer.</div>
     {% endif %}
     <form method="post" class="space-y-4">
       {% csrf_token %}

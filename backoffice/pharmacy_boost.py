@@ -64,7 +64,7 @@ def pharmacy_boost_ads(request):
                     show_popup=bool(request.POST.get("show_popup")),
                     boost_catalog=bool(request.POST.get("boost_catalog")),
                     priority=int(request.POST.get("priority") or 10),
-                    status=PharmacyBoostAd.Status.ACTIVE
+                    status=PharmacyBoostAd.Status.PENDING_REVIEW
                     if request.POST.get("publish")
                     else PharmacyBoostAd.Status.DRAFT,
                     starts_at=timezone.now(),
@@ -73,7 +73,15 @@ def pharmacy_boost_ads(request):
                 )
                 ad.image = image
                 ad.save()
-                messages.success(request, "Publicité enregistrée.")
+                messages.success(
+                    request,
+                    "Publicité enregistrée."
+                    + (
+                        " Elle sera visible après validation admin."
+                        if ad.status == PharmacyBoostAd.Status.PENDING_REVIEW
+                        else ""
+                    ),
+                )
             return redirect("bo_pharmacy_boost")
 
         if action == "update":

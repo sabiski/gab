@@ -9,6 +9,7 @@ from backoffice.insurer_portal import (
     insurer_contracts,
     insurer_coverage_detail,
     insurer_coverage_list,
+    insurer_coverage_prescription,
     insurer_dashboard,
     insurer_fraud,
     insurer_members,
@@ -29,7 +30,7 @@ from backoffice.pharmacy_personnel import pharmacy_personnel
 from backoffice.regional_portal import regional_dashboard
 from backoffice import client_portal_views
 from backoffice import views
-from backoffice import prescription_files
+from backoffice import pharmacy_counter, pharmacy_statements, prescription_files
 
 
 urlpatterns = [
@@ -49,6 +50,11 @@ urlpatterns = [
         "commande/<int:order_id>/fichier-ordonnance/",
         prescription_files.order_prescription_file_view,
         name="bo_order_prescription_file",
+    ),
+    path(
+        "ordonnance/acces-exceptionnel/<str:kind>/<int:pk>/",
+        prescription_files.prescription_break_glass,
+        name="bo_prescription_break_glass",
     ),
     # Admin CRUD
     path("admin/", views.admin_dashboard, name="bo_admin_dashboard"),
@@ -73,6 +79,9 @@ urlpatterns = [
     path("admin/audit/", views.admin_audit, name="bo_admin_audit"),
     path("admin/hero/", views.admin_hero, name="bo_admin_hero"),
     path("admin/publicites/", views.admin_ads, name="bo_admin_ads"),
+    path("admin/publicites-boost/", views.admin_boost_moderation, name="bo_admin_boost_moderation"),
+    path("boost/<int:pk>/vue/", views.boost_track_impression, name="bo_boost_impression"),
+    path("boost/<int:pk>/clic/", views.boost_track_click, name="bo_boost_click"),
     path("admin/conseils/", views.admin_tips, name="bo_admin_tips"),
     # Pharmacie
     path("pharmacie/", views.pharmacy_dashboard, name="bo_pharmacy_dashboard"),
@@ -88,6 +97,13 @@ urlpatterns = [
         pharmacy_coverage.pharmacy_coverage_prescription,
         name="bo_pharmacy_coverage_prescription",
     ),
+    path("pharmacie/caisse/", pharmacy_counter.pharmacy_counter, name="bo_pharmacy_counter"),
+    path("pharmacie/caisse/historique/", pharmacy_counter.pharmacy_counter_history, name="bo_pharmacy_counter_history"),
+    path("pharmacie/caisse/api/vente/", pharmacy_counter.pharmacy_counter_api, name="bo_pharmacy_counter_api"),
+    path("pharmacie/caisse/sw.js", pharmacy_counter.pharmacy_counter_service_worker, name="bo_pharmacy_counter_sw"),
+    path("pharmacie/caisse/<int:pk>/ticket/", pharmacy_counter.pharmacy_counter_receipt, name="bo_pharmacy_counter_receipt"),
+    path("pharmacie/tiers-payant/", pharmacy_statements.pharmacy_statements, name="bo_pharmacy_statements"),
+    path("pharmacie/tiers-payant/<int:pk>/", pharmacy_statements.pharmacy_statement_detail, name="bo_pharmacy_statement_detail"),
     path("pharmacie/stocks/", views.pharmacy_stocks, name="bo_pharmacy_stocks"),
     path("pharmacie/stocks/<int:stock_id>/fiche/", views.pharmacy_medicine_edit, name="bo_pharmacy_medicine_edit"),
     path("pharmacie/conseils/", views.pharmacy_tips, name="bo_pharmacy_tips"),
@@ -131,6 +147,11 @@ urlpatterns = [
     path("assurance/demandes/refusees/", insurer_claims_rejected, name="bo_insurer_claims_rejected"),
     path("assurance/prises-en-charge/", insurer_coverage_list, name="bo_insurer_coverage_list"),
     path("assurance/prises-en-charge/<int:pk>/", insurer_coverage_detail, name="bo_insurer_coverage_detail"),
+    path(
+        "assurance/prises-en-charge/<int:pk>/ordonnance/",
+        insurer_coverage_prescription,
+        name="bo_insurer_coverage_prescription",
+    ),
     path("assurance/assures/", insurer_members, name="bo_insurer_members"),
     path("assurance/pharmacies/", insurer_pharmacies, name="bo_insurer_pharmacies"),
     path("assurance/pharmacies/<int:pharmacy_id>/", insurer_pharmacy_detail, name="bo_insurer_pharmacy_detail"),
@@ -154,6 +175,11 @@ urlpatterns = [
     path("client/assurance/", client_insurance.client_insurance_home, name="bo_client_insurance_home"),
     path("client/assurance/carte/", client_insurance.client_insurance_card, name="bo_client_insurance_card"),
     path("client/assurance/garanties/", client_insurance.client_insurance_guarantees, name="bo_client_insurance_guarantees"),
+    path(
+        "client/assurance/souscrire/",
+        client_insurance.client_insurance_subscribe,
+        name="bo_client_insurance_subscribe",
+    ),
     path(
         "client/assurance/demander/",
         client_insurance.client_insurance_request_create,

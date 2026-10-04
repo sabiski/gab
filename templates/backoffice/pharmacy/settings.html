@@ -348,7 +348,7 @@
   var lat = parseFloat(latInput.value) || defaultLat;
   var lng = parseFloat(lngInput.value) || defaultLng;
   var map = L.map('pharmacy-map').setView([lat, lng], 14);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
   var marker = L.marker([lat, lng], { draggable: true }).addTo(map);
   function syncInputs(ll) {
     latInput.value = ll.lat.toFixed(6);
