@@ -1,7 +1,7 @@
 /* Service worker de la caisse hors app (portée : /espace/pharmacie/caisse/).
    Permet d'ouvrir la caisse sans réseau. Les ventes elles-mêmes sont mises en file
    par pharmacy-counter.js puis synchronisées au retour de la connexion. */
-const CACHE = 'gp-caisse-v1';
+const CACHE = 'gp-caisse-v2';
 const PAGE = '/espace/pharmacie/caisse/';
 const ASSET_HOSTS = ['cdn.tailwindcss.com', 'fonts.googleapis.com', 'fonts.gstatic.com', 'unpkg.com'];
 

@@ -21,7 +21,8 @@ CONTENT_SECURITY_POLICY = "; ".join([
     f"style-src 'self' 'unsafe-inline' {_FONTS_CSS} https://unpkg.com https://cdn.jsdelivr.net",
     f"font-src 'self' data: {_FONTS}",
     "img-src 'self' data: blob: https:",
-    f"connect-src 'self' {_OSM} https://cdn.jsdelivr.net https://unpkg.com",
+    # Les service workers (caisse, PWA) re-téléchargent CDN et polices via fetch() : connect-src s'applique.
+    f"connect-src 'self' {_OSM} {_CDN} {_FONTS_CSS} {_FONTS}",
     "frame-src 'self'",
     "worker-src 'self'",
     "manifest-src 'self'",
