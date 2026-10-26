@@ -268,3 +268,96 @@ class InsuranceStatementTests(TillFixture):
                 insurance_amount=500,
                 customer_name="Sans numéro",
             )
+
+
+class InsurerDashboardTests(TillFixture):
+    """Tableau de bord assureur : chiffres réels, tendances, file de travail, alertes."""
+
+    def setUp(self):
+        super().setUp()
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from accounts.models import PartnerProfile
+        from orders.models import Order
+        from payments.models import CoverageRequest, InsuranceClaim
+
+        self.provider = InsuranceProvider.objects.create(name="NSIA", code="NSIA-T", coverage_rate=70, annual_cap=10000)
+        self.partner_user = User.objects.create_user("ins_t", password="x", role=User.Role.PARTNER)
+        self.partner = PartnerProfile.objects.create(
+            user=self.partner_user, partner_type=PartnerProfile.PartnerType.INSURER,
+            organization_name="NSIA", insurance_provider=self.provider, validated_at=timezone.now(),
+        )
+        patient = User.objects.create_user("ins_patient", password="x", role=User.Role.CLIENT)
+        now = timezone.now()
+        order = Order.objects.create(client=patient, pharmacy=self.pharmacy, status=Order.Status.DELIVERED)
+        # Demande en attente depuis 3 jours (hors délai)
+        late = InsuranceClaim.objects.create(client=patient, provider=self.provider, order=order, amount=5000)
+        InsuranceClaim.objects.filter(pk=late.pk).update(created_at=now - timedelta(days=3))
+        # PC acceptée en 2 h, PC refusée
+        pc = CoverageRequest.objects.create(
+            reference="PC-INS1", client=patient, provider=self.provider, pharmacy=self.pharmacy,
+            insured_number="A1", status=CoverageRequest.Status.ACCEPTED, insurance_amount=9500,
+        )
+        CoverageRequest.objects.filter(pk=pc.pk).update(created_at=now - timedelta(hours=5), accepted_at=now - timedelta(hours=3))
+        CoverageRequest.objects.create(
+            reference="PC-INS2", client=patient, provider=self.provider, pharmacy=self.pharmacy,
+            insured_number="A1", status=CoverageRequest.Status.REJECTED,
+        )
+        # Tiers payant au comptoir
+        self._sale(
+            [SaleLine(self.s1.pk, 2)], payment_method=CounterSale.PaymentMethod.INSURANCE,
+            insurance_provider=self.provider, insurance_amount=1500, customer_name="B", insured_number="B2",
+        )
+
+    def _build(self, period="30"):
+        from core.insurer_dashboard import InsurerDashboard
+        from core.insurer_profile import InsurerPortalProfile
+
+        return InsurerDashboard(InsurerPortalProfile.from_partner(self.partner), period).build()
+
+    def test_kpis_use_all_sources(self):
+        w = self._build()
+        kpis = {k["label"]: k for k in w["kpis"]}
+        self.assertEqual(kpis["Dossiers reçus"]["value"], "3")  # 1 demande + 2 PC
+        self.assertEqual(kpis["À traiter"]["value"], "1")
+        self.assertIn("1 hors délai", kpis["À traiter"]["hint"])
+        self.assertEqual(kpis["Taux d'acceptation"]["value"], "50,0 %")
+        self.assertEqual(kpis["Montant engagé"]["value"], "11 000 F")  # 9 500 PC + 1 500 comptoir
+        self.assertEqual(w["engaged"]["counter"], 1500)
+
+    def test_queue_alerts_and_rankings(self):
+        w = self._build()
+        self.assertTrue(w["queue"]["items"][0]["late"])
+        texts = " ".join(a["text"] for a in w["alerts"])
+        self.assertIn("plus de 48 h", texts)
+        self.assertIn("plafond annuel", texts)  # 9 500 / 10 000 F
+        self.assertEqual(w["top_pharmacies"][0]["name"], "Pharmacie Caisse")
+        self.assertEqual(w["top_pharmacies"][0]["amount"], 11000)
+        self.assertEqual(w["top_medicines"][0]["name"], "Doliprane 1000")
+        steps = {s["label"]: s["done"] for s in (w["onboarding"] or [])}
+        self.assertTrue(steps.get("Organisme rattaché", True))
+
+    def test_trend_is_real_not_hardcoded(self):
+        w = self._build("7")
+        received = next(k for k in w["kpis"] if k["label"] == "Dossiers reçus")
+        self.assertEqual(received["trend"]["label"], "Nouveau")  # rien sur la période précédente
+
+    def test_pending_partner_sees_onboarding(self):
+        self.partner.validated_at = None
+        self.partner.save()
+        steps = self._build()["onboarding"]
+        self.assertFalse(next(s for s in steps if s["label"] == "Validation par Gab'Pharma")["done"])
+
+    def test_dashboard_page_renders_each_period(self):
+        from accounts.models import PartnerSubscription
+        from core.partner_subscription import create_partner_subscription
+
+        create_partner_subscription(self.partner, PartnerSubscription.Plan.PROFESSIONAL, activate=True,
+                                    payment_reference="T", payment_method="transfer")
+        self.client.force_login(self.partner_user)
+        for p in ["7", "30", "90", "365"]:
+            r = self.client.get(reverse("bo_insurer_dashboard") + f"?periode={p}")
+            self.assertContains(r, "À traiter maintenant")
+            self.assertContains(r, "PC-INS1")

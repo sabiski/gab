@@ -1,266 +1,275 @@
 {% extends "backoffice/insurer/base_insurer.html" %}
-
 {% load humanize %}
-
 {% block ins_page_title %}Tableau de bord{% endblock %}
 
-
-
 {% block ins_content %}
-
-{% include "backoffice/insurer/partials/page_header.html" with page_title="Tableau de bord" page_subtitle="Vue d'ensemble de votre activité" display_date=widgets.display_date %}
-
-
+{% include "backoffice/insurer/partials/page_header.html" with page_title="Tableau de bord" page_subtitle="Pilotage de vos prises en charge en temps réel" display_date=widgets.display_date %}
 
 {% if partner_profile.preview %}
-
-<div class="ins-banner">Mode aperçu administrateur — données de <strong>{{ partner_profile.organization_name }}</strong>{% if widgets.is_demo %} (démonstration){% endif %}.</div>
-
-{% elif partner_profile and not partner_profile.is_validated %}
-
-<div class="ins-banner">Compte en attente de validation par Gab'Pharma. Certaines actions restent limitées.</div>
-
+<div class="ins-banner">Mode aperçu administrateur — données réelles de <strong>{{ partner_profile.organization_name }}</strong>.</div>
 {% endif %}
 
+{# ── Mise en route : tant que le compte n'est pas opérationnel ── #}
+{% if widgets.onboarding %}
+<section class="insd-onboarding gp-reveal">
+  <div class="insd-onboarding__head">
+    <span class="material-symbols-rounded">rocket_launch</span>
+    <div>
+      <h2>Mise en route de votre espace assureur</h2>
+      <p>{% if partner_profile and not partner_profile.is_validated %}Votre compte est en cours de validation par Gab'Pharma : certaines actions restent limitées en attendant.{% else %}Encore quelques étapes pour recevoir vos premiers dossiers.{% endif %}</p>
+    </div>
+  </div>
+  <ol class="insd-steps">
+    {% for s in widgets.onboarding %}
+    <li class="{% if s.done %}is-done{% endif %}">
+      <span class="insd-steps__dot"><span class="material-symbols-rounded sm">{% if s.done %}check{% else %}radio_button_unchecked{% endif %}</span></span>
+      <div class="min-w-0">
+        <p class="font-bold">{{ s.label }}</p>
+        <p class="text-xs text-ink-muted">{{ s.hint }}</p>
+      </div>
+      {% if not s.done and s.url %}<a href="{{ s.url }}" class="insd-steps__go">Faire →</a>{% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+{% endif %}
 
-
-<section class="ins-kpi-grid">
-
-  {% for k in widgets.kpis %}
-
-  <article class="ins-kpi ins-kpi--{{ k.tone }}">
-
-    <div class="ins-kpi__icon"><span class="material-symbols-rounded">{{ k.icon }}</span></div>
-
-    <p class="ins-kpi__label">{{ k.label }}</p>
-
-    <p class="ins-kpi__value">{{ k.value|intcomma }}</p>
-
-    {% if k.trend_label %}<p class="ins-kpi__trend{% if k.tone == 'purple' %} is-up{% endif %}">{{ k.trend_label }}</p>{% elif k.trend %}<p class="ins-kpi__trend is-up">+{{ k.trend }} %</p>{% endif %}
-
-  </article>
-
+{# ── Sélecteur de période ── #}
+<nav class="insd-periods" aria-label="Période">
+  {% for key, label in widgets.periods %}
+  <a href="?periode={{ key }}" class="insd-period {% if widgets.period == key %}is-active{% endif %}"{% if widgets.period == key %} aria-current="page"{% endif %}>{{ label }}</a>
   {% endfor %}
+</nav>
 
+{# ── Indicateurs clés ── #}
+<section class="insd-kpis">
+  {% for k in widgets.kpis %}
+  {% if k.url %}<a href="{{ k.url }}" class="insd-kpi insd-kpi--{{ k.tone }} gp-card--hover">{% else %}<article class="insd-kpi insd-kpi--{{ k.tone }} gp-card--hover">{% endif %}
+    <div class="flex items-center justify-between gap-2">
+      <span class="insd-kpi__icon"><span class="material-symbols-rounded sm">{{ k.icon }}</span></span>
+      {% if k.trend %}
+      <span class="insd-trend insd-trend--{{ k.trend.direction }}{% if k.trend.good %} is-good{% elif k.trend.good == False %} is-bad{% endif %}">
+        <span class="material-symbols-rounded">{% if k.trend.direction == 'up' %}trending_up{% elif k.trend.direction == 'down' %}trending_down{% else %}trending_flat{% endif %}</span>{{ k.trend.label }}
+      </span>
+      {% endif %}
+    </div>
+    <p class="insd-kpi__label">{{ k.label }}</p>
+    <p class="insd-kpi__value">{{ k.value }}</p>
+    {% if k.hint %}<p class="insd-kpi__hint">{{ k.hint }}</p>{% endif %}
+  {% if k.url %}</a>{% else %}</article>{% endif %}
+  {% endfor %}
 </section>
 
-
-
-<section class="ins-mid-grid">
-
+{# ── File de travail + alertes ── #}
+<section class="insd-grid insd-grid--queue">
   <article class="ins-panel">
-
-    <h3>Demandes par statut</h3>
-
-    <div class="ins-doughnut-wrap">
-
-      <div class="ins-chart-wrap"><canvas id="chartStatus"></canvas></div>
-
-      <div class="ins-doughnut-center">
-
-        <span>{{ widgets.status_total|intcomma }}</span>
-
-        <small>total</small>
-
-      </div>
-
+    <div class="insd-panel-head">
+      <h3>À traiter maintenant</h3>
+      <span class="insd-chip">{{ widgets.queue.pending }} en attente{% if widgets.queue.late %} · <strong class="text-rose-600">{{ widgets.queue.late }} en retard</strong>{% endif %}</span>
     </div>
-
-  </article>
-
-  <article class="ins-panel">
-
-    <h3>Évolution des demandes</h3>
-
-    <p class="ins-panel__hint">7 derniers jours</p>
-
-    <div class="ins-chart-wrap"><canvas id="chartEvolution"></canvas></div>
-
-  </article>
-
-</section>
-
-
-
-<section class="ins-mid-grid ins-mid-grid--3">
-
-  <article class="ins-panel ins-panel--wide">
-
-    <h3>Demandes récentes</h3>
-
-    <div class="ins-recent-list">
-
-      {% for c in widgets.recent_claims %}
-
-      <div class="ins-recent-row">
-
-        <span class="ins-status-icon ins-status-icon--{{ c.status }}">
-
-          <span class="material-symbols-rounded sm">{% if c.status == 'pending' %}schedule{% elif c.status == 'rejected' %}cancel{% else %}check_circle{% endif %}</span>
-
-        </span>
-
-        <div class="min-w-0 flex-1">
-
-          <p class="font-bold truncate">{{ c.client_name }} <span class="text-ink-muted font-medium">#{{ c.code }}</span></p>
-
-          <p class="text-xs text-ink-muted truncate">{{ c.pharmacy }} · {{ c.created_at|date:"d M Y • H:i" }}</p>
-
-        </div>
-
-        <div class="text-right shrink-0">
-
-          <p class="font-extrabold text-sm">{{ c.amount|intcomma }} FCFA</p>
-
-          <span class="ins-badge ins-badge--{{ c.status }}">{{ c.status_label }}</span>
-
-        </div>
-
-      </div>
-
-      {% empty %}
-
-      <p class="text-sm text-ink-muted py-4">Aucune demande pour le moment.</p>
-
-      {% endfor %}
-
-    </div>
-
-    <a href="{% url 'bo_insurer_claims' %}" class="ins-link-more">Voir toutes les demandes →</a>
-
-  </article>
-
-  <article class="ins-panel">
-
-    <h3>Montant des prises en charge</h3>
-
-    <p class="ins-amount-total">{{ widgets.total_amount|intcomma }} <span>FCFA</span></p>
-
-    <p class="ins-amount-growth">+{{ widgets.amount_growth|floatformat:1 }} % vs semaine précédente</p>
-
-    <p class="ins-panel__hint">7 derniers jours</p>
-
-    <div class="ins-chart-wrap ins-chart-wrap--short"><canvas id="chartAmounts"></canvas></div>
-
-  </article>
-
-</section>
-
-
-
-<section class="ins-bottom-grid">
-
-  <article class="ins-panel">
-
-    <h3>Accès rapides</h3>
-
-    <div class="ins-quick-grid ins-quick-grid--5">
-
-      <a href="{% url 'bo_insurer_claims_pending' %}" class="ins-quick"><span class="material-symbols-rounded">add_circle</span>Nouvelle demande</a>
-
-      <a href="{% url 'bo_insurer_members' %}" class="ins-quick"><span class="material-symbols-rounded">person_search</span>Rechercher assuré</a>
-
-      <a href="{% url 'bo_insurer_pharmacies' %}" class="ins-quick"><span class="material-symbols-rounded">local_pharmacy</span>Ajouter pharmacie</a>
-
-      <a href="{% url 'bo_insurer_contracts' %}" class="ins-quick"><span class="material-symbols-rounded">contract</span>Nouveau contrat</a>
-
-      <a href="{% url 'bo_insurer_reports' %}" class="ins-quick"><span class="material-symbols-rounded">summarize</span>Rapport personnalisé</a>
-
-    </div>
-
-  </article>
-
-  <article class="ins-panel">
-
-    <h3>Alertes importantes</h3>
-
-    <ul class="ins-alerts">
-
-      {% for a in widgets.alerts %}
-
-      <li class="ins-alert ins-alert--{{ a.tone|default:'blue' }}">
-
-        <span class="material-symbols-rounded sm">{{ a.icon }}</span>
-
-        <div><p>{{ a.text }}</p><p class="text-xs text-ink-muted">{{ a.meta }}</p></div>
-
+    <ul class="insd-queue">
+      {% for i in widgets.queue.items %}
+      <li>
+        <a href="{{ i.url }}" class="insd-queue__row {% if i.late %}is-late{% endif %}">
+          <span class="insd-queue__icon"><span class="material-symbols-rounded sm">{{ i.icon }}</span></span>
+          <div class="min-w-0 flex-1">
+            <p class="font-bold truncate">{{ i.who }} <span class="text-ink-muted font-medium">· {{ i.ref }}</span></p>
+            <p class="text-xs text-ink-muted truncate">{{ i.kind }} · {{ i.where }}</p>
+          </div>
+          <div class="text-right shrink-0">
+            <p class="font-extrabold text-sm">{{ i.amount|intcomma }} F</p>
+            <p class="text-[11px] {% if i.late %}text-rose-600 font-bold{% else %}text-ink-muted{% endif %}">{% if i.late %}<span class="material-symbols-rounded" style="font-size:12px;vertical-align:-2px">timer_off</span> {% endif %}{{ i.age }}</p>
+          </div>
+        </a>
       </li>
-
+      {% empty %}
+      <li class="insd-empty"><span class="material-symbols-rounded">task_alt</span>Rien en attente — tous les dossiers sont traités.</li>
       {% endfor %}
-
     </ul>
-
+    <div class="flex gap-3 mt-2">
+      <a href="{% url 'bo_insurer_claims_pending' %}" class="ins-link-more">Demandes en attente →</a>
+      <a href="{% url 'bo_insurer_coverage_list' %}" class="ins-link-more">Dossiers PC →</a>
+    </div>
   </article>
 
+  <article class="ins-panel">
+    <h3>Alertes</h3>
+    <ul class="insd-alerts">
+      {% for a in widgets.alerts %}
+      <li><a href="{{ a.url }}" class="insd-alert insd-alert--{{ a.tone }}">
+        <span class="material-symbols-rounded sm">{{ a.icon }}</span>
+        <div class="min-w-0"><p class="font-bold">{{ a.text }}</p><p class="text-xs opacity-80">{{ a.meta }}</p></div>
+      </a></li>
+      {% empty %}
+      <li class="insd-empty"><span class="material-symbols-rounded">verified_user</span>Aucune alerte : fraude, délais et plafonds sous contrôle.</li>
+      {% endfor %}
+    </ul>
+  </article>
 </section>
 
+{# ── Graphiques ── #}
+<section class="insd-grid insd-grid--charts">
+  <article class="ins-panel">
+    <h3>Dossiers reçus et acceptés</h3>
+    <p class="ins-panel__hint">{{ widgets.period_label }}</p>
+    <div class="insd-chart"><canvas id="chartEvolution"></canvas></div>
+  </article>
+  <article class="ins-panel">
+    <h3>Statut des dossiers</h3>
+    <p class="ins-panel__hint">{{ widgets.period_label }}</p>
+    <div class="ins-doughnut-wrap">
+      <div class="insd-chart insd-chart--donut"><canvas id="chartStatus"></canvas></div>
+      <div class="ins-doughnut-center"><span data-countup>{{ widgets.status_total }}</span><small>dossiers</small></div>
+    </div>
+  </article>
+</section>
 
+<section class="insd-grid insd-grid--charts">
+  <article class="ins-panel">
+    <h3>Montant engagé</h3>
+    <p class="ins-panel__hint">Part assurance des dossiers acceptés · {{ widgets.period_label }}</p>
+    <p class="ins-amount-total"><span data-countup>{{ widgets.engaged.total }}</span> <span>FCFA</span></p>
+    <div class="insd-chart insd-chart--short"><canvas id="chartAmounts"></canvas></div>
+  </article>
+  <article class="ins-panel">
+    <h3>Origine des dépenses</h3>
+    <p class="ins-panel__hint">{{ widgets.period_label }}</p>
+    <ul class="insd-split">
+      {% for s in widgets.engaged_split %}
+      <li>
+        <div class="flex justify-between text-sm"><span class="flex items-center gap-2"><span class="insd-split__dot" style="background:{{ s.color }}"></span>{{ s.label }}</span><strong>{{ s.value|intcomma }} F</strong></div>
+        <div class="insd-bar"><span style="width:{% if widgets.engaged.total %}{% widthratio s.value widgets.engaged.total 100 %}{% else %}0{% endif %}%;background:{{ s.color }}"></span></div>
+      </li>
+      {% endfor %}
+    </ul>
+  </article>
+</section>
+
+{# ── Classements ── #}
+<section class="insd-grid insd-grid--charts">
+  <article class="ins-panel">
+    <h3>Pharmacies les plus actives</h3>
+    <p class="ins-panel__hint">Montant pris en charge · {{ widgets.period_label }}</p>
+    <ol class="insd-rank">
+      {% for p in widgets.top_pharmacies %}
+      <li>
+        <span class="insd-rank__n">{{ forloop.counter }}</span>
+        <div class="flex-1 min-w-0">
+          <div class="flex justify-between gap-2 text-sm"><a href="{% url 'bo_insurer_pharmacy_detail' p.id %}" class="font-bold truncate hover:underline">{{ p.name }}</a><strong class="shrink-0">{{ p.amount|intcomma }} F</strong></div>
+          <div class="insd-bar"><span style="width:{{ p.share }}%"></span></div>
+          <p class="text-[11px] text-ink-muted">{{ p.count }} dossier{{ p.count|pluralize }} · moyenne {{ p.avg|intcomma }} F</p>
+        </div>
+      </li>
+      {% empty %}
+      <li class="insd-empty"><span class="material-symbols-rounded">local_pharmacy</span>Aucune pharmacie sur la période.</li>
+      {% endfor %}
+    </ol>
+  </article>
+  <article class="ins-panel">
+    <h3>Médicaments les plus coûteux</h3>
+    <p class="ins-panel__hint">Coût brut des dossiers acceptés · {{ widgets.period_label }}</p>
+    <ol class="insd-rank">
+      {% for m in widgets.top_medicines %}
+      <li>
+        <span class="insd-rank__n insd-rank__n--med"><span class="material-symbols-rounded sm">medication</span></span>
+        <div class="flex-1 min-w-0">
+          <div class="flex justify-between gap-2 text-sm"><span class="font-bold truncate">{{ m.name }}</span><strong class="shrink-0">{{ m.amount|intcomma }} F</strong></div>
+          <div class="insd-bar insd-bar--teal"><span style="width:{{ m.share }}%"></span></div>
+          <p class="text-[11px] text-ink-muted">{{ m.qty }} boîte{{ m.qty|pluralize }} délivrée{{ m.qty|pluralize }}</p>
+        </div>
+      </li>
+      {% empty %}
+      <li class="insd-empty"><span class="material-symbols-rounded">medication</span>Aucun médicament sur la période.</li>
+      {% endfor %}
+    </ol>
+  </article>
+</section>
+
+{# ── Activité récente + accès rapides ── #}
+<section class="ins-mid-grid ins-mid-grid--3">
+  <article class="ins-panel ins-panel--wide">
+    <h3>Activité récente</h3>
+    <div class="ins-recent-list">
+      {% for c in widgets.recent %}
+      <a href="{{ c.url }}" class="ins-recent-row hover:bg-[#faf9ff] rounded-lg">
+        <span class="ins-status-icon ins-status-icon--{{ c.status }}">
+          <span class="material-symbols-rounded sm">{% if c.status == 'pending' %}schedule{% elif c.status == 'rejected' %}cancel{% else %}check_circle{% endif %}</span>
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="font-bold truncate">{{ c.client_name }} <span class="text-ink-muted font-medium">#{{ c.ref }}</span></p>
+          <p class="text-xs text-ink-muted truncate">{{ c.kind }} · {{ c.pharmacy }} · {{ c.created_at|date:"d M Y • H:i" }}</p>
+        </div>
+        <div class="text-right shrink-0">
+          <p class="font-extrabold text-sm">{{ c.amount|intcomma }} FCFA</p>
+          <span class="ins-badge ins-badge--{{ c.status }}">{{ c.status_label }}</span>
+        </div>
+      </a>
+      {% empty %}
+      <p class="insd-empty"><span class="material-symbols-rounded">inbox</span>Aucun dossier reçu pour le moment.</p>
+      {% endfor %}
+    </div>
+  </article>
+  <article class="ins-panel">
+    <h3>Accès rapides</h3>
+    <div class="insd-quick">
+      <a href="{% url 'bo_insurer_claims_pending' %}"><span class="material-symbols-rounded">fact_check</span>Traiter les demandes</a>
+      <a href="{% url 'bo_insurer_coverage_list' %}"><span class="material-symbols-rounded">medical_information</span>Dossiers PC</a>
+      <a href="{% url 'bo_insurer_members' %}"><span class="material-symbols-rounded">person_search</span>Rechercher un assuré</a>
+      <a href="{% url 'bo_insurer_payments' %}"><span class="material-symbols-rounded">request_quote</span>Paiements pharmacies</a>
+      <a href="{% url 'bo_insurer_fraud' %}"><span class="material-symbols-rounded">shield</span>Lutte anti-fraude</a>
+      <a href="{% url 'bo_insurer_reports' %}"><span class="material-symbols-rounded">monitoring</span>Rapports</a>
+    </div>
+  </article>
+</section>
 
 <section class="ins-footer-stats">
-
   {% for s in widgets.footer_stats %}
-
   <div class="ins-footer-stat">
-
     <p class="ins-footer-stat__label">{{ s.label }}</p>
-
-    <p class="ins-footer-stat__value">{% if s.value|stringformat:"s"|slice:"-1:" == "%" %}{{ s.value }}{% else %}{{ s.value|intcomma }}{% endif %}</p>
-
+    <p class="ins-footer-stat__value">{{ s.value }}</p>
     <p class="ins-footer-stat__trend">{{ s.trend }}</p>
-
   </div>
-
   {% endfor %}
-
 </section>
-
-<p class="ins-copyright">© {% now "Y" %} Gab'Pharma Assurance · Tous droits réservés</p>
-
-
+<p class="ins-copyright">© {% now "Y" %} Gab'Pharma Assurance · Données mises à jour à chaque affichage</p>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
 <script>
-
 (function () {
-
   const charts = {{ charts_json|safe }};
-
   if (typeof Chart === "undefined") return;
-
-  new Chart(document.getElementById("chartStatus"), {
-
-    type: "doughnut",
-
-    data: { labels: charts.status.labels, datasets: [{ data: charts.status.data, backgroundColor: charts.status.colors, borderWidth: 0 }] },
-
-    options: { responsive: true, maintainAspectRatio: false, cutout: "72%", plugins: { legend: { position: "bottom", labels: { boxWidth: 10, padding: 12, font: { size: 11 } } } } }
-
-  });
+  Chart.defaults.font.family = "Poppins, 'Plus Jakarta Sans', system-ui, sans-serif";
+  const money = v => v >= 1e6 ? (v / 1e6).toFixed(1).replace(".", ",") + " M" : v >= 1e3 ? Math.round(v / 1e3) + " k" : v;
+  const anim = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? false : { duration: 700, easing: "easeOutQuart" };
 
   new Chart(document.getElementById("chartEvolution"), {
-
     type: "line",
+    data: {
+      labels: charts.evolution.labels,
+      datasets: [
+        { label: "Reçus", data: charts.evolution.received, borderColor: "#5B47FB", backgroundColor: "rgba(91,71,251,.12)", fill: true, tension: 0.35, pointRadius: 2 },
+        { label: "Acceptés", data: charts.evolution.accepted, borderColor: "#10B981", backgroundColor: "transparent", borderDash: [5, 4], tension: 0.35, pointRadius: 2 }
+      ]
+    },
+    options: { animation: anim, responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } } } }
+  });
 
-    data: { labels: charts.evolution.labels, datasets: [{ data: charts.evolution.data, borderColor: "#5B47FB", backgroundColor: "rgba(91,71,251,.12)", fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: "#5B47FB" }] },
-
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } } }
-
+  new Chart(document.getElementById("chartStatus"), {
+    type: "doughnut",
+    data: { labels: charts.status.labels, datasets: [{ data: charts.status.data, backgroundColor: charts.status.colors, borderWidth: 0 }] },
+    options: { animation: anim, responsive: true, maintainAspectRatio: false, cutout: "72%",
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, padding: 10, font: { size: 11 } } } } }
   });
 
   new Chart(document.getElementById("chartAmounts"), {
-
     type: "bar",
-
-    data: { labels: charts.amounts.labels, datasets: [{ data: charts.amounts.data, backgroundColor: "#5B47FB", borderRadius: 6, maxBarThickness: 28 }] },
-
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => (v / 1e6).toFixed(1) + "M" } }, x: { grid: { display: false } } } }
-
+    data: { labels: charts.amounts.labels, datasets: [{ label: "FCFA", data: charts.amounts.data, backgroundColor: "#5B47FB", borderRadius: 6, maxBarThickness: 26 }] },
+    options: { animation: anim, responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: c => " " + c.parsed.y.toLocaleString("fr-FR") + " FCFA" } } },
+      scales: { y: { beginAtZero: true, ticks: { callback: money } }, x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } } } }
   });
-
 })();
-
 </script>
-
 {% endblock %}
-

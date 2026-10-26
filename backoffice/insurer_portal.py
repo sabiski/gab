@@ -26,7 +26,6 @@ from core.insurer_claims import (
     partner_pharmacies_for_claims,
 )
 from core.insurer_profile import resolve_insurer_profile
-from core.insurer_portal_stats import charts_json, insurer_dashboard_widgets
 from notifications.models import Notification
 from notifications.services import notify_user
 from payments.models import InsuranceClaim
@@ -153,15 +152,17 @@ def _handle_claim_action(request, profile, claim_id, new_status, review_notes=""
 @role_required(*insurer_access_roles)
 @portal_permission_required("dashboard")
 def insurer_dashboard(request):
+    from core.insurer_dashboard import InsurerDashboard, dashboard_charts_json
+
     profile = _insurer_profile(request.user, request)
-    widgets = insurer_dashboard_widgets(profile)
+    widgets = InsurerDashboard(profile, request.GET.get("periode")).build()
     return _render(
         request,
         "dashboard",
         "backoffice/insurer/dashboard.html",
         profile,
         widgets=widgets,
-        charts_json=charts_json(widgets),
+        charts_json=dashboard_charts_json(widgets),
     )
 
 
